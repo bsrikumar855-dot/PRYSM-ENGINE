@@ -4,13 +4,13 @@
 
 | Field | Value |
 |---|---|
-| Current phase | Phase 4 complete → **waiting at Checkpoint A (owner approval)**; no implementation started |
-| Current milestone | none (M0 next) |
-| Pass for this milestone (budget: 5 by default; edit here) | 0 / 5 |
-| Total passes, all milestones | 0 |
-| Failing checks → attempts (one line per distinct check; max 3 each) | none |
-| Last verified commit | none (no commits) |
-| Independent review done for current milestone? | Discovery challenge: yes (architect, security-engineer, critical-reviewer; document review only) |
+| Current phase | Phase 5 implementation (Checkpoint A approved: "Approve, mock only", DEC-15/16) |
+| Current milestone | M1 gate passed with caveats → M2 next (M0 commit 2e6848e; M1 commit below) |
+| Pass for this milestone (budget: 5 by default; edit here) | M1 closed after 3 / 5 passes (0 / 5 for M2) |
+| Total passes, all milestones | 3 |
+| Failing checks → attempts (one line per distinct check; max 3 each) | F-01..F-09: closed except F-05(glob only)/F-07 partial; N-01 deny/unparseable: 1 attempt; N-02 metering: 1; N-03 mutable toolInfo: 1; N-04 hidden chars: 2 (F-07 then N-04) |
+| Last verified commit | 2e6848e (M0) |
+| Independent review done for current milestone? | M1: yes (security-engineer x2, critical-reviewer x2, blind corpus labeller); pass-3 fixes N-01..N-04 NOT yet independently re-verified |
 
 ## Milestone gates
 
@@ -19,11 +19,11 @@ Budget: 5 implement→verify passes per milestone, 3 attempts per failing check.
 | Milestone | Expected outcome | Verification command(s) | Tests run | Regression run | Review (independent?) | Criteria verified | Docs updated | Open blocker/major | Gate passed |
 |---|---|---|---|---|---|---|---|---|---|
 | M0 Scaffold + toolchain | TS project, test runner, lint/typecheck, `npm ci`; `node:sqlite` smoke test passes on this Windows machine (open, WAL, BEGIN IMMEDIATE, concurrent reader, crash-recovery) or fallback chosen behind store interface | `npm test`, `npm run typecheck`, `npm run smoke:sqlite` | – | – | not required (mechanical) | – | – | – | no |
-| M1 Core: canonicalise + `decide()` | JSON policy loader (strict), JCS hash, plain-JSON snapshot, deny-overrides `decide()`, matchers (domain, path-within, glob, in/equals/range), explanations, limits; property tests (order independence, deny monotonicity, determinism, idempotence), Cedar differential on shared subset; start adversarial corpus (P-01,06,11,12,13,14,15) | `npm test -- core`, `npm run corpus` | – | – | security-engineer re-check of P-01/06/11/13/14 | – | – | – | no |
+| M1 Core: canonicalise + `decide()` | JSON policy loader (strict), JCS hash, plain-JSON snapshot, deny-overrides `decide()`, matchers (domain, path-within, glob, in/equals/range), explanations, limits; property tests (order independence, deny monotonicity, determinism, idempotence), start adversarial corpus (P-01,06,11,12,13,14,15). **Cedar differential: deferred to M5 (DEC-21)** | `npm test -- core`, `npm run corpus` | `npm test` 107/107; `npm run corpus` 563/563 | typecheck clean; core import test | security-engineer x2 + critical-reviewer x2 (independent); N-01..N-04 pending re-check in M2 gate | A-02/07/16/17 partial, A-19 verified (see checklist) | POLICY-SPEC v1.3, DECISIONS DEC-19..22, SECURITY-REVIEW | none open Critical/High; Medium/Low N-01..N-04 fixed, unverified | yes (with caveats) |
 | M2 Store + guard | SQLite hash-chained store behind narrow interface, sync decision-before-execute, fault-injection tests, concurrency test, verify-chain, anchor, retention checkpoint, redaction choke point, HMAC digests, session taint, fail-mode matrix | `npm test -- store guard`, `npm run verify-chain` | – | – | **independent review gate** (critical-reviewer, qa-engineer, security-engineer) | – | – | – | no |
 | M3 MCP stdio proxy | Proxy over same core; e2e against a real local MCP server; unauthorized/unknown/tainted calls never reach server; control channel for taint (or documented in-process-only) | `npm test -- proxy`, `npm run demo:e2e` | – | – | **independent review gate** | – | – | – | no |
 | M4 CLI + static report | `validate, explain, events, verify-chain, anchor, simulate`; self-contained HTML report incl. events, explanations, policy versions, chain status, real-event metrics; empty state | `npm test -- cli report` | – | – | qa-engineer | – | – | – | no |
-| M5 Benchmark + real-model scenario | Labelled corpus (≥30/class) + benign ≥200 traces, second-party labels, FN/FP with Wilson intervals, baselines; latency bench (p50/p95/p99, cold/warm, concurrency, FULL vs NORMAL); real-LLM injection scenario (A-15, owner-approved model) | `npm run bench`, `npm run eval` | – | – | **independent review gate** | – | – | – | no |
+| M5 Benchmark + real-model scenario | Labelled corpus (≥30/class) + benign ≥200 traces, second-party labels, FN/FP with Wilson intervals, baselines; latency bench (p50/p95/p99, cold/warm, concurrency, FULL vs NORMAL); Cedar differential test on shared tool/scope subset (deferred from M1, DEC-21); second blind-labeller pass for the extended fixture (any_in, string[], agents, equals/in/max_length, domain_exact, host accept, session_tainted opt-in, monitor_only); real-LLM injection scenario (A-15, owner-approved model) | `npm run bench`, `npm run eval` | – | – | **independent review gate** | – | – | – | no |
 | M6 Docs, optional live viewer, final review | Docs reflect actual behaviour and limits; optional hardened live viewer; final whole-project review + security review; delivery report | full suite | – | – | final independent review | – | – | – | no |
 
 ## Acceptance checklist
@@ -31,12 +31,12 @@ Budget: 5 implement→verify passes per milestone, 3 attempts per failing check.
 | ID | Criterion (measurable) | State | Evidence |
 |---|---|---|---|
 | A-01 | Denied tool function invoked 0 times (call counter); result carries decision_id and reason_code; `explain` shows rule id | Untested | – |
-| A-02 (replaced) | Same DecisionRequest ⇒ byte-identical decision over 1000 runs, shuffled rule order, on Windows (+Linux if available) | Untested | – |
+| A-02 (replaced) | Same DecisionRequest ⇒ byte-identical decision over 1000 runs, shuffled rule order, on Windows (+Linux if available) | Partially verified (M1) | Property tests (shuffle incl. policy_version equality, 1000-repeat determinism) pass via `npm test`; Windows only, deepEqual rather than byte-compare; Linux not run |
 | A-03 | `prysm explain <id>` prints rule/version/reason/redacted args; exit 0 known, non-zero unknown | Untested | – |
 | A-04 | `npm run bench` reports p50/p95/p99 over ≥10,000 evals vs hypotheses (decide p99 <1 ms @200 rules; guard overhead with sync audit <10 ms; both recorded even if missed) | Untested | – |
 | A-05 | Canary secret absent from args/results/model_meta/errors/stack/engine_error/CLI/export/report/digest | Untested | – |
 | A-06 | Forced engine exception ⇒ all calls deny, `engine_error` event; no fail-open on engine error | Untested | – |
-| A-07 | ≥15 precedence cases + property tests pass; any rule change changes version hash; semantically-equal files same hash | Untested | – |
+| A-07 | ≥15 precedence cases + property tests pass; any rule change changes version hash; semantically-equal files same hash | Partially verified (M1) | 27 numbered behaviour cases + property tests pass; rule reorder keeps version, mode change changes it (pending final M1 gate re-verification) |
 | A-08 | Report/viewer empty on empty store; after demo count equals `prysm events --count`; no seeded fixtures in runtime path (grep) | Untested | – |
 | A-09 | Fresh clone → first blocked call time recorded (target ≤30 min) | Untested | – |
 | A-10 | Swapping example model adapter leaves policy unchanged | Untested | – |
@@ -45,10 +45,10 @@ Budget: 5 implement→verify passes per milestone, 3 attempts per failing check.
 | A-13 | `verify-chain` detects modified, deleted-middle, reordered rows; tail deletion detected via anchor; concurrent writers yield linear chain | Untested | – |
 | A-14 | (if live viewer built) wrong Host/Origin ⇒ 403, missing token ⇒ 401, XSS payload rendered as text, traversal ⇒ 404 | Untested | – |
 | A-15 | Real-LLM injection scenario — NOT PERFORMED (owner chose mock only, DEC-16); mock-scripted scenario only, labelled unit-level | Out of scope by owner decision | n/a |
-| A-16 | Unknown tool ⇒ deny; unregistered/changed tool schema hash ⇒ deny; extra args rejected | Untested | – |
-| A-17 | Sink differential: for each matcher vector table, decision matches what the real sink would touch | Untested | – |
+| A-16 | Unknown tool ⇒ deny; unregistered/changed tool schema hash ⇒ deny; extra args rejected | Partially verified (M1) | unknown tool/extra args denied (tests + corpus); `schema_hash` is stored but NOT enforced until M3 — untested |
+| A-17 | Sink differential: for each matcher vector table, decision matches what the real sink would touch | Partially verified (M1: decide side only) | Matcher vector tables + 563-case corpus pass; no real sink exists until M2/M5 helpers |
 | A-18 | Proxy e2e: forbidden call never reaches real MCP server (server-side counter 0); allowed call does | Untested | – |
-| A-19 | Core import-graph test: no net/http/child_process/fetch/store imports in `src/core` | Untested | – |
+| A-19 | Core import-graph test: no net/http/child_process/fetch/store imports in `src/core` | Verified (M1, regex heuristic) | `test/core-imports.test.ts` passes; static pattern check, not a full module-graph analysis |
 
 ## Tasks (milestone-level; sub-tasks expanded at milestone start)
 

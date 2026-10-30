@@ -38,3 +38,21 @@ Table-driven sink differential per matcher (paths, URLs, unicode), getter/Proxy/
 
 ## Not done
 Dynamic testing, dependency scanning, Windows junction behaviour tests, legal/privacy review of audit retention.
+
+## M1 review findings (security-engineer, 2026-10-30; static inspection + own local probe scripts; no pen testing)
+| ID | Finding | Sev | State |
+|---|---|---|---|
+| F-01 | Deny rule bypass via mixed `string[]` (spec hole; any-vs-all quantification) | **High, Confirmed** | Fix specified (SPEC §10.1); Open until re-verified |
+| F-02 | Snapshot walk lacks work bound for shared-reference graphs (13.6 s measured; deeper = OOM) — decide() not total | Medium, Confirmed | Fix specified (§10.2); Open |
+| F-03 | Decision not bound to the snapshot the tool receives (TOCTOU at integration boundary) | Medium, Confirmed (API) | Fix specified (§10.5); closes in M2 guard design; Open |
+| F-04 | Case-insensitive path match uses toLowerCase not folding (ſ, ı) | Medium, Potential | Fix: ASCII-only paths (§10.3); Open |
+| F-05 | 1000 rules x 8 KiB arg glob = 7.9 s decide() | Medium/Low, Confirmed | Fix: precompile, star cap, work budget (§10.2); Open |
+| F-06 | Windows aliases COM¹, CONIN$, fullwidth dots not rejected | Low, Potential | Fix: ASCII-only + reserved names (§10.3); Open |
+| F-07 | Hidden characters allowed in policy values (U+00AD, U+061C, …) | Low, Confirmed | Fix (§10.7); Open |
+| F-08 | Fixture cc deny is a blocklist | Low, Confirmed (fixture) | Fix: deny-if-present (§10.9); Open |
+| F-09 | NFC compared but raw string given to the tool | Low, Potential | Fix: NFC snapshot (§10.4); Open |
+Register state after M1 review: P-04 (domain part), P-06, P-14, P-15 Closed for M1; P-01, P-11, P-12, P-13 Open pending fixes above. No finding accepted by the owner.
+
+### M1 re-verification (security-engineer pass 2; static + own scripts; no pen testing; 2026-10-30)
+Closed with evidence: F-01, F-02, F-03 (M1 API; M2 guard must pass `evaluate().snapshot`), F-04, F-06, F-08, F-09. F-05 closed for glob only; F-07 partial.
+New: N-01 Medium Confirmed (deny rule unmatched by unparseable value → broader permit of another predicate kind wins), N-02 Medium/Low Confirmed (path/domain predicates unmetered; 1000 rules x 256x250-char string = 2.6 s), N-03 Low (toolInfo returns live mutable object), N-04 Low (invisible char classes). All have fixes specified in POLICY-SPEC §11 (pass 3). No confirmed Critical or High in M1 scope. Register: P-01 Closed for M1 core; P-04/P-06/P-14/P-15 Closed; P-12 lexical part Closed with N-01 residual; P-11 and P-13 Open (Low/Medium) pending pass 3.

@@ -9,6 +9,7 @@
   "scripts": {
     "test": "node --test --no-warnings=ExperimentalWarning \"test/**/*.test.ts\"",
     "typecheck": "tsc --noEmit",
+    "corpus": "node --no-warnings=ExperimentalWarning eval/run-corpus.ts",
     "smoke:sqlite": "node --no-warnings=ExperimentalWarning smoke/sqlite-smoke.ts"
   },
   "devDependencies": {
