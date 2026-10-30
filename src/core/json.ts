@@ -12,7 +12,7 @@ export const FORBIDDEN_KEYS: ReadonlySet<string> = new Set(['__proto__', 'constr
  * Lone surrogates (Cs) are reported separately as invalid_encoding.
  */
 export const FORBIDDEN_CHARS =
-  /[\p{Cf}\p{Zl}\p{Zp}\p{Cc}\p{Co}\p{Cn}]|(?!\u0020)\p{Zs}|[\u034f\ufe00-\ufe0f]/u; // + variation selectors / CGJ kept from spec 10.7 (stricter union)
+  /[\p{Cf}\p{Zl}\p{Zp}\p{Cc}\p{Co}\p{Cn}]|(?!\u0020)\p{Zs}|[\u034f\ufe00-\ufe0f]|\p{Default_Ignorable_Code_Point}|[\u115f\u1160\u3164\uffa0\u2800]/u; // + variation selectors / CGJ kept from spec 10.7 (stricter union)
 
 export function checkString(s: string, path: string): void {
   if (FORBIDDEN_CHARS.test(s)) {

@@ -5,12 +5,12 @@
 | Field | Value |
 |---|---|
 | Current phase | Phase 5 implementation (Checkpoint A approved: "Approve, mock only", DEC-15/16) |
-| Current milestone | M1 gate passed with caveats → M2 next (M0 commit 2e6848e; M1 commit below) |
-| Pass for this milestone (budget: 5 by default; edit here) | M1 closed after 3 / 5 passes (0 / 5 for M2) |
-| Total passes, all milestones | 3 |
+| Current milestone | M2 gate passed (4 of 5 passes) → M3 MCP proxy next |
+| Pass for this milestone (budget: 5 by default; edit here) | M2 closed after 4 / 5 passes (0 / 5 for M3) |
+| Total passes, all milestones | 7 |
 | Failing checks → attempts (one line per distinct check; max 3 each) | F-01..F-09: closed except F-05(glob only)/F-07 partial; N-01 deny/unparseable: 1 attempt; N-02 metering: 1; N-03 mutable toolInfo: 1; N-04 hidden chars: 2 (F-07 then N-04) |
 | Last verified commit | 2e6848e (M0) |
-| Independent review done for current milestone? | M1: yes (security-engineer x2, critical-reviewer x2, blind corpus labeller); pass-3 fixes N-01..N-04 NOT yet independently re-verified |
+| Independent review done for current milestone? | M2: yes (security-engineer x3 passes, critical-reviewer, qa-engineer blind plan + black-box run); M1 fixes N-01..N-04 re-verified Closed |
 
 ## Milestone gates
 
@@ -20,7 +20,7 @@ Budget: 5 implement→verify passes per milestone, 3 attempts per failing check.
 |---|---|---|---|---|---|---|---|---|---|
 | M0 Scaffold + toolchain | TS project, test runner, lint/typecheck, `npm ci`; `node:sqlite` smoke test passes on this Windows machine (open, WAL, BEGIN IMMEDIATE, concurrent reader, crash-recovery) or fallback chosen behind store interface | `npm test`, `npm run typecheck`, `npm run smoke:sqlite` | – | – | not required (mechanical) | – | – | – | no |
 | M1 Core: canonicalise + `decide()` | JSON policy loader (strict), JCS hash, plain-JSON snapshot, deny-overrides `decide()`, matchers (domain, path-within, glob, in/equals/range), explanations, limits; property tests (order independence, deny monotonicity, determinism, idempotence), start adversarial corpus (P-01,06,11,12,13,14,15). **Cedar differential: deferred to M5 (DEC-21)** | `npm test -- core`, `npm run corpus` | `npm test` 107/107; `npm run corpus` 563/563 | typecheck clean; core import test | security-engineer x2 + critical-reviewer x2 (independent); N-01..N-04 pending re-check in M2 gate | A-02/07/16/17 partial, A-19 verified (see checklist) | POLICY-SPEC v1.3, DECISIONS DEC-19..22, SECURITY-REVIEW | none open Critical/High; Medium/Low N-01..N-04 fixed, unverified | yes (with caveats) |
-| M2 Store + guard | SQLite hash-chained store behind narrow interface, sync decision-before-execute, fault-injection tests, concurrency test, verify-chain, anchor, retention checkpoint, redaction choke point, HMAC digests, session taint, fail-mode matrix | `npm test -- store guard`, `npm run verify-chain` | – | – | **independent review gate** (critical-reviewer, qa-engineer, security-engineer) | – | – | – | no |
+| M2 Store + guard | SQLite hash-chained store behind narrow interface, sync decision-before-execute, fault-injection tests, concurrency test, verify-chain, anchor, retention checkpoint, redaction choke point, HMAC digests, session taint, fail-mode matrix | `npm test -- store guard` (verify-chain CLI script moved to M4, DEC-24) | `npm test` 233/233; `npm run corpus` 563/563; QA black-box 119/123 (2 deviations fixed) | typecheck clean; M1 suite green | independent: security-engineer x3, critical-reviewer, qa-engineer | A-01, A-05, A-06, A-13 (see checklist) | AUDIT-SPEC v1.3, DEC-23..26, SECURITY-REVIEW | none Critical/High; M2-21 Medium/Low and M2-22 Low tracked | yes |
 | M3 MCP stdio proxy | Proxy over same core; e2e against a real local MCP server; unauthorized/unknown/tainted calls never reach server; control channel for taint (or documented in-process-only) | `npm test -- proxy`, `npm run demo:e2e` | – | – | **independent review gate** | – | – | – | no |
 | M4 CLI + static report | `validate, explain, events, verify-chain, anchor, simulate`; self-contained HTML report incl. events, explanations, policy versions, chain status, real-event metrics; empty state | `npm test -- cli report` | – | – | qa-engineer | – | – | – | no |
 | M5 Benchmark + real-model scenario | Labelled corpus (≥30/class) + benign ≥200 traces, second-party labels, FN/FP with Wilson intervals, baselines; latency bench (p50/p95/p99, cold/warm, concurrency, FULL vs NORMAL); Cedar differential test on shared tool/scope subset (deferred from M1, DEC-21); second blind-labeller pass for the extended fixture (any_in, string[], agents, equals/in/max_length, domain_exact, host accept, session_tainted opt-in, monitor_only); real-LLM injection scenario (A-15, owner-approved model) | `npm run bench`, `npm run eval` | – | – | **independent review gate** | – | – | – | no |
@@ -30,19 +30,19 @@ Budget: 5 implement→verify passes per milestone, 3 attempts per failing check.
 
 | ID | Criterion (measurable) | State | Evidence |
 |---|---|---|---|
-| A-01 | Denied tool function invoked 0 times (call counter); result carries decision_id and reason_code; `explain` shows rule id | Untested | – |
+| A-01 | Denied tool function invoked 0 times (call counter); result carries decision_id and reason_code; `explain` shows rule id | Verified (M2, in-process guard) | guard tests: denied tool invoked 0 times for default-deny, rule-deny, unknown-tool, tainted, invalid args; QA black-box G-deny-* all PASS; decision row visible to the tool during execution; snapshot identity/mutation tests |
 | A-02 (replaced) | Same DecisionRequest ⇒ byte-identical decision over 1000 runs, shuffled rule order, on Windows (+Linux if available) | Partially verified (M1) | Property tests (shuffle incl. policy_version equality, 1000-repeat determinism) pass via `npm test`; Windows only, deepEqual rather than byte-compare; Linux not run |
 | A-03 | `prysm explain <id>` prints rule/version/reason/redacted args; exit 0 known, non-zero unknown | Untested | – |
 | A-04 | `npm run bench` reports p50/p95/p99 over ≥10,000 evals vs hypotheses (decide p99 <1 ms @200 rules; guard overhead with sync audit <10 ms; both recorded even if missed) | Untested | – |
-| A-05 | Canary secret absent from args/results/model_meta/errors/stack/engine_error/CLI/export/report/digest | Untested | – |
-| A-06 | Forced engine exception ⇒ all calls deny, `engine_error` event; no fail-open on engine error | Untested | – |
+| A-05 | Canary secret absent from args/results/model_meta/errors/stack/engine_error/CLI/export/report/digest | Verified (M2) | canary scan of .db/-wal/-shm/.key, sink, exports, errors in 12+ encodings: 0 hits (repo test + independent QA CAN-matrix with positive control) |
+| A-06 | Forced engine exception ⇒ all calls deny, `engine_error` event; no fail-open on engine error | Verified (M2) | forced engine error / non-loaded policy / hmac throw => blocked unavailable, no execution, engine_error row; never fail-open |
 | A-07 | ≥15 precedence cases + property tests pass; any rule change changes version hash; semantically-equal files same hash | Partially verified (M1) | 27 numbered behaviour cases + property tests pass; rule reorder keeps version, mode change changes it (pending final M1 gate re-verification) |
 | A-08 | Report/viewer empty on empty store; after demo count equals `prysm events --count`; no seeded fixtures in runtime path (grep) | Untested | – |
 | A-09 | Fresh clone → first blocked call time recorded (target ≤30 min) | Untested | – |
 | A-10 | Swapping example model adapter leaves policy unchanged | Untested | – |
 | A-11 | Docs state limits: only routed calls enforced; proxy must be sole path; provenance asserted; advisory heuristics; tamper-evident not tamper-proof | Untested | – |
 | A-12 | Benchmark per DEC-08 executed; FN/FP + intervals + corpus sizes reported; thresholds met or misses reported | Untested | – |
-| A-13 | `verify-chain` detects modified, deleted-middle, reordered rows; tail deletion detected via anchor; concurrent writers yield linear chain | Untested | – |
+| A-13 | `verify-chain` detects modified, deleted-middle, reordered rows; tail deletion detected via anchor; concurrent writers yield linear chain | Verified (M2) | tamper tests (mutate, delete-middle, reorder, tail delete via anchor, rewrite via anchor, forged checkpoint), 5-6 process concurrent writers linear chain; limits documented: unkeyed chain needs external anchor |
 | A-14 | (if live viewer built) wrong Host/Origin ⇒ 403, missing token ⇒ 401, XSS payload rendered as text, traversal ⇒ 404 | Untested | – |
 | A-15 | Real-LLM injection scenario — NOT PERFORMED (owner chose mock only, DEC-16); mock-scripted scenario only, labelled unit-level | Out of scope by owner decision | n/a |
 | A-16 | Unknown tool ⇒ deny; unregistered/changed tool schema hash ⇒ deny; extra args rejected | Partially verified (M1) | unknown tool/extra args denied (tests + corpus); `schema_hash` is stored but NOT enforced until M3 — untested |
@@ -60,8 +60,10 @@ Budget: 5 implement→verify passes per milestone, 3 attempts per failing check.
 | T-1.2 | Snapshot/canonicaliser + matchers | M1 | T-1.1 | A-17 (part) | tests | pending | backend-engineer | `src/core/canon*, matchers*` |
 | T-1.3 | `decide()` + explanations + limits | M1 | T-1.1 | A-02, A-07 | tests | pending | backend-engineer | `src/core/decide*` |
 | T-1.4 | Adversarial corpus v1 (labels by qa-engineer) | M1 | T-1.1 spec | corpus ≥ start | `npm run corpus` | pending | qa-engineer proposes, lead writes | `eval/` |
-| T-2.x | Store, chain, guard, redaction, taint, fault-injection | M2 | M1 | A-01,05,06,13,16,19 | tests | pending | backend-engineer | `src/store, src/guard` |
+| T-2.x | Store, chain, guard, redaction, taint, fault-injection | M2 | M1 | A-01,05,06,13,16,19 | tests | done (gate passed) | backend-engineer | `src/store, src/guard` |
 | T-3.x | MCP proxy + e2e | M3 | M2 | A-18 | e2e | pending | backend-engineer | `src/proxy` |
+| T-4.5 | Coalesce repeated deny rows / per-session budgets (M2-21) | M4 | M2 | after deny flood a distinct rule-denied call is still recorded | tests | pending | backend-engineer | `src/guard` |
+| T-6.5 | ACL principal full-name/SID compare (M2-22a); tools_replaced identity (M2-22b) | M6 | M2 | tests | tests | pending | backend-engineer | `src/store` |
 | T-4.x | CLI + static report | M4 | M2 | A-03,08 | tests | pending | backend-engineer + frontend-engineer | `src/cli, src/report` |
 | T-5.x | Benchmark, benign set, real-LLM scenario | M5 | M3 | A-04,12,15 | bench/eval | pending | ai-engineer + qa-engineer | `bench/, eval/, examples/` |
 | T-6.x | Docs, live viewer (optional), final reviews | M6 | M5 | A-09,10,11,14 | review | pending | lead | `docs/, README` |
