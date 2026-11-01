@@ -134,11 +134,21 @@ test('9.4 SIGTERM runs the orderly shutdown (anchor line, exit 0)', { skip: proc
   assert.match(cli.stderrText(), /"prysm":"anchor"/);
 });
 
-test('9.4 exit 70 on an uncaught exception (test seam) with a proxy_fatal line and no message content', async () => {
-  const cli = startCli({ childEnv: { PRYSM_PROXY_TEST_FATAL: '1' } });
-  assert.equal(await cli.exited, 70);
-  assert.match(cli.stderrText(), /\{"prysm":"proxy_fatal"\}/);
-  assert.ok(!cli.stderrText().includes('test fatal'));
+test('9.4/10.3 fatal() seam: proxy_fatal line without message content and the server process is gone', async () => {
+  const env = makeEnv();
+  const l = startLib({ env });
+  await l.client.handshake();
+  const pid = Number(readFileSync(join(env.dir, 'pid.txt'), 'utf8'));
+  const alive = (): boolean => { try { process.kill(pid, 0); return true; } catch { return false; } };
+  assert.ok(alive());
+  try {
+    l.handle.fatal();
+    await waitFor(() => !alive(), 5000);
+    assert.equal(alive(), false, 'fixture server pid is gone');
+    assert.match(l.stderrText(), /\{"prysm":"proxy_fatal"\}/);
+  } finally {
+    try { process.kill(pid); } catch { /* already gone */ }
+  }
 });
 
 // ---------------------------------------------------------------- §9.5 guard-routed rows
@@ -415,4 +425,80 @@ test('9.5 the decision id in a not-ready block refers to a guard-written row (re
   assert.equal(row.reason_code, 'unknown_tool');
   assert.equal((row.outcome as Json)['reason'], 'not_ready');
   s.close();
+});
+
+test('10.1 CLI: a synchronous spawn throw (npx.cmd on Windows) exits 3, other config errors stay 2', { skip: process.platform !== 'win32' ? 'npx.cmd EINVAL is Windows-only' : false }, async () => {
+  const env = makeEnv();
+  const { spawn } = await import('node:child_process');
+  const { BIN } = await import('../support/proxy-kit.ts');
+  const run = async (extra: string[], tail: string[]): Promise<{ code: number | null; err: string }> => {
+    const p = spawn(process.execPath, ['--no-warnings=ExperimentalWarning', BIN, '--policy', env.policyPath, '--db', env.dbPath, '--key-path', env.keyPath, ...extra, '--', ...tail], { stdio: ['pipe', 'pipe', 'pipe'] });
+    let err = '';
+    p.stderr.on('data', (c: Buffer) => { err += c.toString(); });
+    const code = await new Promise<number | null>((r) => { p.on('close', r); });
+    return { code, err };
+  };
+  const r = await run([], ['npx.cmd', '--version']);
+  assert.equal(r.code, 3);
+  assert.ok(!r.err.includes('npx'));
+  assert.equal((await run(['--list-mode', 'bogus'], ['npx.cmd'])).code, 2);
+  assert.equal((await run(['--allow-methods', 'tools/call'], ['npx.cmd'])).code, 2);
+});
+
+test('10.2 a client that never drains: bounded-time shutdown, proxy_client_stalled, anchor line, exit 1', async () => {
+  const env = makeEnv();
+  const gate = { open: true };
+  const held: [Buffer, () => void][] = [];
+  let client: Client | undefined;
+  const clientIn = new PassThrough();
+  const out = new Writable({ highWaterMark: 1024, write(c: Buffer, _e, cb) { if (gate.open) { client?.feed(c); cb(); } else held.push([c, cb]); } });
+  const l = startLib({ env, clientIn, proxy: { clientOut: out, clientStallMs: 800, killGraceMs: 500 } });
+  client = l.client;
+  await l.client.handshake();
+  gate.open = false;
+  const t0 = Date.now();
+  l.client.send({ jsonrpc: '2.0', id: 500, method: 'tools/call', params: { name: 'weird', arguments: { mode: 'flood' }, _meta: { progressToken: 'mine' } } });
+  assert.equal(await l.done, 1);
+  assert.ok(Date.now() - t0 < 8000, 'bounded');
+  assert.match(l.stderrText(), /\{"prysm":"proxy_client_stalled"\}/);
+  assert.match(l.stderrText(), /"prysm":"anchor"/);
+});
+
+test('10.5 posture list caps: more than 32 allow-methods / allow-server-requests entries are rejected', () => {
+  const many = Array.from({ length: 33 }, (_, i) => 'res' + String(i) + '/x');
+  assert.throws(() => startLib({ env: makeEnv(), proxy: { allowMethods: many } }), /bad_option/);
+  assert.throws(() => startLib({ env: makeEnv(), proxy: { allowServerRequests: many } }), /bad_option/);
+});
+
+test('10.4 oversize: a concurrently pending call is failed once and its late reply is dropped as an orphan', async () => {
+  const env = makeEnv();
+  const l = startLib({ env, proxy: { maxServerLineBytes: 100_000 } });
+  await l.client.handshake();
+  const slowEcho = l.client.call('echo', { text: 'late', delay_ms: 500 }, 71);
+  await waitFor(() => callCount(env, 'echo') === 1);
+  const big = await l.client.call('big', { bytes: 200_000 });
+  assert.match(toolText(big), /^Tool error/);
+  assert.match(toolText(await slowEcho), /^Tool error/);
+  await waitFor(() => /proxy_orphan_response/.test(l.stderrText()), 3000);
+  assert.equal(l.client.messages.filter((m) => m['id'] === 71).length, 1);
+  await finish(l);
+});
+
+test('10.8 proxy level: a raw non-policy tool name on the not-ready path yields tool_hmac and never appears in the DB', async () => {
+  const env = makeEnv();
+  const l = startLib({ env, proxy: { readyTimeoutMs: 300 } });
+  await l.client.request('initialize', { protocolVersion: '2025-03-26', capabilities: {}, clientInfo: { name: 't', version: '0' } });
+  const raw = 'RAW-secret-tool-name-b17c';
+  const r = await l.client.call(raw, {});
+  const id = /decision ([0-9a-f-]{36})/.exec(toolText(r))?.[1] as string;
+  await finish(l);
+  const s = openAudit(env);
+  const row = rowsOf(s).find((x) => x.id === id) as { tool: string; outcome: Json };
+  assert.equal(row.tool, '?');
+  assert.equal(row.outcome['tool_hmac'], s.hmac('tool', raw));
+  assert.equal(row.outcome['reason'], 'not_ready');
+  s.close();
+  const dump = [env.dbPath, env.dbPath + '-wal'].filter((p) => existsSync(p)).map((p) => readFileSync(p).toString('latin1')).join('');
+  assert.ok(!dump.includes(raw));
+  assert.ok(!l.stderrText().includes(raw));
 });

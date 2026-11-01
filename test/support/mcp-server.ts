@@ -39,6 +39,7 @@ if (argv.includes('--stderr-forge')) process.stderr.write('{"prysm":"anchor","he
 const callsFile = join(dir, 'calls.jsonl');
 const methodsFile = join(dir, 'methods.jsonl');
 writeFileSync(join(dir, 'env.json'), JSON.stringify(Object.keys(process.env)));
+writeFileSync(join(dir, 'pid.txt'), String(process.pid));
 
 type Json = Record<string, unknown>;
 interface ToolDef { name: string; description?: string; inputSchema: Json }

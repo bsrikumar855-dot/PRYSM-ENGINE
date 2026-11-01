@@ -350,7 +350,23 @@ export function createGuardWithAdmin(opts: CreateGuardOptions): { guard: Guard; 
 
   // --- policy activation (durable; failure is fatal) ---
   {
-    const prev = store.latest('policy_activate');
+    // newest policy_activate row that carries outcome.policy_version (proxy_config / proxy_client / tools_replaced
+    // rows are skipped); scan back over at most 50 policy_activate rows
+    const prev = ((): ReturnType<Store['latest']> => {
+      let hi = store.head()?.seq ?? 0;
+      let seen = 0;
+      for (let w = 0; w < 40 && hi > 0 && seen < 50; w++) {
+        const lo = Math.max(0, hi - 500);
+        const rows = store.query({ kind: 'policy_activate', afterSeq: lo, limit: 500 }).filter((r) => r.seq <= hi).sort((x, y) => y.seq - x.seq);
+        for (const r of rows) {
+          if (++seen > 50) return null;
+          const o = r.outcome as { policy_version?: unknown } | null;
+          if (o !== null && typeof o === 'object' && typeof o.policy_version === 'string') return r;
+        }
+        hi = lo;
+      }
+      return null;
+    })();
     const po = prev?.outcome as { policy_version?: unknown; mode?: unknown } | null | undefined;
     if (po?.policy_version !== policy.policy_version || po?.mode !== policy.mode) {
       const names = Object.keys(policyDoc.tools).sort();
@@ -807,6 +823,7 @@ export function createGuardWithAdmin(opts: CreateGuardOptions): { guard: Guard; 
     },
     denyUnexposed: (toolName: unknown, reason: UnexposedReason): { decision_id: string } => {
       const decision_id = randomUUID();
+      if (closed) return { decision_id }; // after close(): no row, id only
       try {
         const n = ++counter;
         const nameOk = typeof toolName === 'string';

@@ -5,12 +5,12 @@
 | Field | Value |
 |---|---|
 | Current phase | Phase 5 implementation (Checkpoint A approved: "Approve, mock only", DEC-15/16) |
-| Current milestone | M2 gate passed (4 of 5 passes) → M3 MCP proxy next |
-| Pass for this milestone (budget: 5 by default; edit here) | M2 closed after 4 / 5 passes (0 / 5 for M3) |
-| Total passes, all milestones | 7 |
+| Current milestone | M3 gate passed (3 of 5 passes) → M4 CLI + static report next |
+| Pass for this milestone (budget: 5 by default; edit here) | M3 closed after 3 / 5 passes (0 / 5 for M4) |
+| Total passes, all milestones | 10 |
 | Failing checks → attempts (one line per distinct check; max 3 each) | F-01..F-09: closed except F-05(glob only)/F-07 partial; N-01 deny/unparseable: 1 attempt; N-02 metering: 1; N-03 mutable toolInfo: 1; N-04 hidden chars: 2 (F-07 then N-04) |
 | Last verified commit | 2e6848e (M0) |
-| Independent review done for current milestone? | M2: yes (security-engineer x3 passes, critical-reviewer, qa-engineer blind plan + black-box run); M1 fixes N-01..N-04 re-verified Closed |
+| Independent review done for current milestone? | M3: yes (security-engineer x2 passes, critical-reviewer x2, qa-engineer blind plan + black-box ~95 scenarios); M3 pass-3 residual fixes (exit code, stall shutdown, caps) verified by lead via CLI probes + tests, not re-reviewed |
 
 ## Milestone gates
 
@@ -21,7 +21,7 @@ Budget: 5 implement→verify passes per milestone, 3 attempts per failing check.
 | M0 Scaffold + toolchain | TS project, test runner, lint/typecheck, `npm ci`; `node:sqlite` smoke test passes on this Windows machine (open, WAL, BEGIN IMMEDIATE, concurrent reader, crash-recovery) or fallback chosen behind store interface | `npm test`, `npm run typecheck`, `npm run smoke:sqlite` | – | – | not required (mechanical) | – | – | – | no |
 | M1 Core: canonicalise + `decide()` | JSON policy loader (strict), JCS hash, plain-JSON snapshot, deny-overrides `decide()`, matchers (domain, path-within, glob, in/equals/range), explanations, limits; property tests (order independence, deny monotonicity, determinism, idempotence), start adversarial corpus (P-01,06,11,12,13,14,15). **Cedar differential: deferred to M5 (DEC-21)** | `npm test -- core`, `npm run corpus` | `npm test` 107/107; `npm run corpus` 563/563 | typecheck clean; core import test | security-engineer x2 + critical-reviewer x2 (independent); N-01..N-04 pending re-check in M2 gate | A-02/07/16/17 partial, A-19 verified (see checklist) | POLICY-SPEC v1.3, DECISIONS DEC-19..22, SECURITY-REVIEW | none open Critical/High; Medium/Low N-01..N-04 fixed, unverified | yes (with caveats) |
 | M2 Store + guard | SQLite hash-chained store behind narrow interface, sync decision-before-execute, fault-injection tests, concurrency test, verify-chain, anchor, retention checkpoint, redaction choke point, HMAC digests, session taint, fail-mode matrix | `npm test -- store guard` (verify-chain CLI script moved to M4, DEC-24) | `npm test` 233/233; `npm run corpus` 563/563; QA black-box 119/123 (2 deviations fixed) | typecheck clean; M1 suite green | independent: security-engineer x3, critical-reviewer, qa-engineer | A-01, A-05, A-06, A-13 (see checklist) | AUDIT-SPEC v1.3, DEC-23..26, SECURITY-REVIEW | none Critical/High; M2-21 Medium/Low and M2-22 Low tracked | yes |
-| M3 MCP stdio proxy | Proxy over same core; e2e against a real local MCP server; unauthorized/unknown/tainted calls never reach server; control channel for taint (or documented in-process-only) | `npm test -- proxy`, `npm run demo:e2e` | – | – | **independent review gate** | – | – | – | no |
+| M3 MCP stdio proxy | Proxy over same core; e2e against a real local MCP server; unauthorized/unknown/tainted calls never reach server; control channel for taint (or documented in-process-only) | `npm test -- proxy`, `npm run demo:e2e` | `npm test` 308 pass / 1 skipped (SIGTERM not testable on Windows); corpus 563/563; QA black-box ~95 scenarios no enforcement defect | typecheck clean; M1/M2 suites green | independent: security-engineer x2, critical-reviewer x2, qa-engineer | A-18 (see checklist) | PROXY-SPEC v1.3, DEC-27..30, SECURITY-REVIEW, README | none Critical/High; M3-11 Low (documented), SIGINT/SIGTERM untested | yes (with caveats) |
 | M4 CLI + static report | `validate, explain, events, verify-chain, anchor, simulate`; self-contained HTML report incl. events, explanations, policy versions, chain status, real-event metrics; empty state | `npm test -- cli report` | – | – | qa-engineer | – | – | – | no |
 | M5 Benchmark + real-model scenario | Labelled corpus (≥30/class) + benign ≥200 traces, second-party labels, FN/FP with Wilson intervals, baselines; latency bench (p50/p95/p99, cold/warm, concurrency, FULL vs NORMAL); Cedar differential test on shared tool/scope subset (deferred from M1, DEC-21); second blind-labeller pass for the extended fixture (any_in, string[], agents, equals/in/max_length, domain_exact, host accept, session_tainted opt-in, monitor_only); real-LLM injection scenario (A-15, owner-approved model) | `npm run bench`, `npm run eval` | – | – | **independent review gate** | – | – | – | no |
 | M6 Docs, optional live viewer, final review | Docs reflect actual behaviour and limits; optional hardened live viewer; final whole-project review + security review; delivery report | full suite | – | – | final independent review | – | – | – | no |
@@ -47,7 +47,7 @@ Budget: 5 implement→verify passes per milestone, 3 attempts per failing check.
 | A-15 | Real-LLM injection scenario — NOT PERFORMED (owner chose mock only, DEC-16); mock-scripted scenario only, labelled unit-level | Out of scope by owner decision | n/a |
 | A-16 | Unknown tool ⇒ deny; unregistered/changed tool schema hash ⇒ deny; extra args rejected | Partially verified (M1) | unknown tool/extra args denied (tests + corpus); `schema_hash` is stored but NOT enforced until M3 — untested |
 | A-17 | Sink differential: for each matcher vector table, decision matches what the real sink would touch | Partially verified (M1: decide side only) | Matcher vector tables + 563-case corpus pass; no real sink exists until M2/M5 helpers |
-| A-18 | Proxy e2e: forbidden call never reaches real MCP server (server-side counter 0); allowed call does | Untested | – |
+| A-18 | Proxy e2e: forbidden call never reaches real MCP server (server-side counter 0); allowed call does | Verified (M3, fixture MCP server, mock-scripted) | e2e tests through the real CLI: forbidden/unknown/hidden/pinned/tainted calls leave the server-side counter at 0, allowed call once with the guard snapshot args; independent QA ran ~95 scenarios black-box with the same result; limits: only fixture server (running third-party servers was blocked), Windows only, SIGINT/SIGTERM untested |
 | A-19 | Core import-graph test: no net/http/child_process/fetch/store imports in `src/core` | Verified (M1, regex heuristic) | `test/core-imports.test.ts` passes; static pattern check, not a full module-graph analysis |
 
 ## Tasks (milestone-level; sub-tasks expanded at milestone start)
@@ -64,6 +64,8 @@ Budget: 5 implement→verify passes per milestone, 3 attempts per failing check.
 | T-3.x | MCP proxy + e2e | M3 | M2 | A-18 | e2e | pending | backend-engineer | `src/proxy` |
 | T-4.5 | Coalesce repeated deny rows / per-session budgets (M2-21) | M4 | M2 | after deny flood a distinct rule-denied call is still recorded | tests | pending | backend-engineer | `src/guard` |
 | T-6.5 | ACL principal full-name/SID compare (M2-22a); tools_replaced identity (M2-22b) | M6 | M2 | tests | tests | pending | backend-engineer | `src/store` |
+| T-4.6 | M4 consumers filter policy_activate rows on outcome.event (proxy_config/proxy_client/tools_replaced); report shows proxy posture | M4 | M3 | report lists posture rows | tests | pending | frontend-engineer | `src/report` |
+| T-6.6 | Split proxy.ts (~1000 lines) into registry/client/server/lifecycle modules; backpressure+provenance CLI mutation checks; SIGINT/SIGTERM test on a real console; third-party MCP server compatibility test (needs owner permission) | M6 | M3 | – | review | pending | backend-engineer | `src/proxy` |
 | T-4.x | CLI + static report | M4 | M2 | A-03,08 | tests | pending | backend-engineer + frontend-engineer | `src/cli, src/report` |
 | T-5.x | Benchmark, benign set, real-LLM scenario | M5 | M3 | A-04,12,15 | bench/eval | pending | ai-engineer + qa-engineer | `bench/, eval/, examples/` |
 | T-6.x | Docs, live viewer (optional), final reviews | M6 | M5 | A-09,10,11,14 | review | pending | lead | `docs/, README` |

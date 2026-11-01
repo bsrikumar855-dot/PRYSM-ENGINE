@@ -97,6 +97,8 @@ export interface ProxyOptions {
   processEnv?: Record<string, string | undefined>;
   listTimeoutMs?: number;
   killGraceMs?: number;
+  /** Output buffer full (no drain) for longer than this => shutdown, exit 1 (default 30000). */
+  clientStallMs?: number;
   storeWrap?: (s: Store) => Store;
 }
 
@@ -208,6 +210,7 @@ export function createProxy(opts: ProxyOptions): ProxyHandle {
   if (listMode !== 'hide' && listMode !== 'show') cfg('bad_option');
   const allowMethods = methodList(opts.allowMethods);
   const allowServerRequests = methodList(opts.allowServerRequests);
+  if (allowMethods.size > 32 || allowServerRequests.size > 32) cfg('bad_option');
   const allowServerNotifications = opts.allowServerNotifications === true;
   const requirePins = opts.requirePins === true;
   for (const n of opts.env ?? []) if (typeof n !== 'string' || !ENV_NAME.test(n)) cfg('bad_option');
@@ -218,6 +221,8 @@ export function createProxy(opts: ProxyOptions): ProxyHandle {
   const killGraceMs = opts.killGraceMs ?? 2000;
   const maxServerLine = opts.maxServerLineBytes ?? MAX_SERVER_LINE;
   if (!Number.isInteger(maxServerLine) || maxServerLine < 1024 || maxServerLine > MAX_SERVER_LINE_LIMIT) cfg('bad_option');
+  const clientStallMs = opts.clientStallMs ?? 30_000;
+  if (!Number.isInteger(clientStallMs) || clientStallMs <= 0) cfg('bad_option');
   const forwardTimeoutMs = opts.forwardTimeoutMs ?? 30_000;
   if (!Number.isInteger(forwardTimeoutMs) || forwardTimeoutMs <= 0) cfg('bad_option');
   if (opts.agentId !== undefined && !IDENT_RE.test(agentId)) cfg('bad_option');
@@ -233,6 +238,7 @@ export function createProxy(opts: ProxyOptions): ProxyHandle {
     hostCtx.scopes = [...opts.scopes];
   }
   const provNames = Object.keys(opts.provenance ?? {});
+  if (provNames.length > 32) cfg('bad_option');
   if (opts.provenance !== undefined && provNames.length > 0) {
     const prov: Record<string, string[]> = {};
     for (const k of provNames) {
@@ -340,9 +346,11 @@ export function createProxy(opts: ProxyOptions): ProxyHandle {
 
   // ---------------------------------------------------------------- output to the client (with backpressure)
   let paused = false;
+  let stallTimer: ReturnType<typeof setTimeout> | undefined;
   const resumeAll = (): void => {
     if (!paused) return;
     paused = false;
+    if (stallTimer !== undefined) { clearTimeout(stallTimer); stallTimer = undefined; }
     opts.clientOut.removeListener('drain', resumeAll);
     opts.clientOut.removeListener('close', resumeAll);
     child.stdout?.resume();
@@ -358,6 +366,13 @@ export function createProxy(opts: ProxyOptions): ProxyHandle {
         opts.clientIn.pause();
         opts.clientOut.once('drain', resumeAll);
         opts.clientOut.once('close', resumeAll);
+        // a client that never drains must not keep the proxy alive
+        stallTimer = setTimeout(() => {
+          stallTimer = undefined;
+          if (shuttingDown) return;
+          proxyLine('proxy_client_stalled');
+          void onClientEnd(1);
+        }, clientStallMs);
       }
     } catch { /* ignore */ }
   };

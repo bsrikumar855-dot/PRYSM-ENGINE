@@ -30,13 +30,11 @@ try {
 } catch (e) {
   const code = e instanceof ArgsError || e instanceof ProxyConfigError ? e.code : 'startup_failed';
   process.stderr.write('prysm-proxy: ' + code + '\n');
-  process.exit(2);
+  process.exit(e instanceof ProxyConfigError && e.code === 'spawn_failed' ? 3 : 2);
 }
 if (handle !== undefined) {
   const h = handle;
   void h.done.then((c) => { exit(c); });
   // orderly shutdown (same path as client EOF): abort, close server stdin, grace, kill tree, anchor line, exit 0
   for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, () => { void h.stop(); });
-  // test seam for the exit-70 path (uncaught exception); inert unless the operator sets it
-  if (process.env['PRYSM_PROXY_TEST_FATAL'] === '1') setImmediate(() => { throw new Error('test fatal'); });
 }

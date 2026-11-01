@@ -2,7 +2,7 @@
 
 **PRYSM** is a deterministic, runtime policy gate for AI agent tool calls. It sits between an agent and its tools, decides allow/deny from a versioned policy (never from prompt text), and records a privacy-aware, hash-chained audit trail.
 
-> **Status: work in progress (MVP, not released).** Milestones M0–M2 are complete and independently reviewed; M3 (MCP proxy) is in its final review; M4 (CLI + static report), M5 (benchmarks, false-positive/negative and latency measurement) and M6 (final review and docs) are not done. No performance or detection-rate claims are made yet because they have not been measured. See `docs/auto-builder/TASKS.md` for the live roadmap and evidence table.
+> **Status: work in progress (MVP, not released).** Milestones M0–M3 are complete and independently reviewed; M4 (CLI + static report), M5 (benchmarks, false-positive/negative and latency measurement) and M6 (final review and docs) are not done. No performance or detection-rate claims are made yet because they have not been measured. See `docs/auto-builder/TASKS.md` for the live roadmap and evidence table.
 
 ## What it does (and does not)
 
@@ -73,7 +73,7 @@ Key flags: `--taint-tools` (retrieval tools whose use taints the session), `--li
 - Launch the real executable or `node <script>`. `.cmd`/`.bat` shims such as `npx.cmd` are not supported (the proxy never uses a shell); they fail to start.
 - Ctrl+C is handled (clean shutdown with an anchor line). A `SIGTERM` sent by another process is a forced terminate on Windows and cannot be intercepted.
 - The server's environment is limited to a small allowlist (`PATH`, `SystemRoot`, `ComSpec`, `PATHEXT`, `windir`, `SystemDrive`, `HOME`, `USERPROFILE`, `TEMP`, `TMP`); pass anything else with `--env NAME`.
-- Very large tool results are capped by `--max-server-line-bytes` (default 16 MiB). An oversize line fails the pending calls but does not stop the proxy.
+- Very large tool results are capped by `--max-server-line-bytes` (default 16 MiB). An oversize line fails **all** pending calls (including healthy concurrent ones, which fail closed after the server already ran them) but does not stop the proxy; raise the cap or avoid huge outputs.
 
 ## Security status
 

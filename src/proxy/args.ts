@@ -15,7 +15,7 @@ export type CliConfig = Omit<ProxyOptions, 'clientIn' | 'clientOut' | 'stderr' |
 const VALUE_FLAGS = new Set([
   '--policy', '--db', '--key-path', '--agent-id', '--policy-sha256', '--taint-tools', '--tool-timeout-ms',
   '--list-mode', '--allow-methods', '--env', '--user-id', '--scopes', '--provenance', '--ready-timeout-ms',
-  '--allow-server-requests', '--max-server-line-bytes', '--forward-timeout-ms',
+  '--allow-server-requests', '--max-server-line-bytes', '--forward-timeout-ms', '--client-stall-ms',
 ]);
 const BOOL_FLAGS = new Set(['--require-pins', '--allow-server-notifications']);
 
@@ -59,7 +59,7 @@ export function parseArgs(argv: readonly string[]): CliConfig {
   }
   const tt = seen.get('--taint-tools');
   if (tt !== undefined) out.taintTools = csv(tt);
-  for (const [flag, key] of [['--tool-timeout-ms', 'toolTimeoutMs'], ['--ready-timeout-ms', 'readyTimeoutMs'], ['--forward-timeout-ms', 'forwardTimeoutMs'], ['--max-server-line-bytes', 'maxServerLineBytes']] as const) {
+  for (const [flag, key] of [['--tool-timeout-ms', 'toolTimeoutMs'], ['--ready-timeout-ms', 'readyTimeoutMs'], ['--forward-timeout-ms', 'forwardTimeoutMs'], ['--client-stall-ms', 'clientStallMs'], ['--max-server-line-bytes', 'maxServerLineBytes']] as const) {
     const v = seen.get(flag);
     if (v !== undefined) {
       if (!/^[1-9][0-9]{0,9}$/.test(v)) throw new ArgsError('bad_value');

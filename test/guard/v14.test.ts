@@ -7,6 +7,7 @@ import { openStore } from '../../src/store/index.ts';
 import { POLICY_DOC } from '../support/policy.ts';
 import { KEY } from '../support/guard-kit.ts';
 import { cleanup, tmpDir, dbPath } from '../support/tmp.ts';
+import { existsSync, readFileSync } from 'node:fs';
 
 after(cleanup);
 type Json = Record<string, unknown>;
@@ -75,5 +76,55 @@ test('setTools meta is merged into the tools_replaced row; core fields win; inva
   }
   assert.equal(store.count(), n);
   assert.equal((await g.guard.call('note', { text: 't' })).ok, true, 'registry unchanged after rejected meta');
+  store.close();
+});
+
+test('denyUnexposed: tool_hmac is the keyed HMAC of the raw name, and the raw name never reaches the DB files', () => {
+  const dir = tmpDir();
+  const store = openStore({ path: dbPath(dir), hmacKey: KEY });
+  const policy = loadPolicy(JSON.stringify(POLICY_DOC('enforce')));
+  const g = createGuardWithAdmin({ policy, store, agentId: 'a', tools: {}, secondarySink: () => undefined });
+  const raw = 'RAW-NAME-not-in-policy-7f3a';
+  const r = g.admin.denyUnexposed(raw, 'tool_not_offered');
+  const row = store.iterate({ limit: 100 }).find((x) => x.id === r.decision_id) as { tool: string; outcome: Json };
+  assert.equal(row.tool, '?');
+  assert.equal(row.outcome['tool_hmac'], store.hmac('tool', raw));
+  assert.match(String(row.outcome['tool_hmac']), /^[0-9a-f]{32}$/);
+  store.close();
+  const p = dbPath(dir);
+  const dump = [p, p + '-wal'].filter((f) => existsSync(f)).map((f) => readFileSync(f).toString('latin1')).join('');
+  assert.ok(!dump.includes(raw));
+});
+
+test('denyUnexposed after guard.close() writes no row and returns an id only', () => {
+  const { store, g } = mk();
+  g.guard.close();
+  const n = store.count();
+  const r = g.admin.denyUnexposed('read_file', 'schema_changed');
+  assert.match(r.decision_id, /^[0-9a-f-]{36}$/);
+  assert.equal(store.count(), n);
+  store.close();
+});
+
+test('activation lookup scans back over policy_activate rows and skips ones without outcome.policy_version', () => {
+  const dir = tmpDir();
+  const p = dbPath(dir);
+  const policy = loadPolicy(JSON.stringify(POLICY_DOC('enforce')));
+  const mkGuard = (store: ReturnType<typeof openStore>) => createGuardWithAdmin({ policy, store, agentId: 'a', tools: {}, secondarySink: () => undefined });
+  const store = openStore({ path: p, hmacKey: KEY });
+  mkGuard(store);
+  const activations = (): number => store.iterate({ limit: 100000 }).filter((r) => r.kind === 'policy_activate' && typeof (r.outcome as Json | null)?.['policy_version'] === 'string' && (r.outcome as Json)['event'] === undefined).length;
+  assert.equal(activations(), 1);
+  for (let i = 0; i < 10; i++) {
+    store.append({ id: 'cfg-' + String(i), kind: 'policy_activate', agent_id: 'a', effect: null, tool: null, enforcement: 'enforced', policy_version: policy.policy_version, engine_version: 'prysm-engine/1', outcome: { event: i % 2 ? 'proxy_client' : 'proxy_config' } });
+  }
+  mkGuard(store); // restart: the proxy_config/proxy_client rows are skipped, the earlier activation row matches
+  assert.equal(activations(), 1, 'no redundant activation row');
+  // beyond 50 policy_activate rows without a version the lookup gives up and writes a fresh activation
+  for (let i = 0; i < 60; i++) {
+    store.append({ id: 'cfg2-' + String(i), kind: 'policy_activate', agent_id: 'a', effect: null, tool: null, enforcement: 'enforced', policy_version: policy.policy_version, engine_version: 'prysm-engine/1', outcome: { event: 'proxy_config' } });
+  }
+  mkGuard(store);
+  assert.equal(activations(), 2);
   store.close();
 });
