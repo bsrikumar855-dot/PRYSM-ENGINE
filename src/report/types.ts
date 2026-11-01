@@ -6,7 +6,7 @@ import type { LoadedPolicy } from '../core/index.ts';
 export interface BuildReportOptions {
   /** Optional policy used for rule detail; shown only for rows whose policy_version equals policy.policy_version. */
   policy?: LoadedPolicy;
-  /** Window size for the decisions explorer and the event log (default 500, clamped to 1..5000). */
+  /** Window size for the decisions explorer and the event log (default 200, clamped to 1..5000). */
   maxEvents?: number;
   anchor?: Anchor;
   expectPruned?: { through_seq: number; last_hash: string } | { through_seq: number; last_hash: string }[];
@@ -65,6 +65,10 @@ export interface DecisionView {
   will_execute: boolean;
   dropped_before: string | null;
   verdict: string;
+  /** How the cause of a block was determined: deny_n, policy, or legacy (unknown split). */
+  cause_source: 'deny_n' | 'policy' | 'legacy' | 'not_applicable';
+  /** Ids named as the cause of a block (deny rules only). */
+  cause_ids: string[];
   why: string;
   results: ResultView[];
   /** 'shown' = rules below come from the supplied policy (versions equal). */
@@ -140,7 +144,12 @@ export interface Metrics {
   unknown_tool_names: number;
   top_denied_tools: CountRow[];
   top_rules: CountRow[];
+  /** Distinct non-null session ids among decisions that do not start with eph-. */
   sessions: number;
+  /** Distinct guard-issued ephemeral per-call session ids (eph-...). */
+  ephemeral_sessions: number;
+  /** Enforced denied_by_rule rows left out of top_rules because the deny/permit split is unknown. */
+  top_rules_excluded: number;
   tainted_decisions: number;
   tainted_share: number | null;
   dropped_before_total: number;

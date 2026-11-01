@@ -146,8 +146,13 @@ export function recount(store: Store) {
     all, dec, enforced, denied,
     wouldBe: dec.filter((e) => e.effect === 'deny' && e.enforcement === 'monitor_only'),
     topTools: tally(denied.map((e) => e.tool).filter((x): x is string => x !== null && x !== '?')).slice(0, 10),
-    topRules: tally(denied.flatMap((e) => (Array.isArray(e.rule_ids) ? e.rule_ids as string[] : [])).filter((r) => !r.startsWith('…+'))).slice(0, 10),
-    sessions: new Set(dec.map((e) => e.session_id).filter((s) => s !== null)).size,
+    topRules: tally(denied.filter((e) => e.reason_code === 'denied_by_rule').flatMap((e) => {
+      const dn = (e.outcome as { deny_n?: unknown } | null)?.deny_n;
+      return typeof dn === 'number' ? (e.rule_ids as string[]).slice(0, dn) : [];
+    }).filter((r) => !r.startsWith('…+'))).slice(0, 10),
+    ruleExcluded: denied.filter((e) => e.reason_code === 'denied_by_rule' && typeof (e.outcome as { deny_n?: unknown } | null)?.deny_n !== 'number').length,
+    sessions: new Set(dec.map((e) => e.session_id).filter((s): s is string => s !== null && !s.startsWith('eph-'))).size,
+    ephemeral: new Set(dec.map((e) => e.session_id).filter((s): s is string => s !== null && s.startsWith('eph-'))).size,
     tainted: dec.filter((e) => e.session_tainted === 1).length,
     lat,
     nearest: (p: number): number | null => (lat.length === 0 ? null : (lat[Math.ceil((p * lat.length) / 100) - 1] as number)),

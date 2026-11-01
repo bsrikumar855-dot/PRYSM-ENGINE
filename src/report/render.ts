@@ -95,9 +95,9 @@ code.hash{display:inline-block;max-width:100%;overflow-wrap:anywhere;word-break:
 .verdict p{max-width:75ch}
 .verdict .head{font-size:1.4rem;line-height:1.3;font-weight:700;margin:0 0 4px}
 .verdict.ok{color:var(--fg-ok);background:var(--bg-ok);border-color:var(--fg-ok)}
-.verdict.bad{color:var(--fg-bad);background:var(--bg-bad);border-color:var(--fg-bad);border-left-width:14px}
+.verdict.bad{color:var(--fg-bad);background:var(--bg-bad);border-color:var(--fg-bad)}
 nav.toc ul{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:0 20px}
-nav.toc a{display:inline-block;padding:2px 0;min-height:28px;line-height:24px}
+nav.toc a{display:inline-block;padding:4px 0;min-height:32px;line-height:24px}
 dl.summary{display:flex;flex-wrap:wrap;gap:8px 32px;margin:16px 0 0}
 dl.summary div{min-width:0}
 dl.summary dt{color:var(--fg-muted);font-size:.9rem}
@@ -127,7 +127,7 @@ dl.legend dt{font-weight:600;margin-top:6px}
 dl.legend dd{margin:0}
 ul.plain{margin:6px 0;padding-left:20px}
 footer{padding:8px 0 32px;color:var(--fg-muted)}
-@media (max-width:480px){dl.facts{grid-template-columns:1fr;gap:0}dl.facts dd{margin-bottom:8px}h1{font-size:1.35rem}td a{padding:11px 0}nav.toc a{padding:10px 0}}
+@media (max-width:480px){dl.facts{grid-template-columns:1fr;gap:0}dl.facts dd{margin-bottom:8px}h1{font-size:1.35rem}td a{padding:11px 0}nav.toc a{padding:10px 0;min-height:44px}}
 @media print{:root{--bg-page:#f8f9fb;--bg-surface:#f8f9fb;--fg-text:#1c2128;--fg-muted:#4b5563;--rule:#c8cfd8;--fg-accent:#1d5bb8;--fg-ok:#0e5a2b;--bg-ok:#e3f1e7;--fg-bad:#8b1a1a;--bg-bad:#f8e6e6}
 .scroll,.scroll.tall{overflow:visible;max-height:none}thead th{position:static}.skip,nav.toc{display:none}
 .h-short{display:none}.h-full{display:inline}article.detail{break-inside:avoid}table{font-size:.8rem}}
@@ -135,7 +135,7 @@ footer{padding:8px 0 32px;color:var(--fg-muted)}
 
 const CSP = "default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'";
 
-const CODE_HELP: Record<string, string> = {
+export const CODE_HELP: Record<string, string> = {
   hash_mismatch: 'row content does not match its stored hash (the row was modified)',
   prev_mismatch: 'row does not link to the previous row (rows removed, reordered or replaced)',
   seq_gap: 'a sequence number is missing (rows were removed)',
@@ -210,12 +210,17 @@ function postureHtml(title: string, p: PostureView | null, absent: string): stri
 
 function banner(d: ReportData): string {
   const v = d.verify;
+  const w = v.warnings.length;
+  const warnWordHtml = w === 1 ? 'warning' : 'warnings';
+  const listedHtml = w > 0 ? ' (listed under Integrity and posture)' : '';
+  const warnHtml = `<p>${num(w)} ${warnWordHtml}${listedHtml}.</p>`;
+  const devHtml = d.allow_pruned ? '<p><strong>Development flag:</strong> pruned history accepted without an expected checkpoint.</p>' : '';
   if (v.ok) {
     const anchorHtml = d.anchor_supplied ? '' : '<p>No external anchor was supplied. See “Integrity and posture” for what that means.</p>';
     const rowWordHtml = v.count === 1 ? 'row' : 'rows';
     const emptyHtml = v.count === 0 ? ' (the chain is empty)' : '';
     return `<div class="verdict ok" role="status"><p class="head">OK: chain verification passed</p>` +
-      `<p>${num(v.count)} ${rowWordHtml} checked${emptyHtml}, no errors.</p>${anchorHtml}</div>`;
+      `<p>${num(v.count)} ${rowWordHtml} checked${emptyHtml}, no errors.</p>${warnHtml}${devHtml}${anchorHtml}</div>`;
   }
   const seen = new Set<string>();
   const codesHtml = v.errors.filter((e) => (seen.has(e.code) ? false : (seen.add(e.code), true))).slice(0, 8)
@@ -224,7 +229,7 @@ function banner(d: ReportData): string {
   const errWordHtml = n === 1 ? 'error' : 'errors';
   return `<div class="verdict bad" role="alert"><p class="head">FAILED: chain verification found ${num(n)} ${errWordHtml}</p>` +
     '<p>The audit log was modified after it was written, or the chain is incomplete. Compare against a stored anchor with <code>prysm verify-chain</code>.</p>' +
-    `<p>Error codes: ${codesHtml}.</p></div>`;
+    `<p>Error codes: ${codesHtml}.</p>${warnHtml}${devHtml}</div>`;
 }
 
 function hashTable(caption: string, headers: { label: string; cls?: string }[], list: { a: number; b: number | null; hash: string }[]): string {
@@ -317,6 +322,12 @@ function renderOverview(d: ReportData): string {
   const dropHtml = m.dropped_before_total === 0
     ? '<p>Dropped events: 0. No best-effort audit rows were dropped.</p>'
     : `<p><strong>Dropped events: ${num(m.dropped_before_total)}.</strong> Best-effort audit rows were dropped before later rows were written (sum of <code>dropped_before</code>).</p>`;
+  const exN = m.top_rules_excluded;
+  const lackHtml = exN === 1 ? 'row lacks' : 'rows lack';
+  const isHtml = exN === 1 ? 'is' : 'are';
+  const excludedHtml = exN > 0
+    ? `<p><strong>${num(exN)} ${lackHtml} the deny/permit split</strong> and ${isHtml} left out of the top rules table. Rows written before the guard recorded the split cannot say which matched rule caused the block.</p>`
+    : '';
   const toolRows: CountRow[] = m.unknown_tool_names > 0
     ? [...m.top_denied_tools, { name: 'unknown tool names (hashed)', count: m.unknown_tool_names }]
     : m.top_denied_tools;
@@ -326,7 +337,7 @@ function renderOverview(d: ReportData): string {
     countTable('Decisions by enforcement', 'Enforcement', m.by_enforcement, m.decisions_total),
     reasonTable(m.reason_classes, m.decisions_total),
     countTable('Top tools among enforced denies (up to 10)', 'Tool', toolRows, null),
-    countTable('Top rules among enforced denies (up to 10)', 'Rule id', m.top_rules, null),
+    countTable('Top deny rules among enforced blocks (up to 10)', 'Rule id', m.top_rules, null),
     countTable('Tool-result outcomes', 'Outcome', resultsRows.filter((r) => r.count > 0 || r.name !== 'other'), m.tool_results.total),
     m.dropped_before_by_class.length > 0 ? countTable('Dropped events by row class', 'Class', m.dropped_before_by_class, null) : '',
   ].join('');
@@ -336,13 +347,14 @@ function renderOverview(d: ReportData): string {
     dlItem('Denied (enforced)', num(m.denied)),
     dlItem('Would-be denied (monitor_only)', num(m.would_be_denied)),
     dlItem('Deny rate (enforced decisions)', esc(rate(m.denied, m.enforced_decisions))),
-    dlItem('Sessions with decisions', num(m.sessions)),
+    dlItem('Named sessions with decisions', num(m.sessions)),
+    dlItem('Ephemeral per-call sessions', num(m.ephemeral_sessions)),
     dlItem('Decisions in tainted sessions', esc(rate(m.tainted_decisions, m.decisions_total))),
     dlItem('Fail-open', 'fail-open events are not stored: see stderr'),
   ].join('');
   return `<section id="overview" aria-labelledby="h-overview"><h2 id="h-overview">Overview</h2>${coverHtml}` +
     '<p class="muted">Counts cover the scanned rows, not only the windows shown further down. A deny in monitor_only mode was recorded but not enforced, so it is counted separately.</p>' +
-    `<dl class="facts">${factsHtml}</dl>${dropHtml}<div class="grid2">${tablesHtml}</div></section>`;
+    `<dl class="facts">${factsHtml}</dl>${dropHtml}${excludedHtml}<div class="grid2">${tablesHtml}</div></section>`;
 }
 
 function renderLatency(d: ReportData): string {
@@ -411,7 +423,7 @@ function detailBlock(x: DecisionView): string {
     dlItem('Tool', `<code>${opt(x.tool)}</code>`),
     dlItem('Effect and enforcement', esc(effectLabel(x.effect, x.enforcement))),
     dlItem('Reason', `<code>${opt(x.reason_code)}</code> (class ${esc(x.reason_class)})`),
-    dlItem('Matched rule ids', x.rule_ids.length === 0 ? 'none' : x.rule_ids.map((r) => `<code>${esc(r)}</code>`).join(', ')),
+    dlItem('All matched rule ids (deny rules first)', x.rule_ids.length === 0 ? 'none' : x.rule_ids.map((r) => `<code>${esc(r)}</code>`).join(', ')),
     dlItem('Policy version', x.policy_version === null ? 'none' : hashHtml(x.policy_version)),
     dlItem('Risk', opt(x.risk)),
     dlItem('Session', `<code>${opt(x.session_id)}</code>, tainted: ${esc(taint)}`),
@@ -499,8 +511,9 @@ function renderSummary(d: ReportData): string {
     stat('Denied (enforced)', num(m.denied)),
     stat('Would-be denied (monitor_only)', num(m.would_be_denied)),
     stat('Deny rate', esc(rate(m.denied, m.enforced_decisions))),
-    stat('Sessions', num(m.sessions)),
-  ].join('') + '</dl>';
+    stat('Named sessions', num(m.sessions)),
+  ].join('') + '</dl>' + (d.scan.truncated
+    ? `<p><strong>Metrics cover the newest ${num(d.scan.scanned)} of ${num(d.scan.total)} rows</strong></p>` : '');
 }
 
 /** Renders the self-contained report. Deterministic: depends only on `d`. */
@@ -516,7 +529,7 @@ export function renderReportHtml(d: ReportData): string {
   const summaryHtml = renderSummary(d);
   const coversHtml = d.head === null
     ? 'Covers an empty chain.'
-    : `Covers the chain up to seq ${num(d.head.seq)}, head hash ${fullHtml(d.head.hash)}.`;
+    : `Covers the chain up to seq ${num(d.head.seq)}. Head hash ${fullHtml(d.head.hash)}`;
   let bodyHtml: string;
   let navBlockHtml = `<nav class="toc" aria-label="Report sections"><ul>${navHtml}</ul></nav>`;
   if (d.too_large) {
@@ -536,7 +549,7 @@ export function renderReportHtml(d: ReportData): string {
     `<title>${esc(d.title)} for ${esc(d.db_name)}</title>` + '<style>' + CSS + '</style></head><body>' +
     '<a class="skip" href="#main">Skip to the report</a>' +
     `<header class="top wrap"><h1>${esc(d.title)}</h1>` +
-    `<p class="meta">Generated <time datetime="${esc(gen)}">${esc(gen)}</time> (generated_ms ${num(d.generated_ms)}) from database <code>${esc(d.db_name)}</code>. ${coversHtml}</p>` +
+    `<p class="meta">Generated <time datetime="${esc(gen)}" data-ms="${num(d.generated_ms)}">${esc(gen)}</time> from database <code>${esc(d.db_name)}</code>. ${coversHtml}</p>` +
     `${bannerHtml}${summaryHtml}${navBlockHtml}</header>` +
     `<main id="main" class="wrap">${bodyHtml}</main>` +
     '<footer class="wrap"><p>This file is self-contained: it has no scripts and makes no network requests.</p></footer>' +

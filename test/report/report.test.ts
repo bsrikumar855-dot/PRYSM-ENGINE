@@ -55,12 +55,14 @@ test('A-08 after a real guard run the displayed totals equal an independent stor
   assert.equal(d.metrics.would_be_denied, r.wouldBe.length);
   assert.equal(d.metrics.enforced_decisions, r.enforced.length);
   assert.equal(d.metrics.sessions, r.sessions);
+  assert.equal(d.metrics.ephemeral_sessions, r.ephemeral);
+  assert.equal(d.metrics.top_rules_excluded, r.ruleExcluded);
   assert.equal(d.metrics.tainted_decisions, r.tainted);
   assert.deepEqual(d.metrics.top_denied_tools.map((x) => [x.name, x.count]), r.topTools);
   assert.deepEqual(d.metrics.top_rules.map((x) => [x.name, x.count]), r.topRules);
   assert.equal(d.metrics.by_kind.reduce((a, x) => a + x.count, 0), k.store.count());
   const h = html(k.store);
-  assert.ok(h.includes(`Events, newest first (${String(Math.min(500, k.store.count()))} of ${String(k.store.count())})`));
+  assert.ok(h.includes(`Events, newest first (${String(Math.min(200, k.store.count()))} of ${String(k.store.count())})`));
   const pctTxt = ((r.denied.length / r.enforced.length) * 100).toFixed(1);
   assert.ok(textOf(h).includes(`${String(r.denied.length)} of ${String(r.enforced.length)}, ${pctTxt}%`));
   assert.ok(r.denied.length > 0 && r.wouldBe.length > 0 && r.tainted > 0, 'fixture exercises denies, would-be denies and taint');
@@ -107,15 +109,15 @@ test('metrics: latency percentiles equal an independent nearest-rank on a fixtur
 
 test('4.16 deny rate is over enforced decisions; would-be denies are separate; no data at 0', () => {
   const { store } = freshStore();
-  const ev = (id: string, effect: 'permit' | 'deny', enf: 'enforced' | 'monitor_only', tool: string, rules: string[]) =>
-    store.append({ id, kind: 'decision', ts_ms: 10, effect, enforcement: enf, tool, rule_ids: rules, reason_code: effect === 'deny' ? 'denied_by_rule' : 'permitted', session_id: 's1' });
+  const ev = (id: string, effect: 'permit' | 'deny', enf: 'enforced' | 'monitor_only', tool: string, rules: string[], denyN = rules.length) =>
+    store.append({ id, kind: 'decision', ts_ms: 10, effect, enforcement: enf, tool, rule_ids: rules, reason_code: effect === 'deny' ? 'denied_by_rule' : 'permitted', session_id: 's1', outcome: { deny_n: denyN } });
   ev('a', 'deny', 'enforced', 'zeta', ['r.b', 'r.a']);
-  ev('b', 'deny', 'enforced', 'alpha', ['r.a']);
+  ev('b', 'deny', 'enforced', 'alpha', ['r.a', 'r.permit'], 1);
   ev('c', 'deny', 'enforced', '?', []);
   ev('d', 'permit', 'enforced', 'alpha', ['r.p']);
   ev('e', 'deny', 'monitor_only', 'alpha', ['r.m']);
   ev('f', 'permit', 'monitor_only', 'alpha', ['r.p']);
-  store.append({ id: 'g', kind: 'decision', ts_ms: 10, effect: 'deny', enforcement: 'enforced', tool: 'beta', rule_ids: Array.from({ length: 20 }, (_, i) => 'x' + String(i)) });
+  store.append({ id: 'g', kind: 'decision', ts_ms: 10, effect: 'deny', enforcement: 'enforced', tool: 'beta', rule_ids: Array.from({ length: 20 }, (_, i) => 'x' + String(i)), outcome: { deny_n: 16 } });
   const m = build(store).metrics;
   assert.equal(m.enforced_decisions, 5);
   assert.equal(m.denied, 4);
@@ -125,6 +127,8 @@ test('4.16 deny rate is over enforced decisions; would-be denies are separate; n
   assert.ok(!m.top_rules.some((x) => x.name.startsWith('…+')), 'truncation marker excluded');
   assert.deepEqual(m.top_rules.slice(0, 2).map((x) => [x.name, x.count]), [['r.a', 2], ['r.b', 1]]);
   assert.ok(!m.top_rules.some((x) => x.name === 'r.m'), 'monitor_only rules are not in enforced-deny top rules');
+  assert.ok(!m.top_rules.some((x) => x.name === 'r.permit'), 'permit ids are never counted');
+  assert.equal(m.top_rules_excluded, 0);
   assert.equal(m.sessions, 1);
   assert.match(textOf(html(store)), /Deny rate \(enforced decisions\) 4 of 5, 80\.0%/);
   assert.match(textOf(html(store)), /unknown tool names \(hashed\)/);
@@ -256,7 +260,8 @@ test('determinism: identical data and generatedMs give byte-identical output; ge
   assert.equal(a, b);
   const d = build(k.store);
   assert.ok(a.includes(new Date(GEN_MS).toISOString()));
-  assert.ok(a.includes(`generated_ms ${String(GEN_MS)}`));
+  assert.ok(a.includes(`<time datetime="${new Date(GEN_MS).toISOString()}" data-ms="${String(GEN_MS)}">`));
+  assert.ok(!textOf(a).includes('generated_ms'), 'no raw generated_ms in visible text');
   assert.ok(a.includes(`up to seq ${String(d.head?.seq)}`));
   assert.ok(a.includes(`<code class="hash" title="${d.head?.hash as string}">${d.head?.hash as string}</code>`));
   assert.notEqual(html(k.store, { generatedMs: GEN_MS + 1000 }), a);

@@ -2,6 +2,7 @@
 // whole chain (counts are never limited to the displayed window). Nothing here reads the clock or the file system.
 import { SCHEMA_VERSION } from '../store/index.ts';
 import type { Store, StoredEvent, VerifyResult } from '../store/index.ts';
+import type { LoadedPolicy } from '../core/index.ts';
 import type {
   ActivationView, BuildReportOptions, CountRow, DecisionView, EventView, LatencyView, Metrics, PostureView,
   ReasonRow, ReportData, ResultView, RuleDetail, VerifyView,
@@ -9,7 +10,7 @@ import type {
 import { renderReportHtml } from './render.ts';
 
 const MAX_BYTES = 8 * 1024 * 1024;
-const DEFAULT_WINDOW = 500;
+const DEFAULT_WINDOW = 200;
 const MAX_WINDOW = 5000;
 const CHUNK = 1000;
 const DEFAULT_SCAN = 2_000_000;
@@ -160,6 +161,22 @@ export function nearestRank(sorted: number[], p: number): number | null {
   return sorted[rank - 1] as number;
 }
 
+/** Cause of a block (REPORT-SPEC 5.2): deny_n, else same-version policy effects, else unknown (legacy row). */
+export function blockCause(e: StoredEvent, policy: LoadedPolicy | undefined): { source: 'deny_n' | 'policy' | 'legacy'; ids: string[] } {
+  const all = Array.isArray(e.rule_ids) ? e.rule_ids.filter((x): x is string => typeof x === 'string') : [];
+  const named = (xs: string[]): string[] => xs.filter((x) => !x.startsWith('…+'));
+  const oc = isObj(e.outcome) ? e.outcome : null;
+  const dn = oc === null ? undefined : oc['deny_n'];
+  if (typeof dn === 'number' && Number.isInteger(dn) && dn >= 0 && dn <= all.length) {
+    return { source: 'deny_n', ids: named(all.slice(0, dn)) };
+  }
+  if (policy !== undefined && policy.policy_version === e.policy_version) {
+    const denyIds = new Set(policy.document.rules.filter((r) => r.effect === 'deny').map((r) => r.id));
+    return { source: 'policy', ids: named(all).filter((x) => denyIds.has(x)) };
+  }
+  return { source: 'legacy', ids: [] };
+}
+
 function clampWindow(v: number | undefined): number {
   if (v === undefined || !Number.isFinite(v)) return DEFAULT_WINDOW;
   return Math.min(MAX_WINDOW, Math.max(1, Math.trunc(v)));
@@ -207,6 +224,8 @@ export function buildReportData(store: Store, opts: BuildReportOptions): ReportD
   const versions = new Map<string, number>();
   const dropClass = new Map<string, number>();
   const sessions = new Set<string>();
+  const ephemeral = new Set<string>();
+  let ruleExcluded = 0;
   const latencies: number[] = [];
   const results = { ok: 0, error: 0, timeout: 0, other: 0, total: 0 };
   let total = 0;
@@ -257,11 +276,13 @@ export function buildReportData(store: Store, opts: BuildReportOptions): ReportD
             denied++;
             if (e.tool === UNKNOWN_TOOL_MARKER) unknownNames++;
             else if (e.tool !== null) bump(deniedTools, e.tool);
-            if (Array.isArray(e.rule_ids)) {
-              for (const r of e.rule_ids) if (typeof r === 'string' && !r.startsWith('…+')) bump(ruleCounts, r);
+            if (e.reason_code === 'denied_by_rule') {
+              const c = blockCause(e, policy);
+              if (c.source === 'legacy') ruleExcluded++;
+              else for (const r of c.ids) bump(ruleCounts, r);
             }
           }
-          if (e.session_id !== null) sessions.add(e.session_id);
+          if (e.session_id !== null) (e.session_id.startsWith('eph-') ? ephemeral : sessions).add(e.session_id);
           if (e.session_tainted === 1) tainted++;
           if (e.policy_version !== null) bump(versions, e.policy_version);
           if (typeof e.latency_us === 'number' && Number.isInteger(e.latency_us) && e.latency_us >= 0) latencies.push(e.latency_us);
@@ -312,6 +333,8 @@ export function buildReportData(store: Store, opts: BuildReportOptions): ReportD
     top_denied_tools: rows(deniedTools, 10),
     top_rules: rows(ruleCounts, 10),
     sessions: sessions.size,
+    ephemeral_sessions: ephemeral.size,
+    top_rules_excluded: ruleExcluded,
     tainted_decisions: tainted,
     tainted_share: decisions === 0 ? null : tainted / decisions,
     dropped_before_total: dropped,
@@ -337,13 +360,19 @@ export function buildReportData(store: Store, opts: BuildReportOptions): ReportD
     const why = (rc !== null ? WHY[rc] : undefined) ?? 'The reason code is not one this report knows how to explain.';
     const willExecute = oc['will_execute'] === true;
     let verdict: string;
-    const by = rids.length === 0 ? '' : (rids.length === 1 ? ' by rule ' : ' by rules ') + rids.join(', ');
+    const cause = e.effect === 'deny' && rc === 'denied_by_rule' ? blockCause(e, policy) : null;
+    const names = e.effect === 'permit' ? rids.filter((x) => !x.startsWith('…+')) : cause === null ? [] : cause.ids;
+    const by = names.length === 0 ? '' : (names.length === 1 ? ' by rule ' : ' by rules ') + names.join(', ');
     if (e.effect === 'deny') {
       verdict = e.enforcement === 'monitor_only' ? 'WOULD BE BLOCKED (monitor_only: the tool ran)' + by : 'BLOCKED' + by;
     } else if (e.effect === 'permit') {
       verdict = e.enforcement === 'monitor_only' ? 'ALLOWED (monitor_only)' + by : 'ALLOWED' + by;
     } else {
       verdict = 'No effect recorded for this row';
+    }
+    let why2 = why;
+    if (cause !== null && cause.source === 'legacy') {
+      why2 = 'A deny rule matched. All matched rules, deny rules listed first: ' + (rids.filter((x) => !x.startsWith('…+')).join(', ') || 'none');
     }
     let ruleDetail: DecisionView['rule_detail'] = 'no_policy';
     let rules: RuleDetail[] = [];
@@ -364,7 +393,7 @@ export function buildReportData(store: Store, opts: BuildReportOptions): ReportD
       tool: e.tool, effect: e.effect, enforcement: e.enforcement, reason_code: rc, reason_class: reasonClass(rc), rule_ids: rids,
       policy_version: e.policy_version, risk: e.risk, session_tainted: e.session_tainted === null ? null : e.session_tainted === 1,
       provenance: jsonText(e.provenance_asserted), args_redacted: jsonText(e.args_redacted), latency_us: e.latency_us,
-      will_execute: willExecute, dropped_before: dropObj === null ? null : jsonText(dropObj), verdict: verdict + '.', why,
+      will_execute: willExecute, cause_source: cause === null ? 'not_applicable' : cause.source, cause_ids: cause === null ? [] : cause.ids, dropped_before: dropObj === null ? null : jsonText(dropObj), verdict: verdict + '.', why: why2,
       results: res, rule_detail: ruleDetail, rules,
     };
     views.set(e.id, v);
