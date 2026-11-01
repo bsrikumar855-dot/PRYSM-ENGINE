@@ -1,11 +1,14 @@
+// expected.effect is "permit" except for category "intended-deny-legit" (legitimate but intentionally refused), which is "deny".
 // Loads the optional benign set eval/benign/*.jsonl. Tolerates a missing or empty directory.
-// Schema: {"id","class":"benign","request":{tool,args,ctx},"expected":{"effect":"permit"},"why","source"}
+// Schema: {"id","class":"benign","category"?,"request":{tool,args,ctx},"expected":{"effect":"permit"},"why","source"}
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
+export const INTENDED_DENY = "intended-deny-legit";
+
 export interface BenignCase {
-  id: string; class: "benign"; request: { tool: string; args: any; ctx: any };
-  expected: { effect: "permit"; reason_code?: string }; why?: string; source?: string;
+  id: string; class: "benign"; category?: string; request: { tool: string; args: any; ctx: any };
+  expected: { effect: "permit" | "deny"; reason_code?: string }; why?: string; source?: string;
 }
 export interface BenignLoad {
   present: boolean; cases: BenignCase[]; files: string[];
@@ -23,7 +26,10 @@ export function validateBenign(x: any): string | null {
   if (typeof r.tool !== "string") return "request.tool must be a string";
   if (r.args === null || typeof r.args !== "object" || Array.isArray(r.args)) return "request.args must be an object";
   if (r.ctx !== undefined && (r.ctx === null || typeof r.ctx !== "object" || Array.isArray(r.ctx))) return "request.ctx must be an object";
-  if (x.expected?.effect !== "permit") return 'expected.effect must be "permit"';
+  if (x.category !== undefined && typeof x.category !== "string") return "category must be a string";
+  // Only the intended-deny-legit category may expect deny; every other category must expect permit.
+  if (x.category === INTENDED_DENY) { if (x.expected?.effect !== "deny") return 'expected.effect must be "deny" for category intended-deny-legit'; }
+  else if (x.expected?.effect !== "permit") return 'expected.effect must be "permit"';
   return null;
 }
 

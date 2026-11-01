@@ -4,7 +4,7 @@ Implements BENCH-SPEC sections 1 and 2. Deterministic: `decide()` is a pure func
 
 ## Commands
 - `npm run eval` prints the human table.
-- `npm run eval -- --json` prints the machine summary (schema_version 1; deterministic, no timestamps).
+- `npm run eval -- --json` prints the machine summary (schema_version 2; deterministic, no timestamps).
 - `npm run eval -- --out file.json` also writes the JSON summary.
 - `npm run eval -- --allow-mismatch` exploration mode (see exit codes).
 - Optional: `--corpus-dir`, `--benign-dir`, `--policy` to point at other inputs.
@@ -24,8 +24,18 @@ Implements BENCH-SPEC sections 1 and 2. Deterministic: `decide()` is a pure func
 
 ## Corpora and provenance
 - Attack/near-miss: `eval/corpus/*.jsonl`, later files override earlier by id. Provenance is read from the `why` text: a `LEAD-DERIVED` marker means lead-written and not independent; everything else is counted blind-labeller. The summary also gives counts by `why` prefix (`v1.1`, `v1.2 relabel`, `v1.3 relabel`, unprefixed v1 original). The current corpus has 0 lead-derived cases. The prefix-based split is only as accurate as the `why` text.
-- Benign set: `eval/benign/*.jsonl` (optional; independent labeller, blind to the engine). Schema `{"id","class":"benign","request":{tool,args,ctx},"expected":{"effect":"permit"},"why","source"}`. A missing or empty directory prints `benign set: not present`. Malformed lines are listed as schema errors, never silently dropped; later duplicate ids override earlier.
+- Benign set: `eval/benign/*.jsonl` (optional; independent labeller, blind to the engine). Schema `{"id","class":"benign","category","request":{tool,args,ctx},"expected":{"effect":"permit"},"why","source"}`. `expected.effect` must be `permit`, except category `intended-deny-legit` where it must be `deny`. A missing or empty directory prints `benign set: not present`. Malformed lines are listed as schema errors, never silently dropped; later duplicate ids override earlier.
 - **Triage**: every benign FP is printed with the matching deny rule ids, matched reasons and the label's `why`. A human classifies each as (a) policy too strict, (b) labeller error, (c) engine defect. The runner never removes or edits cases.
+
+### Benign reporting
+- Per-category FP rates with Wilson intervals (docs-search, file-read, email, http-fetch, discount, workflow, borderline, borderline-fp-risk; unknown categories are appended, missing ones are "uncategorized").
+- The overall benign FP rate is stated twice and labelled: **ALL categories incl. borderline-fp-risk** and **EXCLUDING borderline-fp-risk**. `borderline-fp-risk` cases are deliberately chosen to probe where the policy is likely too strict, so the first number is the stress-test figure and the second is the ordinary-traffic figure. Neither is a population estimate.
+- **Legitimate but intentionally refused** (`intended-deny-legit`): legitimate-looking requests the policy is meant to refuse. Reported separately as n, agree (engine denied), disagree (engine permitted; ids listed, meaning the policy is more permissive than intended). They are never counted in any FN or FP rate, attack or benign.
+- Each benign FP is listed with its category, `reason_code`, matched rule ids (deny and permit), matched reasons and the label `why`; the same fields are in the JSON `benign_set.triage`.
+
+## JSON schema versions
+- **2** (current): adds `intended_refusals`, `benign_set.per_category`, `benign_set.overall_excluding_borderline_fp_risk`; `benign_set.cases` and `benign_set.overall` now cover expected-permit cases only (intended-deny excluded); triage entries gain `category`, `reason_code`, `rule_ids`.
+- 1: initial.
 
 ## Baselines
 - No guard: FN = 100% by construction (every attack call executes). Stated, not measured.

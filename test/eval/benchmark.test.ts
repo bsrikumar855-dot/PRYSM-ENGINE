@@ -169,7 +169,7 @@ test("benign FP triage lists matching rule ids and is never auto-dropped", () =>
     assert.equal(t.id, "fp1");
     assert.ok(t.matched_deny.includes("file.delete-forbidden"));
     assert.equal(s.regression_guard.exit_code, 0); // benign FPs are information, not pass/fail
-    assert.match(renderText(s), /FP fp1: got deny\/denied_by_rule/);
+    assert.match(renderText(s), /FP fp1 \[uncategorized\]: got deny\/denied_by_rule/);
   } finally { rmSync(d, { recursive: true, force: true }); }
 });
 
@@ -186,12 +186,12 @@ test("end to end over the real corpus: 0 effect mismatches, stable JSON shape", 
   assert.equal(s.baselines.no_guard.fn_rate, 1);
   assert.equal(s.baselines.prompt_only.measured, false);
 
-  assert.deepEqual(Object.keys(s), ["schema_version", "scope", "attack_corpus", "load_behaviour", "benign_set", "baselines", "caveats", "regression_guard"]);
-  assert.equal(s.schema_version, 1);
+  assert.deepEqual(Object.keys(s), ["schema_version", "scope", "attack_corpus", "load_behaviour", "benign_set", "intended_refusals", "baselines", "caveats", "regression_guard"]);
+  assert.equal(s.schema_version, 2);
   assert.deepEqual(Object.keys(s.attack_corpus), ["cases_loaded", "decision_cases", "overridden_by_later_files", "files", "provenance", "per_class", "overall", "effect_mismatches", "reason_mismatches"]);
   assert.deepEqual(Object.keys(s.attack_corpus.overall), ["n", "expected_deny", "expected_permit", "true_deny", "true_permit", "fn", "fp", "effect_mismatch", "reason_mismatch", "harness_error", "fn_rate", "fp_rate"]);
   assert.deepEqual(Object.keys(s.attack_corpus.overall.fn_rate), ["k", "n", "rate", "lower", "upper"]);
-  assert.deepEqual(Object.keys(s.benign_set), ["present", "cases", "files", "schema_errors", "duplicates_overridden", "overall", "false_positives", "reason_mismatches", "triage"]);
+  assert.deepEqual(Object.keys(s.benign_set), ["present", "cases", "files", "schema_errors", "duplicates_overridden", "overall", "overall_excluding_borderline_fp_risk", "per_category", "false_positives", "reason_mismatches", "triage"]);
   assert.deepEqual(JSON.parse(JSON.stringify(s)), JSON.parse(JSON.stringify(runBenchmark()))); // deterministic
 });
 
@@ -216,6 +216,61 @@ test("CLI: --json parses and --out writes the same summary; exit 0", async () =>
     const printed = JSON.parse(r.stdout);
     const { readFileSync } = await import("node:fs");
     assert.deepEqual(JSON.parse(readFileSync(out, "utf8")), printed);
-    assert.equal(printed.schema_version, 1);
+    assert.equal(printed.schema_version, 2);
+  } finally { rmSync(d, { recursive: true, force: true }); }
+});
+
+// ---- categories, intended-deny section, schema v2 ----
+const cat = (id: string, category: string, tool: string, args: any, effect: string, ctx: any = { agentId: "support-bot" }) =>
+  JSON.stringify({ id, class: "benign", category, request: { tool, args, ctx }, expected: { effect }, why: "w", source: "s" });
+
+test("loader: deny allowed only for intended-deny-legit", () => {
+  const d = tmp();
+  try {
+    writeFileSync(join(d, "x.jsonl"), [
+      cat("i1", "intended-deny-legit", "delete_file", { path: "/workspace/a" }, "deny"),
+      cat("i2", "intended-deny-legit", "delete_file", { path: "/workspace/a" }, "permit"), // wrong effect for this category
+      cat("o1", "docs-search", "search_docs", { query: "x" }, "deny"),                      // deny not allowed elsewhere
+      cat("o2", "docs-search", "search_docs", { query: "x" }, "permit"),
+      JSON.stringify({ id: "n1", class: "benign", request: { tool: "search_docs", args: { query: "x" } }, expected: { effect: "deny" } }), // no category
+    ].join("\n"));
+    const r = loadBenign(d);
+    assert.deepEqual(r.cases.map((c) => c.id).sort(), ["i1", "o2"]);
+    assert.deepEqual(r.errors.map((e) => e.line), [2, 3, 5]);
+  } finally { rmSync(d, { recursive: true, force: true }); }
+});
+
+test("intended refusals are a separate section and never count as FN/FP; per-category and with/without fp-risk rates", () => {
+  const d = tmp();
+  try {
+    writeFileSync(join(d, "x.jsonl"), [
+      cat("p1", "docs-search", "search_docs", { query: "x" }, "permit"),
+      cat("p2", "docs-search", "search_docs", { query: "y" }, "permit"),
+      cat("p3", "borderline-fp-risk", "delete_file", { path: "/workspace/a" }, "permit"), // engine denies: FP
+      cat("p4", "borderline-fp-risk", "search_docs", { query: "z" }, "permit"),
+      cat("i1", "intended-deny-legit", "delete_file", { path: "/workspace/a" }, "deny"),   // agree
+      cat("i2", "intended-deny-legit", "search_docs", { query: "x" }, "deny"),             // engine permits: disagree
+    ].join("\n"));
+    const s = runBenchmark({ benignDir: d });
+    const b = s.benign_set;
+    assert.equal(b.cases, 4);
+    assert.equal(b.overall!.fp, 1); assert.equal(b.overall!.fp_rate.n, 4);
+    assert.equal(b.overall_excluding_borderline_fp_risk!.fp, 0); assert.equal(b.overall_excluding_borderline_fp_risk!.fp_rate.n, 2);
+    assert.deepEqual(Object.keys(b.per_category), ["docs-search", "borderline-fp-risk"]);
+    assert.equal(b.per_category["docs-search"]!.fp_rate.n, 2);
+    assert.equal(b.per_category["borderline-fp-risk"]!.fp, 1);
+    near(b.per_category["borderline-fp-risk"]!.fp_rate.rate, 0.5);
+    assert.deepEqual(s.intended_refusals, { ...s.intended_refusals, n: 2, agree: 1 });
+    assert.deepEqual(s.intended_refusals.disagree.map((x) => x.id), ["i2"]);
+    assert.equal(b.false_positives.length, 1); // intended refusals are not FPs
+    const t = b.triage[0]!;
+    assert.equal(t.category, "borderline-fp-risk"); assert.equal(t.reason_code, "denied_by_rule");
+    assert.ok(t.rule_ids.includes("file.delete-forbidden"));
+    assert.equal(s.regression_guard.exit_code, 0);
+    const txt = renderText(s);
+    assert.match(txt, /Legitimate but intentionally refused/);
+    assert.match(txt, /n=2, agree \(engine denied as intended\)=1, disagree \(engine permitted\)=1/);
+    assert.match(txt, /ALL categories incl\. borderline-fp-risk/);
+    assert.match(txt, /EXCLUDING borderline-fp-risk/);
   } finally { rmSync(d, { recursive: true, force: true }); }
 });

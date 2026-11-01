@@ -13,16 +13,18 @@ import type { Aggregate, ClassSummary, Outcome } from "./bench-lib/confusion.ts"
 import { describe } from "./bench-lib/stats.ts";
 import { evaluateCorpus, loadCorpus, provenanceBucket, provenanceOf, runDecision } from "./bench-lib/corpus.ts";
 import type { CorpusCase, DecideFn, LoadFn } from "./bench-lib/corpus.ts";
-import { loadBenign } from "./benign/loader.ts";
+import { INTENDED_DENY, loadBenign } from "./benign/loader.ts";
 import type { BenignLoad } from "./benign/loader.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
+export const BENIGN_CATEGORIES = ["docs-search", "file-read", "email", "http-fetch", "discount", "workflow", "borderline", "borderline-fp-risk"] as const;
+export const FP_RISK_CATEGORY = "borderline-fp-risk";
 
 export interface Mismatch { id: string; class: string; expected: string; got: string; why: string }
 export interface Triage {
-  id: string; got: string; matched_deny: string[]; matched_reasons: { id: string; effect: string; reason_code: string }[];
+  id: string; category: string; got: string; reason_code: string; rule_ids: string[]; matched_deny: string[]; matched_reasons: { id: string; effect: string; reason_code: string }[];
   trace_matched: { rule: string; why: string }[]; request: { tool: string; args: unknown; ctx: unknown }; why: string; source: string;
   classify_as: "policy too strict | labeller error | engine defect (human decision required)";
 }
@@ -39,7 +41,15 @@ export interface Summary {
   load_behaviour: { cases: number; agree: number; disagree: { id: string; expected: boolean; got: boolean | "error" }[] };
   benign_set: {
     present: boolean; cases: number; files: string[]; schema_errors: { file: string; line: number; message: string }[]; duplicates_overridden: number;
-    overall: ClassSummary | null; false_positives: Mismatch[]; reason_mismatches: Mismatch[]; triage: Triage[];
+    /** Legitimate-intent permit cases only (intended-deny-legit excluded). */
+    overall: ClassSummary | null;
+    overall_excluding_borderline_fp_risk: ClassSummary | null;
+    per_category: Record<string, ClassSummary>;
+    false_positives: Mismatch[]; reason_mismatches: Mismatch[]; triage: Triage[];
+  };
+  intended_refusals: {
+    category: string; n: number; agree: number; disagree: { id: string; expected: string; got: string; why: string }[];
+    note: string;
   };
   baselines: { no_guard: { fn_rate: 1; measured: false; note: string }; prompt_only: { measured: false; note: string } };
   caveats: string[];
@@ -78,17 +88,25 @@ export function runBenchmark(opts: RunOptions = {}): Summary {
   const benign: BenignLoad = loadBenign(opts.benignDir ?? join(here, "benign"));
   let benignOverall: ClassSummary | null = null;
   const fps: Mismatch[] = []; const bReason: Mismatch[] = []; const triage: Triage[] = [];
+  const intendedCases = benign.cases.filter((c) => c.category === INTENDED_DENY);
+  const permitCases = benign.cases.filter((c) => c.category !== INTENDED_DENY);
+  let perCategory: Record<string, ClassSummary> = {};
+  let benignNoRisk: ClassSummary | null = null;
+  const intended = { category: INTENDED_DENY, n: intendedCases.length, agree: 0, disagree: [] as { id: string; expected: string; got: string; why: string }[],
+    note: "Legitimate requests the policy intentionally refuses. NOT counted in any FN/FP rate. A disagreement (engine permitted) means the policy is more permissive than intended." };
   if (benign.present) {
     const outs: Outcome[] = [];
-    for (const c of benign.cases) {
+    for (const c of permitCases) {
       let last: Decision | null = null;
       const o = runDecision(c, c.request, (r) => { const d = engine(r); last = d; return d; });
+      o.class = c.category ?? "uncategorized";
       outs.push(o);
       if (o.gotEffect !== "permit") {
         fps.push(mm(o));
         const d = last as Decision | null;
         triage.push({
-          id: c.id, got: `${o.gotEffect}/${o.gotReason}`,
+          id: c.id, category: c.category ?? "uncategorized", got: `${o.gotEffect}/${o.gotReason}`, reason_code: o.gotReason,
+          rule_ids: d ? [...new Set([...d.matched.deny, ...d.matched.permit])].sort() : [],
           matched_deny: d ? [...d.matched.deny] : [],
           matched_reasons: d ? d.matched_reasons.map((r) => ({ id: r.id, effect: r.effect, reason_code: r.reason_code })) : [],
           trace_matched: d ? d.trace.filter((t) => t.matched).map((t) => ({ rule: t.rule, why: t.why })) : [],
@@ -97,7 +115,17 @@ export function runBenchmark(opts: RunOptions = {}): Summary {
         });
       } else if (o.expectedReason !== undefined && o.expectedReason !== o.gotReason) bReason.push(mm(o));
     }
-    benignOverall = aggregate(outs).overall;
+    const agg = aggregate(outs);
+    benignOverall = permitCases.length ? aggregate(outs.map((o) => ({ ...o, class: "all" }))).overall : null;
+    benignNoRisk = permitCases.length ? aggregate(outs.filter((o) => o.class !== FP_RISK_CATEGORY).map((o) => ({ ...o, class: "all" }))).overall : null;
+    const known = new Set<string>(BENIGN_CATEGORIES);
+    for (const k of BENIGN_CATEGORIES) if (agg.per_class[k]) perCategory[k] = agg.per_class[k]!;
+    for (const k of Object.keys(agg.per_class).sort()) if (!known.has(k)) perCategory[k] = agg.per_class[k]!;
+    for (const c of intendedCases) {
+      const o = runDecision(c, c.request, engine);
+      if (o.gotEffect === "deny") intended.agree++;
+      else intended.disagree.push({ id: c.id, expected: "deny", got: `${o.gotEffect}/${o.gotReason}`, why: c.why ?? "" });
+    }
   }
 
   const pinned = effectMm.length + ev.load.disagree.length;
@@ -113,9 +141,10 @@ export function runBenchmark(opts: RunOptions = {}): Summary {
     },
     load_behaviour: { cases: ev.load.n, agree: ev.load.agree, disagree: ev.load.disagree.map((d) => ({ id: d.id, expected: d.expected, got: d.got })) },
     benign_set: {
-      present: benign.present, cases: benign.cases.length, files: benign.files, schema_errors: benign.errors, duplicates_overridden: benign.duplicates_overridden,
-      overall: benignOverall, false_positives: fps, reason_mismatches: bReason, triage,
+      present: benign.present, cases: permitCases.length, files: benign.files, schema_errors: benign.errors, duplicates_overridden: benign.duplicates_overridden,
+      overall: benignOverall, overall_excluding_borderline_fp_risk: benignNoRisk, per_category: perCategory, false_positives: fps, reason_mismatches: bReason, triage,
     },
+    intended_refusals: intended,
     baselines: {
       no_guard: { fn_rate: 1, measured: false, note: "FN = 100% by construction: with no guard every attack call executes. Stated, not measured." },
       prompt_only: { measured: false, note: "Prompt-only guard is NOT measured: the owner chose a mock-only model (DEC-16) and a scripted mock cannot say anything about real-model prompt compliance." },
@@ -160,9 +189,17 @@ export function renderText(s: Summary): string {
     L.push("benign set: not present");
     if (b.schema_errors.length) L.push(`  (${b.schema_errors.length} schema error(s) in eval/benign; no valid cases)`);
   } else {
-    L.push(`benign set: ${b.cases} cases from ${b.files.join(", ")} (${b.duplicates_overridden} duplicate ids overridden, ${b.schema_errors.length} schema errors)`);
-    L.push(describe("Benign FP rate (expected permit, engine deny)", b.overall!.fp_rate));
+    L.push(`benign set: ${b.cases} expected-permit cases from ${b.files.join(", ")} (${b.duplicates_overridden} duplicate ids overridden, ${b.schema_errors.length} schema errors)`);
+    if (b.overall) L.push(describe("Benign FP rate, ALL categories incl. borderline-fp-risk", b.overall.fp_rate));
+    if (b.overall_excluding_borderline_fp_risk) L.push(describe("Benign FP rate, EXCLUDING borderline-fp-risk", b.overall_excluding_borderline_fp_risk.fp_rate));
+    L.push("  per category (FP = engine denied a legitimate call):");
+    for (const [k, v] of Object.entries(b.per_category)) L.push("    " + describe(pad(k, 20), v.fp_rate));
     L.push(`  reason-code disagreements among correct permits: ${b.reason_mismatches.length}`);
+    const r = s.intended_refusals;
+    L.push("");
+    L.push("Legitimate but intentionally refused (policy intent; not counted in FN/FP above)");
+    L.push(`  n=${r.n}, agree (engine denied as intended)=${r.agree}, disagree (engine permitted)=${r.disagree.length}`);
+    for (const d of r.disagree) L.push(`  POLICY MORE PERMISSIVE THAN INTENDED ${d.id}: got ${d.got}  [${d.why}]`);
   }
   for (const e of b.schema_errors.slice(0, 20)) L.push(`  SCHEMA ERROR ${e.file}:${e.line} ${e.message}`);
   L.push("");
@@ -182,8 +219,8 @@ export function renderText(s: Summary): string {
     L.push("");
     L.push(`Benign false positives needing triage (${b.triage.length}); classify each: policy too strict / labeller error / engine defect. None dropped.`);
     for (const t of b.triage) {
-      L.push(`  FP ${t.id}: got ${t.got}`);
-      L.push(`     tool=${t.request.tool} deny-rules=[${t.matched_deny.join(", ")}] matched=[${t.matched_reasons.map((r) => `${r.id}:${r.effect}:${r.reason_code}`).join(", ")}]`);
+      L.push(`  FP ${t.id} [${t.category}]: got ${t.got}`);
+      L.push(`     tool=${t.request.tool} deny-rules=[${t.matched_deny.join(", ")}] rules=[${t.rule_ids.join(", ")}] matched=[${t.matched_reasons.map((r) => `${r.id}:${r.effect}:${r.reason_code}`).join(", ")}]`);
       if (t.why) L.push(`     label why: ${t.why}`);
     }
   }
