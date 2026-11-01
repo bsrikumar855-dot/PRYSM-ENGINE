@@ -1,0 +1,213 @@
+{
+  "policy_schema_version": 1,
+  "name": "support-agent-proxy",
+  "mode": "enforce",
+  "tools": {
+    "search_docs": {
+      "risk": "low",
+      "external_effect": false,
+      "read_only": true,
+      "fail_mode": "open_on_audit_failure",
+      "args": {
+        "query": {
+          "type": "string"
+        }
+      }
+    },
+    "read_file": {
+      "risk": "medium",
+      "external_effect": false,
+      "read_only": true,
+      "fail_mode": "closed",
+      "args": {
+        "path": {
+          "type": "string"
+        }
+      }
+    },
+    "send_email": {
+      "risk": "high",
+      "external_effect": true,
+      "read_only": false,
+      "fail_mode": "closed",
+      "args": {
+        "to": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "cc": {
+          "type": "string",
+          "optional": true
+        }
+      }
+    },
+    "http_get": {
+      "risk": "medium",
+      "external_effect": true,
+      "read_only": true,
+      "fail_mode": "closed",
+      "args": {
+        "url": {
+          "type": "string"
+        }
+      }
+    },
+    "delete_file": {
+      "risk": "high",
+      "external_effect": false,
+      "read_only": false,
+      "fail_mode": "closed",
+      "args": {
+        "path": {
+          "type": "string"
+        }
+      }
+    },
+    "set_discount": {
+      "risk": "high",
+      "external_effect": true,
+      "read_only": false,
+      "fail_mode": "closed",
+      "args": {
+        "percent": {
+          "type": "number"
+        }
+      }
+    }
+  },
+  "rules": [
+    {
+      "id": "search.allow",
+      "effect": "permit",
+      "reason_code": "search_ok",
+      "match": {
+        "tools": [
+          "search_docs"
+        ]
+      }
+    },
+    {
+      "id": "file.read-workspace",
+      "effect": "permit",
+      "reason_code": "read_workspace",
+      "match": {
+        "tools": [
+          "read_file"
+        ],
+        "args": {
+          "path": {
+            "path_within": {
+              "root": "/workspace",
+              "case_insensitive": false
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "file.deny-secrets",
+      "effect": "deny",
+      "reason_code": "secrets_forbidden",
+      "match": {
+        "tools": [
+          "read_file"
+        ],
+        "args": {
+          "path": {
+            "path_within": {
+              "root": "/workspace/secrets",
+              "case_insensitive": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "email.corp-only",
+      "effect": "permit",
+      "reason_code": "email_corp",
+      "match": {
+        "tools": [
+          "send_email"
+        ],
+        "args": {
+          "to": {
+            "domain_suffix": "corp.com",
+            "accept": [
+              "email"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "email.deny-cc",
+      "effect": "deny",
+      "reason_code": "cc_forbidden",
+      "match": {
+        "tools": [
+          "send_email"
+        ],
+        "args": {
+          "cc": {
+            "max_length": 8192
+          }
+        }
+      }
+    },
+    {
+      "id": "http.corp-docs",
+      "effect": "permit",
+      "reason_code": "http_corp",
+      "match": {
+        "tools": [
+          "http_get"
+        ],
+        "args": {
+          "url": {
+            "domain_suffix": "corp.com",
+            "accept": [
+              "url"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "file.delete-forbidden",
+      "effect": "deny",
+      "reason_code": "tool_forbidden",
+      "match": {
+        "tools": [
+          "delete_file"
+        ]
+      }
+    },
+    {
+      "id": "discount.small",
+      "effect": "permit",
+      "reason_code": "discount_ok",
+      "match": {
+        "tools": [
+          "set_discount"
+        ],
+        "args": {
+          "percent": {
+            "range": {
+              "min": 0,
+              "max": 10
+            }
+          }
+        },
+        "scopes_any": [
+          "sales"
+        ]
+      }
+    }
+  ]
+}
