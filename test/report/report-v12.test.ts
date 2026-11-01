@@ -28,7 +28,7 @@ test('5.2 cause precedence 1: outcome.deny_n names only the first deny_n ids; pe
   assert.equal(a1?.cause_source, 'deny_n');
   assert.deepEqual(a1?.cause_ids, ['d.one', 'd.two']);
   const a2 = d.decisions.find((x) => x.id === 'a2');
-  assert.equal(a2?.verdict, 'BLOCKED.');
+  assert.equal(a2?.verdict, 'BLOCKED because a deny rule matched.'); // wording unified with the CLI (shared src/explain)
   for (const x of d.decisions) assert.ok(!/BLOCKED[^.]* by rules? .*p\./.test(x.verdict), 'permit id after BLOCKED by: ' + x.verdict);
   assert.deepEqual(d.metrics.top_rules.map((r) => r.name), ['d.one', 'd.two']);
   assert.equal(d.metrics.top_rules_excluded, 0);
@@ -59,8 +59,9 @@ test('5.2 cause precedence 3: legacy rows use caveat wording and are excluded fr
   const d = build(store);
   const g1 = d.decisions.find((x) => x.id === 'g1');
   assert.equal(g1?.cause_source, 'legacy');
-  assert.equal(g1?.verdict, 'BLOCKED.');
-  assert.equal(g1?.why, 'A deny rule matched. All matched rules, deny rules listed first: d.secret, p.read');
+  // wording unified with the CLI (shared src/explain): the caveat is part of the verdict line
+  assert.equal(g1?.verdict, 'BLOCKED. A deny rule matched. All matched rules, deny rules listed first: d.secret, p.read');
+  assert.equal(g1?.why, 'A deny rule matched.');
   assert.deepEqual(d.metrics.top_rules, [{ name: 'd.secret', count: 1 }], 'only the deny_n row is counted');
   assert.equal(d.metrics.top_rules_excluded, 1);
   const t = textOf(html(store));

@@ -59,6 +59,17 @@ test('pre-evaluate rows (unknown tool, invalid ctx, non-string tool) and denyUne
   store.close();
 });
 
+test('deny_n is clamped to the stored deny ids: 20 matched deny rules => 16 stored ids + marker, deny_n 16', async () => {
+  const extra = Array.from({ length: 20 }, (_, i) => rule('deny', 'd.y' + String(i + 1).padStart(2, '0'), { tools: ['read_file'], args: { path: { glob: '/secret*' } } }));
+  const k = kit({ extraRules: extra });
+  const r = await k.guard.call('read_file', { path: '/secret/q' });
+  const row = k.decisionRows().find((x) => x.id === (r as { decision_id: string }).decision_id) as unknown as { rule_ids: string[]; outcome: Out };
+  assert.equal(row.rule_ids.length, 17);
+  assert.ok((row.rule_ids[16] as string).startsWith(String.fromCharCode(0x2026) + '+'));
+  assert.equal(row.outcome.deny_n, 16);
+  k.store.close();
+});
+
 test('monitor_only would-be deny keeps its deny_n', async () => {
   const k = kit({ mode: 'monitor_only' });
   const r = await k.guard.call('read_file', { path: '/secret/z' });

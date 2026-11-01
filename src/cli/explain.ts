@@ -3,27 +3,10 @@ import type { StoredEvent, Store } from '../store/index.ts';
 import type { LoadedPolicy } from '../core/index.ts';
 import { cell, esc, iso, jsonLine } from './text.ts';
 import { CliExit } from './files.ts';
+import { rowVerdict } from '../explain/index.ts';
 import type { Io } from './files.ts';
 
 export const VERSION_DIFFERS = 'policy version differs; rule detail not shown';
-
-const PLAIN_REASON: Readonly<Record<string, string>> = {
-  permitted: 'a permit rule matched and no deny rule matched',
-  denied_by_rule: 'a deny rule matched',
-  default_deny: 'no permit rule matched (default deny)',
-  unknown_tool: 'the tool is not known to the policy or the guard',
-  invalid_args: 'the arguments did not match the tool schema declared in the policy',
-  invalid_request: 'the request or its context was malformed',
-  limit_exceeded: 'a size or work limit was exceeded',
-  tainted_session: 'the session is tainted and no tainted-session permit rule matched an external-effect tool',
-  engine_error: 'the policy engine failed (fail-closed)',
-  audit_unavailable: 'the audit store was unavailable (fail-closed)',
-};
-
-export function plainReason(code: string | null): string {
-  if (code === null) return 'no reason recorded';
-  return Object.hasOwn(PLAIN_REASON, code) ? (PLAIN_REASON[code] as string) : `reason code ${esc(code)}`;
-}
 
 function asObj(v: unknown): Record<string, unknown> | null {
   return typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
@@ -44,41 +27,6 @@ export function droppedBefore(rows: readonly StoredEvent[]): unknown[] {
     if (d !== undefined && d !== null) out.push(d);
   }
   return out;
-}
-
-export const LEGACY_CAUSE = 'A deny rule matched. All matched rules, deny rules listed first:';
-
-/** deny_n from outcome (integer 0..len), or null for legacy rows. */
-export function denyN(row: StoredEvent): number | null {
-  const n = asObj(row.outcome)?.['deny_n'];
-  return typeof n === 'number' && Number.isSafeInteger(n) && n >= 0 ? n : null;
-}
-
-/**
- * One plain-language line. Cause precedence for denied_by_rule (REPORT-SPEC 5.2): outcome.deny_n (first deny_n ids),
- * else the ids whose rule effect is deny in a same-version policy, else the legacy caveat wording. Permit ids are
- * never presented as a cause. monitor_only is stated honestly.
- */
-export function verdict(row: StoredEvent, rules?: readonly { id: string; effect: string }[]): { verdict: string; why: string } {
-  const all = ruleIds(row);
-  const why = plainReason(row.reason_code);
-  const mon = row.enforcement === 'monitor_only';
-  if (row.effect === 'permit') {
-    const by = all.length > 0 ? all.map(esc).join(', ') : 'none (no rule matched)';
-    return { verdict: mon ? `ALLOWED (monitor_only) by rule(s) ${by}` : `ALLOWED by rule(s) ${by}`, why };
-  }
-  if (row.effect !== 'deny') return { verdict: 'UNKNOWN (no effect recorded)', why };
-  const head = mon ? `WOULD BE BLOCKED (monitor_only: the tool ${willExecute(row) ? 'ran' : 'did not run'})` : 'BLOCKED';
-  if (row.reason_code !== 'denied_by_rule') {
-    const by = all.length > 0 ? all.map(esc).join(', ') : 'none (no rule matched)';
-    return { verdict: `${head} by rule(s) ${by} because ${why}`, why };
-  }
-  const n = denyN(row);
-  let cause: string[] | null = null;
-  if (n !== null) cause = all.slice(0, n);
-  else if (rules !== undefined) cause = all.filter((id) => rules.some((r) => r.id === id && r.effect === 'deny'));
-  if (cause === null) return { verdict: `${head}. ${LEGACY_CAUSE} ${all.length > 0 ? all.map(esc).join(', ') : 'none'}`, why };
-  return { verdict: `${head} by rule(s) ${cause.length > 0 ? cause.map(esc).join(', ') : 'none (no deny rule id recorded)'} because ${why}`, why };
 }
 
 function list(v: unknown): string {
@@ -162,7 +110,8 @@ export function explain(store: Store, id: string, policy: LoadedPolicy | undefin
     if (row.policy_version !== null && row.policy_version === policy.policy_version) rules = ruleDetail(policy, ruleIds(row));
     else warning = VERSION_DIFFERS;
   }
-  const v = verdict(row, rules);
+  const rv = rowVerdict(row, policy === undefined ? {} : { policy });
+  const v = { verdict: rv.verdict, why: rv.why };
 
   if (json) {
     io.out(jsonLine({
@@ -178,7 +127,8 @@ export function explain(store: Store, id: string, policy: LoadedPolicy | undefin
   const L = (k: string, val: string): void => io.out(k.padEnd(16) + val);
   L('decision', cell(row.id));
   L('time', iso(row.ts_ms));
-  L('verdict', v.verdict);
+  L('verdict', esc(v.verdict));
+  L('why', v.why);
   L('effect', cell(row.effect));
   L('enforcement', cell(row.enforcement));
   L('reason_code', cell(row.reason_code));

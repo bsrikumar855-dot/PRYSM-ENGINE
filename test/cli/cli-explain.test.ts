@@ -18,7 +18,7 @@ test('explain: blocked decision without --policy', async () => {
   const f = await fixture;
   const r = await runCli(['explain', f.deniedId, '--db', f.db]);
   assert.equal(r.code, 0);
-  assert.match(r.stdout, /^verdict +BLOCKED by rule\(s\) d\.secret/m);
+  assert.match(r.stdout, /^verdict +BLOCKED by rule d\.secret\.$/m);
   assert.match(r.stdout, /reason_code +denied_by_rule/);
   assert.match(r.stdout, /enforcement +enforced/);
   assert.match(r.stdout, /policy_version +sha256:/);
@@ -33,7 +33,7 @@ test('explain: allowed decision shows the linked tool_result', async () => {
   const f = await fixture;
   const r = await runCli(['explain', f.allowedId, '--db', f.db]);
   assert.equal(r.code, 0);
-  assert.match(r.stdout, /^verdict +ALLOWED by rule\(s\) p\.read$/m);
+  assert.match(r.stdout, /^verdict +ALLOWED by rule p\.read\.$/m);
   assert.match(r.stdout, /result +seq=\d+ status=ok .*result_type=string/);
   assert.match(r.stdout, /will_execute +yes/);
 });
@@ -46,7 +46,7 @@ test('explain: --policy with the same version shows rule detail; a different ver
   assert.match(same.stdout, /arg path: glob "\/secret\*"/);
   assert.match(same.stdout, /tool is one of \["read_file"\]/);
   // verdict names only the deny rule when the effect of each rule is known
-  assert.match(same.stdout, /^verdict +BLOCKED by rule\(s\) d\.secret because/m);
+  assert.match(same.stdout, /^verdict +BLOCKED by rule d\.secret\.$/m);
   assert.ok(!same.stdout.includes('policy version differs'));
 
   const dir = tmpDir();
@@ -104,7 +104,7 @@ test('explain --json shape, exactly one document, nothing on stderr', async () =
   assert.equal(o.results[0].kind, 'tool_result');
   assert.deepEqual(o.warnings, []);
   assert.ok(Array.isArray(o.rules));
-  assert.match(o.verdict, /^ALLOWED by rule\(s\)/);
+  assert.match(o.verdict, /^ALLOWED by rule /);
   const n = JSON.parse((await runCli(['explain', f.allowedId, '--db', f.db, '--json'])).stdout);
   assert.equal(n.rules, null);
 });
@@ -118,7 +118,7 @@ test('A-03: every decision in a real guard run is explainable and consistent wit
     assert.equal(r.code, 0);
     const o = JSON.parse(r.stdout);
     assert.deepEqual(o.decision, JSON.parse(JSON.stringify(d)));
-    assert.match(o.verdict, d.effect === 'deny' ? /^BLOCKED by/ : /^ALLOWED by/);
+    assert.match(o.verdict, d.effect === 'deny' ? /^BLOCKED/ : /^ALLOWED by rule/);
     assert.equal(o.results.length, f.rows.filter((x) => x.kind === 'tool_result' && x.decision_id === d.id).length);
     if (d.reason_code === 'denied_by_rule') {
       assert.ok(o.rules.some((x: { effect: string }) => x.effect === 'deny'));
@@ -134,9 +134,9 @@ test('explain: monitor_only wording (WOULD BE BLOCKED ... / ALLOWED (monitor_onl
   k.guard.close();
   k.store.close();
   const a = await runCli(['explain', (denied as { decision_id: string }).decision_id, '--db', k.path]);
-  assert.match(a.stdout, /^verdict +WOULD BE BLOCKED \(monitor_only: the tool ran\) by rule\(s\) /m);
+  assert.match(a.stdout, /^verdict +WOULD BE BLOCKED \(monitor_only: the tool ran\) by rules? /m);
   const b = await runCli(['explain', (ok as { decision_id: string }).decision_id, '--db', k.path]);
-  assert.match(b.stdout, /^verdict +ALLOWED \(monitor_only\) by rule\(s\) p\.read$/m);
+  assert.match(b.stdout, /^verdict +ALLOWED \(monitor_only\) by rule p\.read\.$/m);
   const c = await runCli(['explain', (bad as { decision_id: string }).decision_id, '--db', k.path]);
   assert.match(c.stdout, /WOULD BE BLOCKED \(monitor_only: the tool did not run\)/);
 });

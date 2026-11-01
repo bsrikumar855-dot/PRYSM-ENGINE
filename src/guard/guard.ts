@@ -543,6 +543,8 @@ export function createGuardWithAdmin(opts: CreateGuardOptions): { guard: Guard; 
       const willExecute = snapshot !== null &&
         !NOT_EXECUTED.has(reason) &&
         (monitor || effect === 'permit');
+      // never larger than the number of deny ids the store keeps (it keeps at most 16 ids, then a marker)
+      const denyN = Math.min(decision.matched.deny.length, 16);
       const decisionEvent: NewEvent = {
         ...base(),
         enforcement: monitor ? 'monitor_only' : 'enforced',
@@ -560,7 +562,7 @@ export function createGuardWithAdmin(opts: CreateGuardOptions): { guard: Guard; 
         latency_us,
         session_tainted: tainted ? 1 : 0,
         provenance_asserted: prov,
-        outcome: willExecute ? { deny_n: decision.matched.deny.length, will_execute: true } : { deny_n: decision.matched.deny.length },
+        outcome: willExecute ? { deny_n: denyN, will_execute: true } : { deny_n: denyN },
       };
       ev = decisionEvent;
 

@@ -168,14 +168,14 @@ test('explain cause precedence: deny_n, then same-version policy, then the legac
   // deny_n present: first deny_n ids, with or without a policy
   for (const wp of [false, true]) {
     const v = await verdictOf('row-denyn-1', wp);
-    assert.match(v, /^BLOCKED by rule\(s\) d\.secret because/);
+    assert.match(v, /^BLOCKED by rule d\.secret\.$/);
     assert.ok(!v.includes('p.read'));
   }
   // deny_n wins over the policy
-  assert.match(await verdictOf('row-denyn-2', true), /by rule\(s\) d\.secret, p\.read because/);
+  assert.match(await verdictOf('row-denyn-2', true), /^BLOCKED by rules d\.secret, p\.read\.$/);
   // legacy + same-version policy: deny-effect rules only
   const lp = await verdictOf('row-legacy-1', true);
-  assert.match(lp, /^BLOCKED by rule\(s\) d\.secret because/);
+  assert.match(lp, /^BLOCKED by rule d\.secret\.$/);
   assert.ok(!lp.includes('p.read'));
   // legacy, no policy / different version: caveat wording, still not "by rule(s)"
   for (const [id, wp] of [['row-legacy-1', false], ['row-legacy-2', true]] as const) {

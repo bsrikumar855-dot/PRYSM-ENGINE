@@ -2,7 +2,7 @@
 
 **PRYSM** is a deterministic, runtime policy gate for AI agent tool calls. It sits between an agent and its tools, decides allow/deny from a versioned policy (never from prompt text), and records a privacy-aware, hash-chained audit trail.
 
-> **Status: work in progress (MVP, not released).** Milestones M0–M3 are complete and independently reviewed; M4 (CLI + static report), M5 (benchmarks, false-positive/negative and latency measurement) and M6 (final review and docs) are not done. No performance or detection-rate claims are made yet because they have not been measured. See `docs/auto-builder/TASKS.md` for the live roadmap and evidence table.
+> **Status: work in progress (MVP, not released).** Milestones M0–M4 are complete and independently reviewed; M5 (benchmarks, false-positive/negative and latency measurement) and M6 (final review and docs) are not done. No performance or detection-rate claims are made yet because they have not been measured. See `docs/auto-builder/TASKS.md` for the live roadmap and evidence table.
 
 ## What it does (and does not)
 
@@ -22,6 +22,7 @@ npm install --ignore-scripts
 npm test            # full suite (~20 s)
 npm run typecheck
 npm run corpus      # independently labelled adversarial policy corpus (563 cases)
+npm run prysm -- help   # CLI: validate, events, explain, verify-chain, anchor, simulate, report
 ```
 
 ## Library use (in-process)
