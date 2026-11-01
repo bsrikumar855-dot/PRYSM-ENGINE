@@ -5,12 +5,19 @@
   "description": "PRYSM: deterministic runtime policy gate for AI agent tool calls",
   "license": "Apache-2.0",
   "type": "module",
-  "engines": { "node": ">=24.0.0" },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "bin": {
+    "prysm": "src/cli/bin.ts"
+  },
   "scripts": {
     "test": "node --test --no-warnings=ExperimentalWarning \"test/**/*.test.ts\"",
     "typecheck": "tsc --noEmit",
     "corpus": "node --no-warnings=ExperimentalWarning eval/run-corpus.ts",
-    "smoke:sqlite": "node --no-warnings=ExperimentalWarning smoke/sqlite-smoke.ts"
+    "smoke:sqlite": "node --no-warnings=ExperimentalWarning smoke/sqlite-smoke.ts",
+    "prysm": "node --no-warnings=ExperimentalWarning src/cli/bin.ts",
+    "proxy": "node --no-warnings=ExperimentalWarning src/proxy/bin.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
