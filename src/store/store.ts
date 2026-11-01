@@ -24,7 +24,7 @@ export class StoreError extends Error {
 }
 
 export type EventKind = 'decision' | 'tool_result' | 'policy_activate' | 'checkpoint';
-export type KeyProtection = 'acl' | 'mode_0600' | 'unprotected' | 'external';
+export type KeyProtection = 'acl' | 'mode_0600' | 'unprotected' | 'external' | 'unknown';
 export type HmacLabel = 'args' | 'user' | 'result' | 'request' | 'tool';
 
 export interface NewEvent {
@@ -181,6 +181,12 @@ export interface OpenStoreOptions {
   aclReader?: (keyPath: string) => string | null;
   /** Test seam: the principal expected in the ACL (default: os.userInfo().username). */
   aclUser?: string;
+  /**
+   * Open an EXISTING store strictly read-only (CLI reads; query_only). Never creates the DB, tables, meta rows or a
+   * key file, never loads a key file, never resets meta flags, never writes. Without `hmacKey`, `hmac` throws
+   * key_mismatch and keyProtection() reports 'unknown'. All write methods throw StoreError io.
+   */
+  readOnly?: boolean;
 }
 
 export const SCHEMA_VERSION = '1';
@@ -541,15 +547,40 @@ export function openStore(opts: OpenStoreOptions): Store {
     }
   };
 
+  const readOnly = opts.readOnly === true;
+  if (opts.readOnly !== undefined && typeof opts.readOnly !== 'boolean') throw new StoreError('invalid_event');
+  if (readOnly && path === ':memory:') throw new StoreError('invalid_event');
   let db: DatabaseSync;
   try {
-    db = new DatabaseSync(path, { timeout: busy });
+    // readOnly: the file must already exist (SQLite never creates it) and nothing below issues a write.
+    db = readOnly ? new DatabaseSync(path, { readOnly: true, timeout: busy }) : new DatabaseSync(path, { timeout: busy });
   } catch (e) {
     throw mapErr(e);
   }
   let key: Buffer = Buffer.alloc(0);
   let genesis = '';
-  try {
+  if (readOnly) {
+    try {
+      db.exec('PRAGMA busy_timeout=' + String(busy));
+      db.exec('PRAGMA query_only=1');
+      const get = (k: string): string | null => {
+        const r = db.prepare('SELECT value FROM meta WHERE key=?').get(k) as { value: string | null } | undefined;
+        return r?.value ?? null;
+      };
+      const nonce = get('nonce');
+      if (nonce === null || get('schema_version') !== SCHEMA_VERSION) throw new StoreError('corrupt');
+      genesis = sha256Hex('prysm-genesis-v1:' + nonce);
+      // no key file is read or created in read-only mode; only an explicitly supplied key is usable
+      if (opts.hmacKey !== undefined) key = Buffer.from(opts.hmacKey);
+      else protection = 'unknown';
+    } catch (e) {
+      try { db.close(); } catch { /* ignore */ }
+      if (e instanceof StoreError) throw e;
+      const m = mapErr(e);
+      const msg = (e as { message?: unknown } | null)?.message;
+      throw typeof msg === 'string' && /no such table/i.test(msg) ? new StoreError('corrupt') : m;
+    }
+  } else try {
     db.exec('PRAGMA busy_timeout=' + String(busy));
     db.exec('PRAGMA journal_mode=WAL');
     db.exec('PRAGMA synchronous=' + sync);
@@ -699,6 +730,7 @@ export function openStore(opts: OpenStoreOptions): Store {
 
   const inTxn = <T>(fn: () => T): T => {
     assertOpen();
+    if (readOnly) throw new StoreError('io');
     try {
       db.exec('BEGIN IMMEDIATE');
     } catch (e) {
@@ -716,12 +748,14 @@ export function openStore(opts: OpenStoreOptions): Store {
 
   const append = (ev: NewEvent): StoredEvent => {
     assertOpen();
+    if (readOnly) throw new StoreError('io');
     const n = normalize(ev, clock);
     return inTxn(() => appendRow(n));
   };
 
   const appendShort = (ev: NewEvent): StoredEvent => {
     assertOpen();
+    if (readOnly) throw new StoreError('io');
     const n = normalize(ev, clock);
     const t = Math.min(busy, 250);
     try { db.exec('PRAGMA busy_timeout=' + String(t)); } catch { /* ignore */ }
@@ -824,6 +858,7 @@ export function openStore(opts: OpenStoreOptions): Store {
 
   const hmac = (label: HmacLabel, data: string): string => {
     if (!HMAC_LABELS.has(label) || typeof data !== 'string') throw new StoreError('invalid_event');
+    if (key.length === 0) throw new StoreError('key_mismatch'); // readOnly open without a usable key
     // First 32 hex chars (128 bits) are kept: ample for correlation, shorter rows.
     return createHmac('sha256', key).update(label + ':' + data, 'utf8').digest('hex').slice(0, 32);
   };
