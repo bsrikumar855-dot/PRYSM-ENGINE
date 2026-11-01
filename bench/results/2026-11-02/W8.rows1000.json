@@ -1,0 +1,57 @@
+{
+ "case": "W8.rows1000",
+ "workload": "W8",
+ "title": "report + verify-chain on a store of 1000 decision rows (single run)",
+ "profile": "full",
+ "seed": 20260101,
+ "machine": {
+  "cpu_model": "AMD Ryzen 7 4800H with Radeon Graphics",
+  "logical_cores": 16,
+  "ram_bytes": 16556584960,
+  "os": "win32 10.0.26200 (Windows 11 Home Single Language)",
+  "arch": "x64",
+  "node": "v24.13.1",
+  "date": "2026-11-01T23:13:16.814Z",
+  "power_plan": "Performance"
+ },
+ "failed_runs": [],
+ "runs": [
+  {
+   "rep": 1,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 0,
+   "iters": 1,
+   "wall_ms": 1031.0514,
+   "output": {
+    "kind": "custom",
+    "data": {
+     "rows": 1000,
+     "head_seq": 1000,
+     "build_ms": 309.4634,
+     "db_bytes": 761856,
+     "report": {
+      "wall_ms": 425.5395,
+      "exit_code": 0,
+      "inproc_ms": 194.8987,
+      "peak_rss_mb": 94.640625,
+      "stdout_first_line": "report written: C:\\Users\\babus\\AppData\\Local\\Temp\\prysm-bench-8QHmBO\\report.html (1075592 bytes)",
+      "stderr_lines": 0,
+      "html_bytes": 1075592
+     },
+     "verify_chain": {
+      "wall_ms": 268.4373,
+      "exit_code": 0,
+      "inproc_ms": 59.7374,
+      "peak_rss_mb": 74.85546875,
+      "stdout_first_line": "OK",
+      "stderr_lines": 0
+     }
+    }
+   }
+  }
+ ],
+ "cold": null,
+ "aggregate": null,
+ "extra_aggregate": null
+}

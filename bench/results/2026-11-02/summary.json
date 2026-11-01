@@ -1,0 +1,1159 @@
+{
+ "schema": "prysm-bench-summary/1",
+ "profile": "full",
+ "seed": 20260101,
+ "machine": {
+  "cpu_model": "AMD Ryzen 7 4800H with Radeon Graphics",
+  "logical_cores": 16,
+  "ram_bytes": 16556584960,
+  "os": "win32 10.0.26200 (Windows 11 Home Single Language)",
+  "arch": "x64",
+  "node": "v24.13.1",
+  "date": "2026-11-01T23:13:16.814Z",
+  "power_plan": "Performance"
+ },
+ "note": "Protocol run (BENCH-SPEC section 3).",
+ "latency_ms": {
+  "W1.fixture-mix": {
+   "n_per_run": 10000,
+   "runs": 5,
+   "p50": {
+    "median": 0.039,
+    "min": 0.038,
+    "max": 0.039,
+    "cv": 0.0102
+   },
+   "p95": {
+    "median": 0.07,
+    "min": 0.062,
+    "max": 0.076,
+    "cv": 0.0782
+   },
+   "p99": {
+    "median": 0.152,
+    "min": 0.134,
+    "max": 0.16,
+    "cv": 0.0652
+   },
+   "cold": {
+    "p50": 0.091,
+    "p99": 1.107,
+    "first_iteration": 1.649,
+    "n": 100
+   },
+   "extra": {
+    "permit_calls": {
+     "median": 5744,
+     "min": 5744,
+     "max": 5744,
+     "cv": 0
+    },
+    "deny_calls": {
+     "median": 6256,
+     "min": 6256,
+     "max": 6256,
+     "cv": 0
+    },
+    "rules": {
+     "median": 8,
+     "min": 8,
+     "max": 8,
+     "cv": 0
+    }
+   }
+  },
+  "W2.tiny": {
+   "n_per_run": 10000,
+   "runs": 5,
+   "p50": {
+    "median": 0.074,
+    "min": 0.056,
+    "max": 0.087,
+    "cv": 0.2146
+   },
+   "p95": {
+    "median": 0.13,
+    "min": 0.085,
+    "max": 0.156,
+    "cv": 0.2774
+   },
+   "p99": {
+    "median": 0.301,
+    "min": 0.242,
+    "max": 0.341,
+    "cv": 0.163
+   },
+   "cold": {
+    "p50": 0.099,
+    "p99": 0.764,
+    "first_iteration": 2.139,
+    "n": 100
+   },
+   "extra": {
+    "permit_calls": {
+     "median": 10518,
+     "min": 10518,
+     "max": 10518,
+     "cv": 0
+    },
+    "deny_calls": {
+     "median": 1482,
+     "min": 1482,
+     "max": 1482,
+     "cv": 0
+    },
+    "rules": {
+     "median": 200,
+     "min": 200,
+     "max": 200,
+     "cv": 0
+    }
+   }
+  },
+  "W2.kib1": {
+   "n_per_run": 10000,
+   "runs": 5,
+   "p50": {
+    "median": 0.169,
+    "min": 0.168,
+    "max": 0.173,
+    "cv": 0.0104
+   },
+   "p95": {
+    "median": 0.294,
+    "min": 0.288,
+    "max": 0.363,
+    "cv": 0.1035
+   },
+   "p99": {
+    "median": 0.461,
+    "min": 0.447,
+    "max": 0.591,
+    "cv": 0.126
+   },
+   "cold": {
+    "p50": 0.234,
+    "p99": 1.182,
+    "first_iteration": 2.527,
+    "n": 100
+   },
+   "extra": {
+    "permit_calls": {
+     "median": 10871,
+     "min": 10871,
+     "max": 10871,
+     "cv": 0
+    },
+    "deny_calls": {
+     "median": 1129,
+     "min": 1129,
+     "max": 1129,
+     "cv": 0
+    },
+    "rules": {
+     "median": 200,
+     "min": 200,
+     "max": 200,
+     "cv": 0
+    }
+   }
+  },
+  "W2.kib8": {
+   "n_per_run": 10000,
+   "runs": 5,
+   "p50": {
+    "median": 0.947,
+    "min": 0.945,
+    "max": 0.959,
+    "cv": 0.0059
+   },
+   "p95": {
+    "median": 1.722,
+    "min": 1.721,
+    "max": 1.799,
+    "cv": 0.0197
+   },
+   "p99": {
+    "median": 2.321,
+    "min": 2.294,
+    "max": 2.486,
+    "cv": 0.0348
+   },
+   "cold": {
+    "p50": 1.02,
+    "p99": 3.072,
+    "first_iteration": 4.144,
+    "n": 100
+   },
+   "extra": {
+    "permit_calls": {
+     "median": 10032,
+     "min": 10032,
+     "max": 10032,
+     "cv": 0
+    },
+    "deny_calls": {
+     "median": 1968,
+     "min": 1968,
+     "max": 1968,
+     "cv": 0
+    },
+    "rules": {
+     "median": 200,
+     "min": 200,
+     "max": 200,
+     "cv": 0
+    }
+   }
+  },
+  "W2.list64": {
+   "n_per_run": 10000,
+   "runs": 5,
+   "p50": {
+    "median": 0.235,
+    "min": 0.234,
+    "max": 0.236,
+    "cv": 0.0044
+   },
+   "p95": {
+    "median": 0.359,
+    "min": 0.354,
+    "max": 0.37,
+    "cv": 0.0206
+   },
+   "p99": {
+    "median": 0.56,
+    "min": 0.542,
+    "max": 0.598,
+    "cv": 0.0385
+   },
+   "cold": {
+    "p50": 0.343,
+    "p99": 1.052,
+    "first_iteration": 2.152,
+    "n": 100
+   },
+   "extra": {
+    "permit_calls": {
+     "median": 10424,
+     "min": 10424,
+     "max": 10424,
+     "cv": 0
+    },
+    "deny_calls": {
+     "median": 1576,
+     "min": 1576,
+     "max": 1576,
+     "cv": 0
+    },
+    "rules": {
+     "median": 200,
+     "min": 200,
+     "max": 200,
+     "cv": 0
+    }
+   }
+  },
+  "W3.fixture-mix": {
+   "n_per_run": 10000,
+   "runs": 5,
+   "p50": {
+    "median": 0.025,
+    "min": 0.025,
+    "max": 0.025,
+    "cv": 0.006
+   },
+   "p95": {
+    "median": 0.041,
+    "min": 0.039,
+    "max": 0.045,
+    "cv": 0.0602
+   },
+   "p99": {
+    "median": 0.094,
+    "min": 0.093,
+    "max": 0.131,
+    "cv": 0.1572
+   },
+   "cold": {
+    "p50": 0.055,
+    "p99": 0.677,
+    "first_iteration": 1.565,
+    "n": 100
+   },
+   "extra": {
+    "snapshots_taken": {
+     "median": 12000,
+     "min": 12000,
+     "max": 12000,
+     "cv": 0
+    }
+   }
+  },
+  "W3.synth-kib1": {
+   "n_per_run": 10000,
+   "runs": 5,
+   "p50": {
+    "median": 0.165,
+    "min": 0.164,
+    "max": 0.186,
+    "cv": 0.0585
+   },
+   "p95": {
+    "median": 0.311,
+    "min": 0.284,
+    "max": 0.403,
+    "cv": 0.1632
+   },
+   "p99": {
+    "median": 0.46,
+    "min": 0.438,
+    "max": 0.545,
+    "cv": 0.0992
+   },
+   "cold": {
+    "p50": 0.22,
+    "p99": 1.377,
+    "first_iteration": 2.501,
+    "n": 100
+   },
+   "extra": {
+    "snapshots_taken": {
+     "median": 12000,
+     "min": 12000,
+     "max": 12000,
+     "cv": 0
+    }
+   }
+  },
+  "W4.permit.FULL": {
+   "n_per_run": 2000,
+   "runs": 5,
+   "p50": {
+    "median": 1.918,
+    "min": 1.799,
+    "max": 2.343,
+    "cv": 0.1215
+   },
+   "p95": {
+    "median": 2.873,
+    "min": 2.347,
+    "max": 3.131,
+    "cv": 0.1375
+   },
+   "p99": {
+    "median": 10.4,
+    "min": 8.376,
+    "max": 12.549,
+    "cv": 0.1566
+   },
+   "cold": {
+    "p50": 1.947,
+    "p99": 3.389,
+    "first_iteration": 6.93,
+    "n": 100
+   },
+   "extra": {
+    "calls_total": {
+     "median": 4000,
+     "min": 4000,
+     "max": 4000,
+     "cv": 0
+    },
+    "audit_rows": {
+     "median": 8001,
+     "min": 8001,
+     "max": 8001,
+     "cv": 0
+    },
+    "unexpected_results": {
+     "median": 0,
+     "min": 0,
+     "max": 0,
+     "cv": 0
+    }
+   }
+  },
+  "W4.permit.NORMAL": {
+   "n_per_run": 2000,
+   "runs": 5,
+   "p50": {
+    "median": 0.399,
+    "min": 0.393,
+    "max": 0.598,
+    "cv": 0.2028
+   },
+   "p95": {
+    "median": 0.922,
+    "min": 0.747,
+    "max": 1.721,
+    "cv": 0.394
+   },
+   "p99": {
+    "median": 12.903,
+    "min": 11.725,
+    "max": 40.402,
+    "cv": 0.6345
+   },
+   "cold": {
+    "p50": 0.961,
+    "p99": 6.105,
+    "first_iteration": 6.105,
+    "n": 100
+   },
+   "extra": {
+    "calls_total": {
+     "median": 4000,
+     "min": 4000,
+     "max": 4000,
+     "cv": 0
+    },
+    "audit_rows": {
+     "median": 8001,
+     "min": 8001,
+     "max": 8001,
+     "cv": 0
+    },
+    "unexpected_results": {
+     "median": 0,
+     "min": 0,
+     "max": 0,
+     "cv": 0
+    }
+   }
+  },
+  "W4.deny.FULL": {
+   "n_per_run": 2000,
+   "runs": 5,
+   "p50": {
+    "median": 0.943,
+    "min": 0.938,
+    "max": 1.007,
+    "cv": 0.0363
+   },
+   "p95": {
+    "median": 1.329,
+    "min": 1.286,
+    "max": 1.476,
+    "cv": 0.0702
+   },
+   "p99": {
+    "median": 1.824,
+    "min": 1.603,
+    "max": 1.96,
+    "cv": 0.0873
+   },
+   "cold": {
+    "p50": 1.104,
+    "p99": 2.484,
+    "first_iteration": 6.899,
+    "n": 100
+   },
+   "extra": {
+    "calls_total": {
+     "median": 4000,
+     "min": 4000,
+     "max": 4000,
+     "cv": 0
+    },
+    "audit_rows": {
+     "median": 4001,
+     "min": 4001,
+     "max": 4001,
+     "cv": 0
+    },
+    "unexpected_results": {
+     "median": 0,
+     "min": 0,
+     "max": 0,
+     "cv": 0
+    }
+   }
+  },
+  "W4.deny.NORMAL": {
+   "n_per_run": 2000,
+   "runs": 5,
+   "p50": {
+    "median": 0.308,
+    "min": 0.307,
+    "max": 0.344,
+    "cv": 0.0517
+   },
+   "p95": {
+    "median": 0.646,
+    "min": 0.635,
+    "max": 0.899,
+    "cv": 0.1591
+   },
+   "p99": {
+    "median": 1.378,
+    "min": 1.362,
+    "max": 1.549,
+    "cv": 0.0555
+   },
+   "cold": {
+    "p50": 0.591,
+    "p99": 2.524,
+    "first_iteration": 4.394,
+    "n": 100
+   },
+   "extra": {
+    "calls_total": {
+     "median": 4000,
+     "min": 4000,
+     "max": 4000,
+     "cv": 0
+    },
+    "audit_rows": {
+     "median": 4001,
+     "min": 4001,
+     "max": 4001,
+     "cv": 0
+    },
+    "unexpected_results": {
+     "median": 0,
+     "min": 0,
+     "max": 0,
+     "cv": 0
+    }
+   }
+  },
+  "W5.c1": {
+   "n_per_run": 2000,
+   "runs": 5,
+   "p50": {
+    "median": 2,
+    "min": 1.898,
+    "max": 6.73,
+    "cv": 0.7272
+   },
+   "p95": {
+    "median": 2.962,
+    "min": 2.446,
+    "max": 19.84,
+    "cv": 1.2459
+   },
+   "p99": {
+    "median": 11.016,
+    "min": 10.282,
+    "max": 30.345,
+    "cv": 0.5921
+   },
+   "cold": {
+    "p50": 1.902,
+    "p99": 3.657,
+    "first_iteration": 5.766,
+    "n": 100
+   },
+   "extra": {
+    "lanes": {
+     "median": 1,
+     "min": 1,
+     "max": 1,
+     "cv": 0
+    },
+    "throughput_per_s": {
+     "median": 456.01223863886554,
+     "min": 121.80357426985731,
+     "max": 459.4577364929477,
+     "cv": 0.3836183915445255
+    },
+    "audit_rows": {
+     "median": 8001,
+     "min": 8001,
+     "max": 8001,
+     "cv": 0
+    },
+    "unexpected_results": {
+     "median": 0,
+     "min": 0,
+     "max": 0,
+     "cv": 0
+    }
+   }
+  },
+  "W5.c4": {
+   "n_per_run": 2000,
+   "runs": 5,
+   "p50": {
+    "median": 8.128,
+    "min": 8.082,
+    "max": 8.27,
+    "cv": 0.0094
+   },
+   "p95": {
+    "median": 15.453,
+    "min": 9.924,
+    "max": 42.23,
+    "cv": 0.6675
+   },
+   "p99": {
+    "median": 20.15,
+    "min": 19.93,
+    "max": 65.264,
+    "cv": 0.6911
+   },
+   "cold": {
+    "p50": 22.333,
+    "p99": 51.592,
+    "first_iteration": 51.849,
+    "n": 100
+   },
+   "extra": {
+    "lanes": {
+     "median": 4,
+     "min": 4,
+     "max": 4,
+     "cv": 0
+    },
+    "throughput_per_s": {
+     "median": 456.6457656094366,
+     "min": 301.80729299516895,
+     "max": 463.6362121116198,
+     "cv": 0.16455873821880881
+    },
+    "audit_rows": {
+     "median": 8001,
+     "min": 8001,
+     "max": 8001,
+     "cv": 0
+    },
+    "unexpected_results": {
+     "median": 0,
+     "min": 0,
+     "max": 0,
+     "cv": 0
+    }
+   }
+  },
+  "W5.c16": {
+   "n_per_run": 2000,
+   "runs": 5,
+   "p50": {
+    "median": 32.634,
+    "min": 32.437,
+    "max": 33.075,
+    "cv": 0.0081
+   },
+   "p95": {
+    "median": 43.78,
+    "min": 43.184,
+    "max": 45.049,
+    "cv": 0.0172
+   },
+   "p99": {
+    "median": 47.058,
+    "min": 44.979,
+    "max": 50.127,
+    "cv": 0.0451
+   },
+   "cold": {
+    "p50": 32.797,
+    "p99": 37.86,
+    "first_iteration": 39.298,
+    "n": 100
+   },
+   "extra": {
+    "lanes": {
+     "median": 16,
+     "min": 16,
+     "max": 16,
+     "cv": 0
+    },
+    "throughput_per_s": {
+     "median": 464.4709237253745,
+     "min": 454.66454565656124,
+     "max": 466.4060218800859,
+     "cv": 0.010751816831079494
+    },
+    "audit_rows": {
+     "median": 8001,
+     "min": 8001,
+     "max": 8001,
+     "cv": 0
+    },
+    "unexpected_results": {
+     "median": 0,
+     "min": 0,
+     "max": 0,
+     "cv": 0
+    }
+   }
+  },
+  "W5.c64": {
+   "n_per_run": 2000,
+   "runs": 5,
+   "p50": {
+    "median": 140.198,
+    "min": 139.445,
+    "max": 159.688,
+    "cv": 0.0602
+   },
+   "p95": {
+    "median": 160.157,
+    "min": 145.776,
+    "max": 201.225,
+    "cv": 0.1388
+   },
+   "p99": {
+    "median": 172.348,
+    "min": 153.357,
+    "max": 266.516,
+    "cv": 0.2426
+   },
+   "cold": {
+    "p50": 101.738,
+    "p99": 126.176,
+    "first_iteration": 129.258,
+    "n": 100
+   },
+   "extra": {
+    "lanes": {
+     "median": 64,
+     "min": 64,
+     "max": 64,
+     "cv": 0
+    },
+    "throughput_per_s": {
+     "median": 453.9457303339928,
+     "min": 391.5832163674266,
+     "max": 460.9541418850037,
+     "cv": 0.06588771952526995
+    },
+    "audit_rows": {
+     "median": 8001,
+     "min": 8001,
+     "max": 8001,
+     "cv": 0
+    },
+    "unexpected_results": {
+     "median": 0,
+     "min": 0,
+     "max": 0,
+     "cv": 0
+    }
+   }
+  },
+  "W5.procs4": {
+   "n_per_run": 2000,
+   "runs": 5,
+   "p50": {
+    "median": 0.849,
+    "min": 0.831,
+    "max": 0.955,
+    "cv": 0.0576
+   },
+   "p95": {
+    "median": 1.208,
+    "min": 1.081,
+    "max": 1.289,
+    "cv": 0.0624
+   },
+   "p99": {
+    "median": 3.236,
+    "min": 2.294,
+    "max": 4.019,
+    "cv": 0.1947
+   },
+   "cold": {
+    "p50": 0.907,
+    "p99": 56.912,
+    "first_iteration": 56.912,
+    "n": 100
+   },
+   "extra": {
+    "processes": {
+     "median": 4,
+     "min": 4,
+     "max": 4,
+     "cv": 0
+    },
+    "throughput_per_s": {
+     "median": 1045.1991130440326,
+     "min": 921.1515462864373,
+     "max": 1067.30169694566,
+     "cv": 0.058196574965575044
+    },
+    "audit_rows": {
+     "median": 4000,
+     "min": 4000,
+     "max": 4000,
+     "cv": 0
+    },
+    "rows_expected": {
+     "median": 4000,
+     "min": 4000,
+     "max": 4000,
+     "cv": 0
+    },
+    "worker_nonzero_exits": {
+     "median": 0,
+     "min": 0,
+     "max": 0,
+     "cv": 0
+    }
+   }
+  },
+  "W7.permit.stub": {
+   "n_per_run": 2000,
+   "runs": 5,
+   "p50": {
+    "median": 0.041,
+    "min": 0.04,
+    "max": 0.045,
+    "cv": 0.0442
+   },
+   "p95": {
+    "median": 0.084,
+    "min": 0.07,
+    "max": 0.099,
+    "cv": 0.1283
+   },
+   "p99": {
+    "median": 0.271,
+    "min": 0.248,
+    "max": 0.311,
+    "cv": 0.0842
+   },
+   "cold": {
+    "p50": 0.082,
+    "p99": 0.763,
+    "first_iteration": 2.721,
+    "n": 100
+   },
+   "extra": {
+    "calls_total": {
+     "median": 4000,
+     "min": 4000,
+     "max": 4000,
+     "cv": 0
+    },
+    "audit_rows": {
+     "median": 8001,
+     "min": 8001,
+     "max": 8001,
+     "cv": 0
+    },
+    "unexpected_results": {
+     "median": 0,
+     "min": 0,
+     "max": 0,
+     "cv": 0
+    }
+   }
+  },
+  "W7.deny.stub": {
+   "n_per_run": 2000,
+   "runs": 5,
+   "p50": {
+    "median": 0.03,
+    "min": 0.03,
+    "max": 0.032,
+    "cv": 0.0317
+   },
+   "p95": {
+    "median": 0.06,
+    "min": 0.052,
+    "max": 0.067,
+    "cv": 0.0941
+   },
+   "p99": {
+    "median": 0.245,
+    "min": 0.214,
+    "max": 0.26,
+    "cv": 0.0707
+   },
+   "cold": {
+    "p50": 0.069,
+    "p99": 0.544,
+    "first_iteration": 2.26,
+    "n": 100
+   },
+   "extra": {
+    "calls_total": {
+     "median": 4000,
+     "min": 4000,
+     "max": 4000,
+     "cv": 0
+    },
+    "audit_rows": {
+     "median": 4001,
+     "min": 4001,
+     "max": 4001,
+     "cv": 0
+    },
+    "unexpected_results": {
+     "median": 0,
+     "min": 0,
+     "max": 0,
+     "cv": 0
+    }
+   }
+  },
+  "W6.direct": {
+   "n_per_run": 2000,
+   "runs": 5,
+   "p50": {
+    "median": 1.027,
+    "min": 1.024,
+    "max": 1.13,
+    "cv": 0.0435
+   },
+   "p95": {
+    "median": 1.326,
+    "min": 1.27,
+    "max": 1.453,
+    "cv": 0.0537
+   },
+   "p99": {
+    "median": 1.56,
+    "min": 1.521,
+    "max": 1.81,
+    "cv": 0.0728
+   },
+   "cold": {
+    "p50": 1.171,
+    "p99": 1.938,
+    "first_iteration": 1.938,
+    "n": 100
+   },
+   "extra": {
+    "calls_total": {
+     "median": 4000,
+     "min": 4000,
+     "max": 4000,
+     "cv": 0
+    },
+    "error_replies": {
+     "median": 0,
+     "min": 0,
+     "max": 0,
+     "cv": 0
+    },
+    "audit_rows": {
+     "median": 0,
+     "min": 0,
+     "max": 0,
+     "cv": 0
+    }
+   }
+  },
+  "W6.proxy": {
+   "n_per_run": 2000,
+   "runs": 5,
+   "p50": {
+    "median": 2.777,
+    "min": 2.669,
+    "max": 2.906,
+    "cv": 0.0366
+   },
+   "p95": {
+    "median": 3.445,
+    "min": 3.084,
+    "max": 3.531,
+    "cv": 0.0567
+   },
+   "p99": {
+    "median": 4.71,
+    "min": 4.64,
+    "max": 6.493,
+    "cv": 0.1599
+   },
+   "cold": {
+    "p50": 4.042,
+    "p99": 6.4,
+    "first_iteration": 9.53,
+    "n": 100
+   },
+   "extra": {
+    "calls_total": {
+     "median": 4000,
+     "min": 4000,
+     "max": 4000,
+     "cv": 0
+    },
+    "error_replies": {
+     "median": 0,
+     "min": 0,
+     "max": 0,
+     "cv": 0
+    },
+    "audit_rows": {
+     "median": 5004,
+     "min": 5004,
+     "max": 5004,
+     "cv": 0
+    },
+    "tool_decision_rows": {
+     "median": 4000,
+     "min": 4000,
+     "max": 4000,
+     "cv": 0
+    }
+   }
+  }
+ },
+ "w8": {
+  "W8.rows1000": {
+   "rows": 1000,
+   "head_seq": 1000,
+   "build_ms": 309.4634,
+   "db_bytes": 761856,
+   "report": {
+    "wall_ms": 425.5395,
+    "exit_code": 0,
+    "inproc_ms": 194.8987,
+    "peak_rss_mb": 94.640625,
+    "stdout_first_line": "report written: C:\\Users\\babus\\AppData\\Local\\Temp\\prysm-bench-8QHmBO\\report.html (1075592 bytes)",
+    "stderr_lines": 0,
+    "html_bytes": 1075592
+   },
+   "verify_chain": {
+    "wall_ms": 268.4373,
+    "exit_code": 0,
+    "inproc_ms": 59.7374,
+    "peak_rss_mb": 74.85546875,
+    "stdout_first_line": "OK",
+    "stderr_lines": 0
+   }
+  },
+  "W8.rows10000": {
+   "rows": 10000,
+   "head_seq": 10000,
+   "build_ms": 3189.3183,
+   "db_bytes": 7348224,
+   "report": {
+    "wall_ms": 897.7211,
+    "exit_code": 0,
+    "inproc_ms": 671.6997,
+    "peak_rss_mb": 156.53125,
+    "stdout_first_line": "report written: C:\\Users\\babus\\AppData\\Local\\Temp\\prysm-bench-mlAVSh\\report.html (1082930 bytes)",
+    "stderr_lines": 0,
+    "html_bytes": 1082930
+   },
+   "verify_chain": {
+    "wall_ms": 599.5526,
+    "exit_code": 0,
+    "inproc_ms": 368.7912,
+    "peak_rss_mb": 134.05859375,
+    "stdout_first_line": "OK",
+    "stderr_lines": 0
+   }
+  },
+  "W8.rows100000": {
+   "rows": 100000,
+   "head_seq": 100000,
+   "build_ms": 36484.311,
+   "db_bytes": 73625600,
+   "report": {
+    "wall_ms": 5683.9422,
+    "exit_code": 0,
+    "inproc_ms": 5451.0764,
+    "peak_rss_mb": 248.33984375,
+    "stdout_first_line": "report written: C:\\Users\\babus\\AppData\\Local\\Temp\\prysm-bench-lD4LTQ\\report.html (1090429 bytes)",
+    "stderr_lines": 0,
+    "html_bytes": 1090429
+   },
+   "verify_chain": {
+    "wall_ms": 3716.1646,
+    "exit_code": 0,
+    "inproc_ms": 3463.2426,
+    "peak_rss_mb": 238.078125,
+    "stdout_first_line": "OK",
+    "stderr_lines": 0
+   }
+  }
+ },
+ "derived": {
+  "w6_proxy_overhead_ms": {
+   "p50": 1.75,
+   "p95": 2.119,
+   "p99": 3.15,
+   "audit_rows_proxy": 5004
+  },
+  "w7_durable_write_cost_ms": {
+   "permit.FULL": {
+    "p50": 1.878,
+    "p99": 10.129
+   },
+   "permit.NORMAL": {
+    "p50": 0.358,
+    "p99": 12.632
+   },
+   "deny.FULL": {
+    "p50": 0.913,
+    "p99": 1.579
+   },
+   "deny.NORMAL": {
+    "p50": 0.278,
+    "p99": 1.133
+   }
+  },
+  "w5_throughput_per_s": {
+   "W5.c1": {
+    "median": 456,
+    "min": 122,
+    "max": 459
+   },
+   "W5.c4": {
+    "median": 457,
+    "min": 302,
+    "max": 464
+   },
+   "W5.c16": {
+    "median": 464,
+    "min": 455,
+    "max": 466
+   },
+   "W5.c64": {
+    "median": 454,
+    "min": 392,
+    "max": 461
+   },
+   "W5.procs4": {
+    "median": 1045,
+    "min": 921,
+    "max": 1067
+   }
+  }
+ },
+ "hypotheses": [
+  {
+   "id": "H1",
+   "statement": "decide() p99 < 1 ms at 200 rules (worst of the W2 variants; median of per-run p99)",
+   "threshold": "< 1 ms",
+   "status": "MISSED",
+   "numbers": "W2.tiny p99=0.301 ms, W2.kib1 p99=0.461 ms, W2.kib8 p99=2.32 ms, W2.list64 p99=0.560 ms",
+   "value": 2.321,
+   "unit": "ms"
+  },
+  {
+   "id": "H2",
+   "statement": "guard call() with no-op tool and synchronous=FULL audit: p99 < 10 ms (both permit and deny paths; median of per-run p99)",
+   "threshold": "< 10 ms",
+   "status": "MISSED",
+   "numbers": "permit p99=10.40 ms (p50 1.92), deny p99=1.82 ms (p50 0.943)",
+   "value": 10.3997,
+   "unit": "ms"
+  },
+  {
+   "id": "H3",
+   "statement": "proxy overhead p99 < 15 ms (proxy p99 minus direct p99, medians of per-run p99)",
+   "threshold": "< 15 ms",
+   "status": "met",
+   "numbers": "overhead p99=3.15 ms, p50=1.75 ms (proxy p50 2.78/p99 4.71; direct p50 1.03/p99 1.56)",
+   "value": 3.1503,
+   "unit": "ms"
+  },
+  {
+   "id": "H4",
+   "statement": "verify-chain of 100k rows < 30 s (process wall time)",
+   "threshold": "< 30 s",
+   "status": "met",
+   "numbers": "verify-chain wall=3.72 s",
+   "value": 3.7161646,
+   "unit": "s"
+  }
+ ],
+ "failures": []
+}

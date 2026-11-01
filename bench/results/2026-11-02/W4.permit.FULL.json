@@ -1,0 +1,264 @@
+{
+ "case": "W4.permit.FULL",
+ "workload": "W4",
+ "title": "guard.call() no-op tool, permit path, store synchronous=FULL",
+ "profile": "full",
+ "seed": 20260101,
+ "machine": {
+  "cpu_model": "AMD Ryzen 7 4800H with Radeon Graphics",
+  "logical_cores": 16,
+  "ram_bytes": 16556584960,
+  "os": "win32 10.0.26200 (Windows 11 Home Single Language)",
+  "arch": "x64",
+  "node": "v24.13.1",
+  "date": "2026-11-01T23:13:16.814Z",
+  "power_plan": "Performance"
+ },
+ "failed_runs": [],
+ "runs": [
+  {
+   "rep": 1,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 2000,
+   "iters": 2000,
+   "wall_ms": 9037.8879,
+   "output": {
+    "kind": "latency",
+    "stats": {
+     "n": 2000,
+     "min": 1403700,
+     "max": 17234500,
+     "mean": 2552602.95,
+     "p50": 2342500,
+     "p95": 3131100,
+     "p99": 12548900,
+     "hist_log2_ns": {
+      "20": 278,
+      "21": 1688,
+      "22": 9,
+      "23": 24,
+      "24": 1
+     }
+    },
+    "first_iteration_ns": 1973300,
+    "extra": {
+     "calls_total": 4000,
+     "audit_rows": 8001,
+     "unexpected_results": 0
+    }
+   }
+  },
+  {
+   "rep": 2,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 2000,
+   "iters": 2000,
+   "wall_ms": 7838.3736,
+   "output": {
+    "kind": "latency",
+    "stats": {
+     "n": 2000,
+     "min": 1364400,
+     "max": 17091800,
+     "mean": 2037841.4,
+     "p50": 1798900,
+     "p95": 2872500,
+     "p99": 8375800,
+     "hist_log2_ns": {
+      "20": 1580,
+      "21": 393,
+      "22": 7,
+      "23": 19,
+      "24": 1
+     }
+    },
+    "first_iteration_ns": 1381300,
+    "extra": {
+     "calls_total": 4000,
+     "audit_rows": 8001,
+     "unexpected_results": 0
+    }
+   }
+  },
+  {
+   "rep": 3,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 2000,
+   "iters": 2000,
+   "wall_ms": 11122.7779,
+   "output": {
+    "kind": "latency",
+    "stats": {
+     "n": 2000,
+     "min": 1587200,
+     "max": 34631200,
+     "mean": 2514965.05,
+     "p50": 2308100,
+     "p95": 3102100,
+     "p99": 11589900,
+     "hist_log2_ns": {
+      "20": 591,
+      "21": 1377,
+      "22": 6,
+      "23": 17,
+      "24": 8,
+      "25": 1
+     }
+    },
+    "first_iteration_ns": 2308100,
+    "extra": {
+     "calls_total": 4000,
+     "audit_rows": 8001,
+     "unexpected_results": 0
+    }
+   }
+  },
+  {
+   "rep": 4,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 2000,
+   "iters": 2000,
+   "wall_ms": 7948.1703,
+   "output": {
+    "kind": "latency",
+    "stats": {
+     "n": 2000,
+     "min": 1394600,
+     "max": 13633200,
+     "mean": 2040322.6,
+     "p50": 1918300,
+     "p95": 2383900,
+     "p99": 10399700,
+     "hist_log2_ns": {
+      "20": 1690,
+      "21": 285,
+      "23": 25
+     }
+    },
+    "first_iteration_ns": 1679800,
+    "extra": {
+     "calls_total": 4000,
+     "audit_rows": 8001,
+     "unexpected_results": 0
+    }
+   }
+  },
+  {
+   "rep": 5,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 2000,
+   "iters": 2000,
+   "wall_ms": 7994.7356,
+   "output": {
+    "kind": "latency",
+    "stats": {
+     "n": 2000,
+     "min": 1506200,
+     "max": 14052400,
+     "mean": 2037377.7,
+     "p50": 1917000,
+     "p95": 2346900,
+     "p99": 9551500,
+     "hist_log2_ns": {
+      "20": 1676,
+      "21": 299,
+      "22": 1,
+      "23": 24
+     }
+    },
+    "first_iteration_ns": 1869300,
+    "extra": {
+     "calls_total": 4000,
+     "audit_rows": 8001,
+     "unexpected_results": 0
+    }
+   }
+  }
+ ],
+ "cold": {
+  "rep": 0,
+  "cold": true,
+  "seed_base": 20260101,
+  "warmup": 0,
+  "iters": 100,
+  "wall_ms": 229.8198,
+  "output": {
+   "kind": "latency",
+   "stats": {
+    "n": 100,
+    "min": 1551500,
+    "max": 6929900,
+    "mean": 2052323,
+    "p50": 1947400,
+    "p95": 2552000,
+    "p99": 3389300,
+    "hist_log2_ns": {
+     "20": 67,
+     "21": 32,
+     "22": 1
+    }
+   },
+   "first_iteration_ns": 6929900,
+   "extra": {
+    "calls_total": 100,
+    "audit_rows": 201,
+    "unexpected_results": 0
+   }
+  }
+ },
+ "aggregate": {
+  "runs": 5,
+  "n_per_run": 2000,
+  "p50": {
+   "median": 1918300,
+   "min": 1798900,
+   "max": 2342500,
+   "cv": 0.1215421670286211
+  },
+  "p95": {
+   "median": 2872500,
+   "min": 2346900,
+   "max": 3131100,
+   "cv": 0.13751279952508122
+  },
+  "p99": {
+   "median": 10399700,
+   "min": 8375800,
+   "max": 12548900,
+   "cv": 0.15664909274779654
+  },
+  "min_ns": 1364400,
+  "max_ns": 34631200,
+  "mean": {
+   "median": 2040322.6,
+   "min": 2037377.7,
+   "max": 2552602.95,
+   "cv": 0.12143272681243539
+  }
+ },
+ "extra_aggregate": {
+  "calls_total": {
+   "median": 4000,
+   "min": 4000,
+   "max": 4000,
+   "cv": 0
+  },
+  "audit_rows": {
+   "median": 8001,
+   "min": 8001,
+   "max": 8001,
+   "cv": 0
+  },
+  "unexpected_results": {
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "cv": 0
+  }
+ }
+}

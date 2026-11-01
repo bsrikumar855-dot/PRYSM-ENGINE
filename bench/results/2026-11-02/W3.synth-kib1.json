@@ -1,0 +1,248 @@
+{
+ "case": "W3.synth-kib1",
+ "workload": "W3",
+ "title": "evaluate() incl. snapshot, 200-rule policy, 1 KiB string",
+ "profile": "full",
+ "seed": 20260101,
+ "machine": {
+  "cpu_model": "AMD Ryzen 7 4800H with Radeon Graphics",
+  "logical_cores": 16,
+  "ram_bytes": 16556584960,
+  "os": "win32 10.0.26200 (Windows 11 Home Single Language)",
+  "arch": "x64",
+  "node": "v24.13.1",
+  "date": "2026-11-01T23:13:16.814Z",
+  "power_plan": "Performance"
+ },
+ "failed_runs": [],
+ "runs": [
+  {
+   "rep": 1,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 2000,
+   "iters": 10000,
+   "wall_ms": 2300.3377,
+   "output": {
+    "kind": "latency",
+    "stats": {
+     "n": 10000,
+     "min": 110800,
+     "max": 1070600,
+     "mean": 186694.78,
+     "p50": 164700,
+     "p95": 310900,
+     "p99": 460400,
+     "hist_log2_ns": {
+      "16": 982,
+      "17": 8107,
+      "18": 841,
+      "19": 69,
+      "20": 1
+     }
+    },
+    "first_iteration_ns": 265500,
+    "extra": {
+     "snapshots_taken": 12000
+    }
+   }
+  },
+  {
+   "rep": 2,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 2000,
+   "iters": 10000,
+   "wall_ms": 2291.9898,
+   "output": {
+    "kind": "latency",
+    "stats": {
+     "n": 10000,
+     "min": 109900,
+     "max": 2690900,
+     "mean": 185009.03,
+     "p50": 164600,
+     "p95": 293700,
+     "p99": 443500,
+     "hist_log2_ns": {
+      "16": 1003,
+      "17": 8125,
+      "18": 821,
+      "19": 49,
+      "20": 1,
+      "21": 1
+     }
+    },
+    "first_iteration_ns": 263300,
+    "extra": {
+     "snapshots_taken": 12000
+    }
+   }
+  },
+  {
+   "rep": 3,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 2000,
+   "iters": 10000,
+   "wall_ms": 2591.7141,
+   "output": {
+    "kind": "latency",
+    "stats": {
+     "n": 10000,
+     "min": 112200,
+     "max": 1144100,
+     "mean": 211182.49,
+     "p50": 185800,
+     "p95": 385100,
+     "p99": 517900,
+     "hist_log2_ns": {
+      "16": 432,
+      "17": 7583,
+      "18": 1896,
+      "19": 88,
+      "20": 1
+     }
+    },
+    "first_iteration_ns": 263300,
+    "extra": {
+     "snapshots_taken": 12000
+    }
+   }
+  },
+  {
+   "rep": 4,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 2000,
+   "iters": 10000,
+   "wall_ms": 2665.7839,
+   "output": {
+    "kind": "latency",
+    "stats": {
+     "n": 10000,
+     "min": 110400,
+     "max": 13399600,
+     "mean": 213904.33,
+     "p50": 178600,
+     "p95": 402700,
+     "p99": 544900,
+     "hist_log2_ns": {
+      "16": 693,
+      "17": 7303,
+      "18": 1875,
+      "19": 122,
+      "20": 3,
+      "21": 1,
+      "22": 1,
+      "23": 2
+     }
+    },
+    "first_iteration_ns": 299000,
+    "extra": {
+     "snapshots_taken": 12000
+    }
+   }
+  },
+  {
+   "rep": 5,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 2000,
+   "iters": 10000,
+   "wall_ms": 2280.6885,
+   "output": {
+    "kind": "latency",
+    "stats": {
+     "n": 10000,
+     "min": 111300,
+     "max": 1134300,
+     "mean": 184073.4,
+     "p50": 164100,
+     "p95": 284000,
+     "p99": 438300,
+     "hist_log2_ns": {
+      "16": 950,
+      "17": 8231,
+      "18": 771,
+      "19": 47,
+      "20": 1
+     }
+    },
+    "first_iteration_ns": 277200,
+    "extra": {
+     "snapshots_taken": 12000
+    }
+   }
+  }
+ ],
+ "cold": {
+  "rep": 0,
+  "cold": true,
+  "seed_base": 20260101,
+  "warmup": 0,
+  "iters": 100,
+  "wall_ms": 58.8168,
+  "output": {
+   "kind": "latency",
+   "stats": {
+    "n": 100,
+    "min": 143800,
+    "max": 2500600,
+    "mean": 297898,
+    "p50": 220300,
+    "p95": 717500,
+    "p99": 1377200,
+    "hist_log2_ns": {
+     "17": 61,
+     "18": 32,
+     "19": 5,
+     "20": 1,
+     "21": 1
+    }
+   },
+   "first_iteration_ns": 2500600,
+   "extra": {
+    "snapshots_taken": 100
+   }
+  }
+ },
+ "aggregate": {
+  "runs": 5,
+  "n_per_run": 10000,
+  "p50": {
+   "median": 164700,
+   "min": 164100,
+   "max": 185800,
+   "cv": 0.058542522426302764
+  },
+  "p95": {
+   "median": 310900,
+   "min": 284000,
+   "max": 402700,
+   "cv": 0.16322931599669993
+  },
+  "p99": {
+   "median": 460400,
+   "min": 438300,
+   "max": 544900,
+   "cv": 0.09915510486777679
+  },
+  "min_ns": 109900,
+  "max_ns": 13399600,
+  "mean": {
+   "median": 186694.78,
+   "min": 184073.4,
+   "max": 213904.33,
+   "cv": 0.07648681473673137
+  }
+ },
+ "extra_aggregate": {
+  "snapshots_taken": {
+   "median": 12000,
+   "min": 12000,
+   "max": 12000,
+   "cv": 0
+  }
+ }
+}

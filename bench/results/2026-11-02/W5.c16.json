@@ -1,0 +1,267 @@
+{
+ "case": "W5.c16",
+ "workload": "W5",
+ "title": "16 concurrent async guard calls on one store (permit path, synchronous=FULL)",
+ "profile": "full",
+ "seed": 20260101,
+ "machine": {
+  "cpu_model": "AMD Ryzen 7 4800H with Radeon Graphics",
+  "logical_cores": 16,
+  "ram_bytes": 16556584960,
+  "os": "win32 10.0.26200 (Windows 11 Home Single Language)",
+  "arch": "x64",
+  "node": "v24.13.1",
+  "date": "2026-11-01T23:13:16.814Z",
+  "power_plan": "Performance"
+ },
+ "failed_runs": [],
+ "runs": [
+  {
+   "rep": 1,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 2000,
+   "iters": 2000,
+   "wall_ms": 14503.8148,
+   "output": {
+    "kind": "latency",
+    "stats": {
+     "n": 2000,
+     "min": 14272300,
+     "max": 45841700,
+     "mean": 34258477.35,
+     "p50": 32437300,
+     "p95": 43707400,
+     "p99": 44980800,
+     "hist_log2_ns": {
+      "23": 3,
+      "24": 1439,
+      "25": 558
+     }
+    },
+    "first_iteration_ns": 31307600,
+    "extra": {
+     "lanes": 16,
+     "throughput_per_s": 466.0808062004781,
+     "audit_rows": 8001,
+     "unexpected_results": 0
+    }
+   }
+  },
+  {
+   "rep": 2,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 2000,
+   "iters": 2000,
+   "wall_ms": 8340.4388,
+   "output": {
+    "kind": "latency",
+    "stats": {
+     "n": 2000,
+     "min": 16053300,
+     "max": 53352800,
+     "mean": 34236779.25,
+     "p50": 32611400,
+     "p95": 43184100,
+     "p99": 44979000,
+     "hist_log2_ns": {
+      "23": 1,
+      "24": 1461,
+      "25": 538
+     }
+    },
+    "first_iteration_ns": 31406300,
+    "extra": {
+     "lanes": 16,
+     "throughput_per_s": 466.4060218800859,
+     "audit_rows": 8001,
+     "unexpected_results": 0
+    }
+   }
+  },
+  {
+   "rep": 3,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 2000,
+   "iters": 2000,
+   "wall_ms": 8295.9141,
+   "output": {
+    "kind": "latency",
+    "stats": {
+     "n": 2000,
+     "min": 15116200,
+     "max": 48403800,
+     "mean": 34703219,
+     "p50": 33075200,
+     "p95": 45049400,
+     "p99": 47058400,
+     "hist_log2_ns": {
+      "23": 2,
+      "24": 1206,
+      "25": 792
+     }
+    },
+    "first_iteration_ns": 39228600,
+    "extra": {
+     "lanes": 16,
+     "throughput_per_s": 460.13342995215095,
+     "audit_rows": 8001,
+     "unexpected_results": 0
+    }
+   }
+  },
+  {
+   "rep": 4,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 2000,
+   "iters": 2000,
+   "wall_ms": 8415.8759,
+   "output": {
+    "kind": "latency",
+    "stats": {
+     "n": 2000,
+     "min": 15121600,
+     "max": 53245100,
+     "mean": 34381091.2,
+     "p50": 32633800,
+     "p95": 43780000,
+     "p99": 47111600,
+     "hist_log2_ns": {
+      "23": 2,
+      "24": 1469,
+      "25": 529
+     }
+    },
+    "first_iteration_ns": 30367500,
+    "extra": {
+     "lanes": 16,
+     "throughput_per_s": 464.4709237253745,
+     "audit_rows": 8001,
+     "unexpected_results": 0
+    }
+   }
+  },
+  {
+   "rep": 5,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 2000,
+   "iters": 2000,
+   "wall_ms": 8241.784,
+   "output": {
+    "kind": "latency",
+    "stats": {
+     "n": 2000,
+     "min": 18324700,
+     "max": 58308000,
+     "mean": 35121062.05,
+     "p50": 32960700,
+     "p95": 44662900,
+     "p99": 50126500,
+     "hist_log2_ns": {
+      "24": 1211,
+      "25": 789
+     }
+    },
+    "first_iteration_ns": 30798600,
+    "extra": {
+     "lanes": 16,
+     "throughput_per_s": 454.66454565656124,
+     "audit_rows": 8001,
+     "unexpected_results": 0
+    }
+   }
+  }
+ ],
+ "cold": {
+  "rep": 0,
+  "cold": true,
+  "seed_base": 20260101,
+  "warmup": 0,
+  "iters": 100,
+  "wall_ms": 242.8627,
+  "output": {
+   "kind": "latency",
+   "stats": {
+    "n": 100,
+    "min": 4240500,
+    "max": 39297900,
+    "mean": 32210853,
+    "p50": 32797000,
+    "p95": 37505000,
+    "p99": 37859600,
+    "hist_log2_ns": {
+     "22": 4,
+     "24": 49,
+     "25": 47
+    }
+   },
+   "first_iteration_ns": 39297900,
+   "extra": {
+    "lanes": 16,
+    "throughput_per_s": 462.7198208348854,
+    "audit_rows": 201,
+    "unexpected_results": 0
+   }
+  }
+ },
+ "aggregate": {
+  "runs": 5,
+  "n_per_run": 2000,
+  "p50": {
+   "median": 32633800,
+   "min": 32437300,
+   "max": 33075200,
+   "cv": 0.008086586053606074
+  },
+  "p95": {
+   "median": 43780000,
+   "min": 43184100,
+   "max": 45049400,
+   "cv": 0.01724460134966994
+  },
+  "p99": {
+   "median": 47058400,
+   "min": 44979000,
+   "max": 50126500,
+   "cv": 0.045078429957720344
+  },
+  "min_ns": 14272300,
+  "max_ns": 58308000,
+  "mean": {
+   "median": 34381091.2,
+   "min": 34236779.25,
+   "max": 35121062.05,
+   "cv": 0.010839778093955662
+  }
+ },
+ "extra_aggregate": {
+  "lanes": {
+   "median": 16,
+   "min": 16,
+   "max": 16,
+   "cv": 0
+  },
+  "throughput_per_s": {
+   "median": 464.4709237253745,
+   "min": 454.66454565656124,
+   "max": 466.4060218800859,
+   "cv": 0.010751816831079494
+  },
+  "audit_rows": {
+   "median": 8001,
+   "min": 8001,
+   "max": 8001,
+   "cv": 0
+  },
+  "unexpected_results": {
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "cv": 0
+  }
+ }
+}

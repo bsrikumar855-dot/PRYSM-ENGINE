@@ -1,0 +1,268 @@
+{
+ "case": "W2.tiny",
+ "workload": "W2",
+ "title": "decide() on the 200-rule synthetic policy, tiny string",
+ "profile": "full",
+ "seed": 20260101,
+ "machine": {
+  "cpu_model": "AMD Ryzen 7 4800H with Radeon Graphics",
+  "logical_cores": 16,
+  "ram_bytes": 16556584960,
+  "os": "win32 10.0.26200 (Windows 11 Home Single Language)",
+  "arch": "x64",
+  "node": "v24.13.1",
+  "date": "2026-11-01T23:13:16.814Z",
+  "power_plan": "Performance"
+ },
+ "failed_runs": [],
+ "runs": [
+  {
+   "rep": 1,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 2000,
+   "iters": 10000,
+   "wall_ms": 1270.1314,
+   "output": {
+    "kind": "latency",
+    "stats": {
+     "n": 10000,
+     "min": 71600,
+     "max": 1495100,
+     "mean": 99368.47,
+     "p50": 86800,
+     "p95": 155500,
+     "p99": 339200,
+     "hist_log2_ns": {
+      "16": 9102,
+      "17": 683,
+      "18": 194,
+      "19": 18,
+      "20": 3
+     }
+    },
+    "first_iteration_ns": 161600,
+    "extra": {
+     "permit_calls": 10518,
+     "deny_calls": 1482,
+     "rules": 200
+    }
+   }
+  },
+  {
+   "rep": 2,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 2000,
+   "iters": 10000,
+   "wall_ms": 1235.8548,
+   "output": {
+    "kind": "latency",
+    "stats": {
+     "n": 10000,
+     "min": 69600,
+     "max": 1713400,
+     "mean": 96227.61,
+     "p50": 85800,
+     "p95": 146500,
+     "p99": 341100,
+     "hist_log2_ns": {
+      "16": 9335,
+      "17": 449,
+      "18": 208,
+      "19": 7,
+      "20": 1
+     }
+    },
+    "first_iteration_ns": 168100,
+    "extra": {
+     "permit_calls": 10518,
+     "deny_calls": 1482,
+     "rules": 200
+    }
+   }
+  },
+  {
+   "rep": 3,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 2000,
+   "iters": 10000,
+   "wall_ms": 1093.6923,
+   "output": {
+    "kind": "latency",
+    "stats": {
+     "n": 10000,
+     "min": 50200,
+     "max": 1013500,
+     "mean": 82346.64,
+     "p50": 74200,
+     "p95": 130300,
+     "p99": 301200,
+     "hist_log2_ns": {
+      "15": 2283,
+      "16": 7228,
+      "17": 319,
+      "18": 165,
+      "19": 5
+     }
+    },
+    "first_iteration_ns": 99600,
+    "extra": {
+     "permit_calls": 10518,
+     "deny_calls": 1482,
+     "rules": 200
+    }
+   }
+  },
+  {
+   "rep": 4,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 2000,
+   "iters": 10000,
+   "wall_ms": 791.4606,
+   "output": {
+    "kind": "latency",
+    "stats": {
+     "n": 10000,
+     "min": 45500,
+     "max": 636800,
+     "mean": 61790.27,
+     "p50": 55800,
+     "p95": 85600,
+     "p99": 247700,
+     "hist_log2_ns": {
+      "15": 8879,
+      "16": 913,
+      "17": 144,
+      "18": 63,
+      "19": 1
+     }
+    },
+    "first_iteration_ns": 64900,
+    "extra": {
+     "permit_calls": 10518,
+     "deny_calls": 1482,
+     "rules": 200
+    }
+   }
+  },
+  {
+   "rep": 5,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 2000,
+   "iters": 10000,
+   "wall_ms": 787.0562,
+   "output": {
+    "kind": "latency",
+    "stats": {
+     "n": 10000,
+     "min": 44100,
+     "max": 809300,
+     "mean": 61629.27,
+     "p50": 55600,
+     "p95": 85000,
+     "p99": 241700,
+     "hist_log2_ns": {
+      "15": 8919,
+      "16": 863,
+      "17": 162,
+      "18": 53,
+      "19": 3
+     }
+    },
+    "first_iteration_ns": 64200,
+    "extra": {
+     "permit_calls": 10518,
+     "deny_calls": 1482,
+     "rules": 200
+    }
+   }
+  }
+ ],
+ "cold": {
+  "rep": 0,
+  "cold": true,
+  "seed_base": 20260101,
+  "warmup": 0,
+  "iters": 100,
+  "wall_ms": 29.5839,
+  "output": {
+   "kind": "latency",
+   "stats": {
+    "n": 100,
+    "min": 71400,
+    "max": 2139200,
+    "mean": 151284,
+    "p50": 98800,
+    "p95": 270100,
+    "p99": 763900,
+    "hist_log2_ns": {
+     "16": 74,
+     "17": 20,
+     "18": 3,
+     "19": 2,
+     "21": 1
+    }
+   },
+   "first_iteration_ns": 2139200,
+   "extra": {
+    "permit_calls": 86,
+    "deny_calls": 14,
+    "rules": 200
+   }
+  }
+ },
+ "aggregate": {
+  "runs": 5,
+  "n_per_run": 10000,
+  "p50": {
+   "median": 74200,
+   "min": 55600,
+   "max": 86800,
+   "cv": 0.21455906864643282
+  },
+  "p95": {
+   "median": 130300,
+   "min": 85000,
+   "max": 155500,
+   "cv": 0.27739858972199705
+  },
+  "p99": {
+   "median": 301200,
+   "min": 241700,
+   "max": 341100,
+   "cv": 0.16295377276812864
+  },
+  "min_ns": 44100,
+  "max_ns": 1713400,
+  "mean": {
+   "median": 82346.64,
+   "min": 61629.27,
+   "max": 99368.47,
+   "cv": 0.225675278323772
+  }
+ },
+ "extra_aggregate": {
+  "permit_calls": {
+   "median": 10518,
+   "min": 10518,
+   "max": 10518,
+   "cv": 0
+  },
+  "deny_calls": {
+   "median": 1482,
+   "min": 1482,
+   "max": 1482,
+   "cv": 0
+  },
+  "rules": {
+   "median": 200,
+   "min": 200,
+   "max": 200,
+   "cv": 0
+  }
+ }
+}

@@ -1,0 +1,265 @@
+{
+ "case": "W6.direct",
+ "workload": "W6",
+ "title": "tools/call send_email round trip (the fixture answers it synchronously, no server-side timer), client -> fixture MCP server (no proxy)",
+ "profile": "full",
+ "seed": 20260101,
+ "machine": {
+  "cpu_model": "AMD Ryzen 7 4800H with Radeon Graphics",
+  "logical_cores": 16,
+  "ram_bytes": 16556584960,
+  "os": "win32 10.0.26200 (Windows 11 Home Single Language)",
+  "arch": "x64",
+  "node": "v24.13.1",
+  "date": "2026-11-01T23:13:16.814Z",
+  "power_plan": "Performance"
+ },
+ "failed_runs": [],
+ "runs": [
+  {
+   "rep": 1,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 2000,
+   "iters": 2000,
+   "wall_ms": 4818.5923,
+   "output": {
+    "kind": "latency",
+    "stats": {
+     "n": 2000,
+     "min": 675200,
+     "max": 83401600,
+     "mean": 1133388.3,
+     "p50": 1023800,
+     "p95": 1452500,
+     "p99": 1810200,
+     "hist_log2_ns": {
+      "19": 1219,
+      "20": 771,
+      "21": 7,
+      "22": 1,
+      "25": 1,
+      "26": 1
+     }
+    },
+    "first_iteration_ns": 962600,
+    "extra": {
+     "calls_total": 4000,
+     "error_replies": 0,
+     "audit_rows": 0
+    }
+   }
+  },
+  {
+   "rep": 2,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 2000,
+   "iters": 2000,
+   "wall_ms": 4626.6243,
+   "output": {
+    "kind": "latency",
+    "stats": {
+     "n": 2000,
+     "min": 763000,
+     "max": 11922100,
+     "mean": 1073105.25,
+     "p50": 1037700,
+     "p95": 1323200,
+     "p99": 1559500,
+     "hist_log2_ns": {
+      "19": 1071,
+      "20": 923,
+      "21": 4,
+      "23": 2
+     }
+    },
+    "first_iteration_ns": 922100,
+    "extra": {
+     "calls_total": 4000,
+     "error_replies": 0,
+     "audit_rows": 0
+    }
+   }
+  },
+  {
+   "rep": 3,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 2000,
+   "iters": 2000,
+   "wall_ms": 4832.4354,
+   "output": {
+    "kind": "latency",
+    "stats": {
+     "n": 2000,
+     "min": 699100,
+     "max": 62742200,
+     "mean": 1196574,
+     "p50": 1129700,
+     "p95": 1405000,
+     "p99": 1658200,
+     "hist_log2_ns": {
+      "19": 602,
+      "20": 1390,
+      "21": 5,
+      "22": 1,
+      "25": 2
+     }
+    },
+    "first_iteration_ns": 1053400,
+    "extra": {
+     "calls_total": 4000,
+     "error_replies": 0,
+     "audit_rows": 0
+    }
+   }
+  },
+  {
+   "rep": 4,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 2000,
+   "iters": 2000,
+   "wall_ms": 4634.6269,
+   "output": {
+    "kind": "latency",
+    "stats": {
+     "n": 2000,
+     "min": 728200,
+     "max": 50397800,
+     "mean": 1078134.85,
+     "p50": 1025500,
+     "p95": 1326000,
+     "p99": 1552700,
+     "hist_log2_ns": {
+      "19": 1143,
+      "20": 852,
+      "21": 2,
+      "22": 2,
+      "25": 1
+     }
+    },
+    "first_iteration_ns": 1156400,
+    "extra": {
+     "calls_total": 4000,
+     "error_replies": 0,
+     "audit_rows": 0
+    }
+   }
+  },
+  {
+   "rep": 5,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 2000,
+   "iters": 2000,
+   "wall_ms": 4364.6993,
+   "output": {
+    "kind": "latency",
+    "stats": {
+     "n": 2000,
+     "min": 711000,
+     "max": 46350500,
+     "mean": 1070084.7,
+     "p50": 1027000,
+     "p95": 1269600,
+     "p99": 1521200,
+     "hist_log2_ns": {
+      "19": 1194,
+      "20": 801,
+      "21": 2,
+      "22": 2,
+      "25": 1
+     }
+    },
+    "first_iteration_ns": 952900,
+    "extra": {
+     "calls_total": 4000,
+     "error_replies": 0,
+     "audit_rows": 0
+    }
+   }
+  }
+ ],
+ "cold": {
+  "rep": 0,
+  "cold": true,
+  "seed_base": 20260101,
+  "warmup": 0,
+  "iters": 100,
+  "wall_ms": 301.0019,
+  "output": {
+   "kind": "latency",
+   "stats": {
+    "n": 100,
+    "min": 977600,
+    "max": 1950300,
+    "mean": 1206904,
+    "p50": 1171000,
+    "p95": 1472400,
+    "p99": 1937600,
+    "hist_log2_ns": {
+     "19": 12,
+     "20": 88
+    }
+   },
+   "first_iteration_ns": 1937600,
+   "extra": {
+    "calls_total": 100,
+    "error_replies": 0,
+    "audit_rows": 0
+   }
+  }
+ },
+ "aggregate": {
+  "runs": 5,
+  "n_per_run": 2000,
+  "p50": {
+   "median": 1027000,
+   "min": 1023800,
+   "max": 1129700,
+   "cv": 0.04346425715960268
+  },
+  "p95": {
+   "median": 1326000,
+   "min": 1269600,
+   "max": 1452500,
+   "cv": 0.053655721559499686
+  },
+  "p99": {
+   "median": 1559500,
+   "min": 1521200,
+   "max": 1810200,
+   "cv": 0.07275112046742581
+  },
+  "min_ns": 675200,
+  "max_ns": 83401600,
+  "mean": {
+   "median": 1078134.85,
+   "min": 1070084.7,
+   "max": 1196574,
+   "cv": 0.049356731696544955
+  }
+ },
+ "extra_aggregate": {
+  "calls_total": {
+   "median": 4000,
+   "min": 4000,
+   "max": 4000,
+   "cv": 0
+  },
+  "error_replies": {
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "cv": 0
+  },
+  "audit_rows": {
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "cv": 0
+  }
+ }
+}

@@ -1,0 +1,57 @@
+{
+ "case": "W8.rows10000",
+ "workload": "W8",
+ "title": "report + verify-chain on a store of 10000 decision rows (single run)",
+ "profile": "full",
+ "seed": 20260101,
+ "machine": {
+  "cpu_model": "AMD Ryzen 7 4800H with Radeon Graphics",
+  "logical_cores": 16,
+  "ram_bytes": 16556584960,
+  "os": "win32 10.0.26200 (Windows 11 Home Single Language)",
+  "arch": "x64",
+  "node": "v24.13.1",
+  "date": "2026-11-01T23:13:16.814Z",
+  "power_plan": "Performance"
+ },
+ "failed_runs": [],
+ "runs": [
+  {
+   "rep": 1,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 0,
+   "iters": 1,
+   "wall_ms": 4758.0928,
+   "output": {
+    "kind": "custom",
+    "data": {
+     "rows": 10000,
+     "head_seq": 10000,
+     "build_ms": 3189.3183,
+     "db_bytes": 7348224,
+     "report": {
+      "wall_ms": 897.7211,
+      "exit_code": 0,
+      "inproc_ms": 671.6997,
+      "peak_rss_mb": 156.53125,
+      "stdout_first_line": "report written: C:\\Users\\babus\\AppData\\Local\\Temp\\prysm-bench-mlAVSh\\report.html (1082930 bytes)",
+      "stderr_lines": 0,
+      "html_bytes": 1082930
+     },
+     "verify_chain": {
+      "wall_ms": 599.5526,
+      "exit_code": 0,
+      "inproc_ms": 368.7912,
+      "peak_rss_mb": 134.05859375,
+      "stdout_first_line": "OK",
+      "stderr_lines": 0
+     }
+    }
+   }
+  }
+ ],
+ "cold": null,
+ "aggregate": null,
+ "extra_aggregate": null
+}
