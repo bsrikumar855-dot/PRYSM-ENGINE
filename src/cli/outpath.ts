@@ -47,7 +47,9 @@ export function checkOutPath(out: string, protectedPaths: readonly string[]): Ou
   const BS = String.fromCharCode(92);
   if (out.startsWith(BS + BS + '.' + BS) || out.startsWith(BS + BS + '?' + BS) || out.startsWith('//./') || out.startsWith('//?/')) return refuse('device path refused');
   if (out.replace(/^[A-Za-z]:/, '').includes(':')) return refuse('alternate data streams are refused');
-  const base = basename(out).replace(/[. ]+$/, '');
+  const rawBase = basename(out);
+  if (rawBase.endsWith('.') || rawBase.endsWith(' ') || out.endsWith(' ') || out.endsWith('.')) return refuse('names ending in a dot or space are refused');
+  const base = rawBase.replace(/[. ]+$/, '');
   if (DEVICE.test(base.replace(/\..*$/, ''))) return refuse('device names are refused');
   const abs = resolve(out);
   let exists = false;
@@ -70,14 +72,14 @@ export function checkOutPath(out: string, protectedPaths: readonly string[]): Ou
   return { exists, abs };
 }
 
-/** True when the file begins (within its first 200 bytes) with the given marker. */
-export function fileHasMarker(path: string, marker: string): boolean {
+/** True only when the file STARTS with `start` (no BOM, no leading whitespace). */
+export function fileStartsWith(path: string, start: string): boolean {
   let fd: number | undefined;
   try {
     fd = openSync(path, 'r');
     const buf = Buffer.alloc(200);
     const n = readSync(fd, buf, 0, 200, 0);
-    return buf.subarray(0, n).toString('utf8').includes(marker);
+    return buf.subarray(0, n).toString('utf8').startsWith(start);
   } catch {
     return false;
   } finally {

@@ -491,9 +491,9 @@ export function createGuardWithAdmin(opts: CreateGuardOptions): { guard: Guard; 
         provenance_asserted: UNTRUSTED,
       });
       const preReject = (reason: 'invalid_request' | 'unknown_tool' | 'engine_error'): GuardResult => {
-        let outcome: unknown = null;
+        let outcome: unknown = { deny_n: 0 };
         if (!known) {
-          try { outcome = { tool_hmac: store.hmac('tool', nameOk ? tool : 'non-string:' + typeof tool) }; } catch { outcome = null; }
+          try { outcome = { deny_n: 0, tool_hmac: store.hmac('tool', nameOk ? tool : 'non-string:' + typeof tool) }; } catch { outcome = { deny_n: 0 }; }
         }
         bestEffort({
           ...base(), effect: 'deny', reason_code: reason, rule_ids: [], request_digest: null, args_hmac: null,
@@ -560,7 +560,7 @@ export function createGuardWithAdmin(opts: CreateGuardOptions): { guard: Guard; 
         latency_us,
         session_tainted: tainted ? 1 : 0,
         provenance_asserted: prov,
-        outcome: willExecute ? { will_execute: true } : null,
+        outcome: willExecute ? { deny_n: decision.matched.deny.length, will_execute: true } : { deny_n: decision.matched.deny.length },
       };
       ev = decisionEvent;
 
@@ -594,7 +594,7 @@ export function createGuardWithAdmin(opts: CreateGuardOptions): { guard: Guard; 
             id: decision_id, kind: 'decision' as const, execution_id, session_id: sess.id, agent_id: agentId,
             tool: safeTool, policy_version: policy.policy_version, engine_version: ENGINE_VERSION,
           }),
-          effect: 'deny', reason_code: 'engine_error', outcome: null,
+          effect: 'deny', reason_code: 'engine_error', rule_ids: [], outcome: { deny_n: 0 },
         }, 'policy_deny');
       } catch { /* nothing more can be done */ }
       return blocked(decision_id, 'unavailable');
@@ -828,7 +828,7 @@ export function createGuardWithAdmin(opts: CreateGuardOptions): { guard: Guard; 
         const n = ++counter;
         const nameOk = typeof toolName === 'string';
         const known = nameOk && inPolicy(toolName);
-        const outcome: Record<string, unknown> = { reason: UNEXPOSED.has(reason) ? reason : 'tool_not_offered' };
+        const outcome: Record<string, unknown> = { deny_n: 0, reason: UNEXPOSED.has(reason) ? reason : 'tool_not_offered' };
         if (!known) {
           try { outcome['tool_hmac'] = store.hmac('tool', nameOk ? toolName : 'non-string:' + typeof toolName); } catch { /* none */ }
         }

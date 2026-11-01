@@ -46,31 +46,39 @@ export function droppedBefore(rows: readonly StoredEvent[]): unknown[] {
   return out;
 }
 
-/** One plain-language line. monitor_only is stated honestly: a would-be deny that executed is not "BLOCKED". */
+export const LEGACY_CAUSE = 'A deny rule matched. All matched rules, deny rules listed first:';
+
+/** deny_n from outcome (integer 0..len), or null for legacy rows. */
+export function denyN(row: StoredEvent): number | null {
+  const n = asObj(row.outcome)?.['deny_n'];
+  return typeof n === 'number' && Number.isSafeInteger(n) && n >= 0 ? n : null;
+}
+
+/**
+ * One plain-language line. Cause precedence for denied_by_rule (REPORT-SPEC 5.2): outcome.deny_n (first deny_n ids),
+ * else the ids whose rule effect is deny in a same-version policy, else the legacy caveat wording. Permit ids are
+ * never presented as a cause. monitor_only is stated honestly.
+ */
 export function verdict(row: StoredEvent, rules?: readonly { id: string; effect: string }[]): { verdict: string; why: string } {
-  let ids = ruleIds(row);
-  let by: string;
-  if (row.reason_code === 'denied_by_rule' && row.effect === 'deny' && rules !== undefined) {
-    // same-version policy: name only the deny rules that blocked the call
-    ids = ids.filter((id) => rules.some((r) => r.id === id && r.effect === 'deny'));
-    by = ids.length > 0 ? ids.map(esc).join(', ') : 'none (no matched deny rule found in the policy)';
-  } else {
-    by = ids.length > 0 ? ids.map(esc).join(', ') : 'none (no rule matched)';
-    // the store keeps matched deny ids then permit ids without their effect
-    if (row.reason_code === 'denied_by_rule' && ids.length > 0) by += ' [all matched rules, deny first; use --policy to see each effect]';
-  }
+  const all = ruleIds(row);
   const why = plainReason(row.reason_code);
   const mon = row.enforcement === 'monitor_only';
-  if (row.effect === 'deny') {
-    if (mon) {
-      return { verdict: `WOULD BE BLOCKED (monitor_only: the tool ${willExecute(row) ? 'ran' : 'did not run'}) by rule(s) ${by} because ${why}`, why };
-    }
-    return { verdict: `BLOCKED by rule(s) ${by} because ${why}`, why };
-  }
   if (row.effect === 'permit') {
+    const by = all.length > 0 ? all.map(esc).join(', ') : 'none (no rule matched)';
     return { verdict: mon ? `ALLOWED (monitor_only) by rule(s) ${by}` : `ALLOWED by rule(s) ${by}`, why };
   }
-  return { verdict: 'UNKNOWN (no effect recorded)', why };
+  if (row.effect !== 'deny') return { verdict: 'UNKNOWN (no effect recorded)', why };
+  const head = mon ? `WOULD BE BLOCKED (monitor_only: the tool ${willExecute(row) ? 'ran' : 'did not run'})` : 'BLOCKED';
+  if (row.reason_code !== 'denied_by_rule') {
+    const by = all.length > 0 ? all.map(esc).join(', ') : 'none (no rule matched)';
+    return { verdict: `${head} by rule(s) ${by} because ${why}`, why };
+  }
+  const n = denyN(row);
+  let cause: string[] | null = null;
+  if (n !== null) cause = all.slice(0, n);
+  else if (rules !== undefined) cause = all.filter((id) => rules.some((r) => r.id === id && r.effect === 'deny'));
+  if (cause === null) return { verdict: `${head}. ${LEGACY_CAUSE} ${all.length > 0 ? all.map(esc).join(', ') : 'none'}`, why };
+  return { verdict: `${head} by rule(s) ${cause.length > 0 ? cause.map(esc).join(', ') : 'none (no deny rule id recorded)'} because ${why}`, why };
 }
 
 function list(v: unknown): string {

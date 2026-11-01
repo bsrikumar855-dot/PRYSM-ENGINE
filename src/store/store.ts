@@ -507,6 +507,40 @@ function readKeyFile(keyPath: string): Buffer | null {
   }
 }
 
+const collapse = (x: string): string => x.replace(/\s+/g, ' ').trim().toLowerCase();
+const EXPECTED_TRIGGERS: Readonly<Record<string, string>> = {
+  events_no_update: collapse("CREATE TRIGGER events_no_update BEFORE UPDATE ON events BEGIN SELECT RAISE(ABORT, 'append-only'); END"),
+  events_no_delete: collapse("CREATE TRIGGER events_no_delete BEFORE DELETE ON events WHEN COALESCE((SELECT value FROM meta WHERE key='prune_open'),'0') <> '1' BEGIN SELECT RAISE(ABORT, 'append-only'); END"),
+};
+const EXPECTED_INDEXES = new Set(['events_decision_id', 'events_kind']);
+
+/**
+ * Schema allow-list (REPORT-SPEC 5.5), applied on every open before any events/meta query: events and meta are
+ * plain tables; no views, virtual tables or foreign objects; only the two append-only triggers (exact text; a
+ * missing trigger is tolerated, a writable open recreates it); trusted_schema is switched off. A violation is
+ * StoreError corrupt, so a forged recursive view is never queried.
+ */
+function checkSchema(db: DatabaseSync): void {
+  db.exec('PRAGMA trusted_schema=OFF');
+  const rows = db.prepare('SELECT type, name, sql FROM sqlite_master').all() as { type: string; name: string; sql: string | null }[];
+  const tables = new Set<string>();
+  for (const r of rows) {
+    const sql = r.sql ?? '';
+    if (r.type === 'table') {
+      if (/^\s*create\s+virtual\s/i.test(sql)) throw new StoreError('corrupt');
+      if (r.name !== 'events' && r.name !== 'meta' && r.name !== 'sqlite_sequence') throw new StoreError('corrupt');
+      tables.add(r.name);
+    } else if (r.type === 'index') {
+      if (!r.name.startsWith('sqlite_autoindex_') && !EXPECTED_INDEXES.has(r.name)) throw new StoreError('corrupt');
+    } else if (r.type === 'trigger') {
+      const want = Object.hasOwn(EXPECTED_TRIGGERS, r.name) ? EXPECTED_TRIGGERS[r.name] : undefined;
+      if (want === undefined || collapse(sql) !== want) throw new StoreError('corrupt');
+    } else throw new StoreError('corrupt'); // views and anything else
+  }
+  const n = tables.has('events') || tables.has('meta');
+  if (n && !(tables.has('events') && tables.has('meta'))) throw new StoreError('corrupt');
+}
+
 export function openStore(opts: OpenStoreOptions): Store {
   if (typeof opts !== 'object' || opts === null || typeof opts.path !== 'string' || opts.path === '') {
     throw new StoreError('invalid_event');
@@ -562,6 +596,7 @@ export function openStore(opts: OpenStoreOptions): Store {
   if (readOnly) {
     try {
       db.exec('PRAGMA busy_timeout=' + String(busy));
+      checkSchema(db);
       db.exec('PRAGMA query_only=1');
       const get = (k: string): string | null => {
         const r = db.prepare('SELECT value FROM meta WHERE key=?').get(k) as { value: string | null } | undefined;
@@ -582,6 +617,7 @@ export function openStore(opts: OpenStoreOptions): Store {
     }
   } else try {
     db.exec('PRAGMA busy_timeout=' + String(busy));
+    checkSchema(db);
     db.exec('PRAGMA journal_mode=WAL');
     db.exec('PRAGMA synchronous=' + sync);
     db.exec('BEGIN IMMEDIATE');
@@ -671,6 +707,7 @@ export function openStore(opts: OpenStoreOptions): Store {
   if (path !== ':memory:') {
     try {
       rdb = new DatabaseSync(path, { readOnly: true, timeout: busy });
+      rdb.exec('PRAGMA trusted_schema=OFF');
     } catch (e) {
       try { db.close(); } catch { /* ignore */ }
       throw mapErr(e);

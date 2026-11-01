@@ -96,9 +96,18 @@ function toAnchor(v: JsonValue, label: string): Anchor {
   return { genesis_hash: g, head_seq: s, head_hash: h, ts_ms: ts ?? 0 };
 }
 
+const WS = /^[ \t\r\n]+|[ \t\r\n]+$/g;
+
+/** UTF-8 text of an input file; a leading BOM is malformed (never stripped) and only JSON whitespace is trimmed. */
+function inputText(path: string, label: string): string {
+  const b = readBounded(path, MAX_SMALL_FILE_BYTES, label);
+  if (b.length >= 3 && b[0] === 0xef && b[1] === 0xbb && b[2] === 0xbf) throw new CliExit(2, `${label}: byte order mark is not allowed`);
+  return b.toString('utf8').replace(WS, '');
+}
+
 /** The output of `anchor`, or exactly one `{"prysm":"anchor",...}` sink line. Anything else is exit 2. */
 export function readAnchorFile(path: string, label: string): Anchor {
-  const text = readBounded(path, MAX_SMALL_FILE_BYTES, label).toString('utf8').trim();
+  const text = inputText(path, label);
   if (text === '') throw new CliExit(2, `${label}: malformed anchor`);
   return toAnchor(parseJsonText(text, label), label);
 }
@@ -123,16 +132,19 @@ function toCheckpoint(v: JsonValue, label: string): ExpectedCheckpoint {
 
 /** A JSON array, or JSON lines, of `{through_seq,last_hash}` / `{"prysm":"checkpoint",...}` objects. */
 export function readExpectedFile(path: string, label: string): ExpectedCheckpoint[] {
-  const text = readBounded(path, MAX_SMALL_FILE_BYTES, label).toString('utf8').trim();
+  const text = inputText(path, label);
   if (text === '') throw new CliExit(2, `${label}: malformed checkpoint`);
   let items: JsonValue[];
-  if (text.startsWith('[')) {
-    const v = parseJsonText(text, label);
-    if (!Array.isArray(v)) throw new CliExit(2, `${label}: malformed checkpoint`);
-    items = v;
-  } else {
+  let whole: JsonValue | undefined;
+  try {
+    whole = parseStrictJson(text, { maxDepth: 6, maxItems: 10000 });
+  } catch {
+    whole = undefined;
+  }
+  if (whole !== undefined) items = Array.isArray(whole) ? whole : [whole];
+  else {
     items = [];
-    for (const line of text.split(/\r?\n/)) {
+    for (const line of text.split(NL)) {
       if (line.trim() === '') continue;
       items.push(parseJsonText(line, label));
     }

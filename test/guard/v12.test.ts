@@ -73,7 +73,7 @@ test('best-effort budgets are per class: drops counted per class, one sink line 
   const row = rowFor(k, (r as { decision_id: string }).decision_id);
   assert.deepEqual((row?.outcome as { dropped_before: unknown }).dropped_before, { policy_deny: 3, tool_result: 1 });
   const next = await k.guard.call('denied_by_default', { x: 'later' });
-  assert.equal(rowFor(k, (next as { decision_id: string }).decision_id)?.outcome, null, 'dropped counts are recorded once');
+  assert.deepEqual(rowFor(k, (next as { decision_id: string }).decision_id)?.outcome, { deny_n: 0 }, 'dropped counts are recorded once');
   k.store.close();
 });
 

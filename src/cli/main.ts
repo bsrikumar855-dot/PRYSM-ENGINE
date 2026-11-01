@@ -8,7 +8,7 @@ import { parseArgs, flagBool, flagInt, flagStr, optStr, requireStr, UsageError }
 import type { CommandSpec, Parsed } from './args.ts';
 import { CliExit, MAX_POLICY_BYTES, loadPolicyBytes, loadPolicyFile, openReadOnly, readAnchorFile, readAnchorLog, readBounded, readExpectedFile, readExpectedLog } from './files.ts';
 import type { ExpectedCheckpoint } from './files.ts';
-import { checkOutPath, fileHasMarker, writeAtomic } from './outpath.ts';
+import { checkOutPath, fileStartsWith, writeAtomic } from './outpath.ts';
 import type { Io } from './files.ts';
 import { explain } from './explain.ts';
 import { simulate } from './simulate.ts';
@@ -28,17 +28,20 @@ commands:
                [--allow-pruned] [--json]
       Verify the hash chain. Exit 0 only when ok. --allow-pruned accepts ANY pruning (development only).
       Without --anchor, tail truncation and full rewrites are not detectable.
-  anchor --db <file> [--out <file>] [--force]
-      Print the store anchor (genesis_hash, head_seq, head_hash, ts_ms). Store it where an attacker with
-      access to the database cannot rewrite it. Run verify-chain first: anchor does not verify the chain.
+  anchor --db <file> [--out <file>] [--force] [--no-verify]
+      Verifies the chain first (refuses with exit 1 on errors unless --no-verify). Print the store anchor (genesis_hash, head_seq, head_hash, ts_ms). Store it where an attacker with
+      access to the database cannot rewrite it. Warnings are printed to stderr as notes.
   simulate --policy <A.json> [--policy-b <B.json>] --requests <file.jsonl> [--json]
       Evaluate request lines {tool,args,ctx[,id]} against one or two policies (max 10 MiB, 100000 lines).
   report --db <file> [--policy <file>] [--out report.html] [--max-events n (default 500, max 5000)]
          [--anchor <file> | --anchor-log <file>] [--expect-pruned <file> | --expect-pruned-log <file>]
-         [--allow-pruned] [--title t] [--force]
+         [--allow-pruned] [--title t] [--scan-limit n (default 2000000, min 1000)] [--force]
       Write a static, self-contained HTML report. Refuses to overwrite a file not created by report unless --force.
   help
       Show this text.
+
+notes: a value that starts with -- must be given as --opt=value. Read-only opens may leave empty -wal/-shm side files
+       next to the database (SQLite WAL mode); they are harmless and are not suppressed.
 
 global options: --db <file>, --key-path <file> (default <db>.key; read-only commands never create it),
                 --json (machine output), --no-color (accepted; output never uses colour)
@@ -60,13 +63,13 @@ const SPECS: Readonly<Record<string, CommandSpec>> = {
     positionals: 0,
     flags: { ...STORE_FLAGS, '--anchor': 'value', '--anchor-log': 'value', '--expect-pruned': 'value', '--expect-pruned-log': 'value', '--allow-pruned': 'bool' },
   },
-  anchor: { positionals: 0, flags: { ...STORE_FLAGS, '--out': 'value', '--force': 'bool' } },
+  anchor: { positionals: 0, flags: { ...STORE_FLAGS, '--out': 'value', '--force': 'bool', '--no-verify': 'bool' } },
   simulate: { positionals: 0, flags: { '--policy': 'value', '--policy-b': 'value', '--requests': 'value' } },
   report: {
     positionals: 0,
     flags: {
       ...STORE_FLAGS, '--policy': 'value', '--out': 'value', '--max-events': 'value', '--anchor': 'value',
-      '--anchor-log': 'value', '--expect-pruned': 'value', '--expect-pruned-log': 'value', '--allow-pruned': 'bool', '--title': 'value', '--force': 'bool',
+      '--anchor-log': 'value', '--expect-pruned': 'value', '--expect-pruned-log': 'value', '--allow-pruned': 'bool', '--title': 'value', '--force': 'bool', '--scan-limit': 'value',
     },
   },
 };
@@ -74,6 +77,7 @@ const SPECS: Readonly<Record<string, CommandSpec>> = {
 const KINDS = ['decision', 'tool_result', 'policy_activate', 'checkpoint'] as const;
 const EFFECTS = ['permit', 'deny'] as const;
 const REPORT_MARKER = '<!-- prysm-report v1 -->';
+const REPORT_START = '<!doctype html>' + REPORT_MARKER;
 
 function loadAnchor(p: Parsed): ReturnType<typeof readAnchorFile> | undefined {
   const f = optStr(p, '--anchor');
@@ -287,8 +291,23 @@ function cmdAnchor(p: Parsed, io: Io): number {
   const store = openReadOnly(db, keyPath);
   let line: string;
   try {
+    if (!flagBool(p, '--no-verify')) {
+      // an anchor must never bless a broken chain: verify first (errors => exit 1, codes only)
+      let v;
+      try {
+        v = store.verify();
+      } catch (e) {
+        throw new CliExit(2, `verify failed (${e instanceof StoreError ? e.code : 'unknown'})`);
+      }
+      if (!v.ok) {
+        const codes = [...new Set(v.errors.map((e) => esc(e.code)))].join(', ');
+        throw new CliExit(1, `chain does not verify (${codes}); no anchor written (use --no-verify to override)`);
+      }
+      for (const w of v.warnings) io.err(`note: seq=${w.seq} code=${esc(w.code)}`);
+    }
     line = JSON.stringify(store.anchor());
   } catch (e) {
+    if (e instanceof CliExit) throw e;
     throw new CliExit(2, `anchor failed (${e instanceof StoreError ? e.code : 'unknown'})`);
   } finally {
     store.close();
@@ -313,6 +332,7 @@ async function cmdReport(p: Parsed, io: Io): Promise<number> {
   const force = flagBool(p, '--force');
   const maxEvents = flagInt(p, '--max-events', 1, 5000) ?? 500;
   const title = optStr(p, '--title');
+  const scanLimit = flagInt(p, '--scan-limit', 1000, Number.MAX_SAFE_INTEGER);
   if (title !== undefined && Array.from(title).length > 200) throw new UsageError('invalid_value', '--title');
   const policyPath = optStr(p, '--policy');
   const policy = policyPath === undefined ? undefined : loadPolicyFile(policyPath, '--policy').policy;
@@ -321,7 +341,7 @@ async function cmdReport(p: Parsed, io: Io): Promise<number> {
 
   // refuse protected paths / links / devices before doing any work; foreign files need --force
   const target = checkOutPath(out, protectedFor(p, db, keyPath));
-  if (target.exists && !force && !fileHasMarker(target.abs, REPORT_MARKER)) {
+  if (target.exists && !force && !fileStartsWith(target.abs, REPORT_START)) {
     throw new CliExit(2, '--out: file exists and was not created by report (use --force to overwrite)');
   }
 
@@ -336,6 +356,7 @@ async function cmdReport(p: Parsed, io: Io): Promise<number> {
   try {
     const data = mod.buildReportData(store, {
       maxEvents,
+      ...(scanLimit !== undefined ? { scanLimit } : {}),
       generatedMs: Date.now(),
       dbName: basename(db),
       ...(policy !== undefined ? { policy } : {}),
@@ -350,7 +371,7 @@ async function cmdReport(p: Parsed, io: Io): Promise<number> {
   } finally {
     store.close();
   }
-  if (!html.slice(0, 200).includes(REPORT_MARKER)) throw new CliExit(2, 'report output is missing its marker');
+  if (!html.startsWith(REPORT_START)) throw new CliExit(2, 'report output is missing its marker');
   writeAtomic(target.abs, html);
   const bytes = Buffer.byteLength(html, 'utf8');
   io.out(flagBool(p, '--json') ? jsonLine({ ok: true, out, bytes }) : `report written: ${esc(out)} (${bytes} bytes)`);

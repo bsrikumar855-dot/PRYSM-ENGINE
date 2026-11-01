@@ -397,7 +397,7 @@ test('pre-evaluate rejections: own-property registry, tool name only if known, h
     assert.equal(blockedReason(r), 'unknown_tool', name);
     const row = rowFor(k, (r as { decision_id: string }).decision_id);
     assert.equal(row?.tool, '?');
-    assert.deepEqual(row?.outcome, { tool_hmac: k.store.hmac('tool', name) });
+    assert.deepEqual(row?.outcome, { deny_n: 0, tool_hmac: k.store.hmac('tool', name) });
     assert.equal(row?.effect, 'deny');
     assert.equal(row?.request_digest, null);
   }
@@ -517,7 +517,7 @@ test('monitor_only: executes would-be-denied calls, records would-be effect, act
   assert.equal(d1?.effect, 'deny');
   assert.equal(d1?.reason_code, 'default_deny');
   assert.equal(d1?.enforcement, 'monitor_only');
-  assert.deepEqual(d1?.outcome, { will_execute: true });
+  assert.deepEqual(d1?.outcome, { deny_n: 0, will_execute: true });
   // would be denied_by_rule
   assert.equal((await k.guard.call('read_file', { path: '/secret/x' })).ok, true);
   // would be tainted_session
