@@ -17,7 +17,12 @@
     "corpus": "node --no-warnings=ExperimentalWarning eval/run-corpus.ts",
     "smoke:sqlite": "node --no-warnings=ExperimentalWarning smoke/sqlite-smoke.ts",
     "prysm": "node --no-warnings=ExperimentalWarning src/cli/bin.ts",
-    "proxy": "node --no-warnings=ExperimentalWarning src/proxy/bin.ts"
+    "proxy": "node --no-warnings=ExperimentalWarning src/proxy/bin.ts",
+    "bench": "node --no-warnings=ExperimentalWarning bench/run.ts",
+    "bench:quick": "node --no-warnings=ExperimentalWarning bench/run.ts --quick",
+    "eval": "node --no-warnings=ExperimentalWarning eval/run-benchmark.ts",
+    "diff": "node --no-warnings=ExperimentalWarning eval/diff/run-diff.ts",
+    "demo": "node --no-warnings=ExperimentalWarning examples/support-agent/demo.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
