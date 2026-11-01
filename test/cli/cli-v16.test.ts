@@ -186,3 +186,53 @@ test('explain cause precedence: deny_n, then same-version policy, then the legac
   const t = await runCli(['explain', 'row-legacy-1', '--db', db]);
   assert.match(t.stdout, /A deny rule matched\. All matched rules, deny rules listed first: d\.secret, p\.read/);
 });
+
+test('M4-11: anchor accepts verify-chain inputs; a legitimately pruned store anchors with --expect-pruned-log', async () => {
+  const dir = tmpDir();
+  const db = dbPath(dir);
+  const sink: string[] = [];
+  const s = openStore({ path: db, hmacKey: KEY, secondarySink: (l) => sink.push(l) });
+  for (let i = 1; i <= 8; i++) s.append({ id: 'e' + i, kind: 'decision', ts_ms: 1000 + i });
+  s.checkpointAndPrune(1005, { force: true });
+  s.close();
+  const log = join(dir, 'guard.log');
+  writeFileSync(log, ['[server] noise', ...sink].join('\n') + '\n');
+  const out = join(dir, 'anchor.json');
+  // without flags: refused, message names the expected-pruned remedy first and never recommends --no-verify first
+  const bare = await runCli(['anchor', '--db', db, '--out', out]);
+  assert.equal(bare.code, 1);
+  assert.match(bare.stderr, /history_pruned/);
+  assert.match(bare.stderr, /--expect-pruned-log/);
+  assert.ok(bare.stderr.indexOf('--expect-pruned-log') < bare.stderr.indexOf('--no-verify'));
+  assert.match(bare.stderr, /last resort/);
+  assert.equal(existsSync(out), false);
+  // with the logged checkpoint: ok, anchor written, and it verifies with the same inputs
+  const ok = await runCli(['anchor', '--db', db, '--out', out, '--expect-pruned-log', log]);
+  assert.equal(ok.code, 0, ok.stderr);
+  assert.equal(JSON.parse(readFileSync(out, 'utf8')).head_seq, 9);
+  assert.equal((await runCli(['verify-chain', '--db', db, '--anchor', out, '--expect-pruned-log', log])).code, 0);
+  // a newer anchor checked against an older one
+  const newer = join(dir, 'newer.json');
+  assert.equal((await runCli(['anchor', '--db', db, '--out', newer, '--anchor', out, '--expect-pruned-log', log])).code, 0);
+  // --allow-pruned (development only) also lets it through
+  assert.equal((await runCli(['anchor', '--db', db, '--allow-pruned', '--force', '--out', newer])).code, 0);
+  // tampered chain with the same flags is still refused
+  rawTamper(db, (d) => { d.exec("UPDATE events SET tool='evil' WHERE seq=7"); });
+  const bad = await runCli(['anchor', '--db', db, '--out', join(dir, 'x.json'), '--expect-pruned-log', log]);
+  assert.equal(bad.code, 1);
+  assert.match(bad.stderr, /hash_mismatch/);
+  assert.equal(existsSync(join(dir, 'x.json')), false);
+  // malformed input file => exit 2
+  writeFileSync(join(dir, 'bad.json'), 'nope');
+  assert.equal((await runCli(['anchor', '--db', db, '--anchor', join(dir, 'bad.json')])).code, 2);
+});
+
+test('M4-12 at CLI level: a store after ANALYZE works for read-only commands', async () => {
+  const k = keyedFixture(3);
+  const d = new DatabaseSync(k.db);
+  d.exec('ANALYZE');
+  d.close();
+  for (const c of [['events'], ['verify-chain'], ['anchor'], ['report', '--out', join(k.dir, 'r.html')]]) {
+    assert.equal((await runCli([...c, '--db', k.db])).code, 0, c[0]);
+  }
+});

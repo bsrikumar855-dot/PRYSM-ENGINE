@@ -93,3 +93,27 @@ test('query_only defence in depth: a raw SQLite read-only connection rejects wri
   assert.equal(s.count(), 1);
   s.close();
 });
+
+test('M4-12: a store after ANALYZE (sqlite_stat tables) opens read-only and writable, verifies, and a guard starts on it', async () => {
+  const p = good();
+  raw(p, 'ANALYZE');
+  const d = new DatabaseSync(p, { readOnly: true });
+  const names = (d.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as { name: string }[]).map((r) => r.name);
+  d.close();
+  assert.ok(names.includes('sqlite_stat1'), 'fixture really has sqlite_stat1');
+  assert.deepEqual(opens(p), [undefined, undefined]);
+  const s = openStore({ path: p, hmacKey: KEY });
+  assert.equal(s.verify().ok, true);
+  const { createGuard } = await import('../../src/guard/index.ts');
+  const { loadPolicy } = await import('../../src/core/index.ts');
+  const { POLICY_DOC } = await import('../support/policy.ts');
+  const g = createGuard({
+    policy: loadPolicy(JSON.stringify(POLICY_DOC())), store: s, agentId: 'a', tools: { read_file: () => 'x' }, secondarySink: () => {},
+  } as never);
+  assert.equal(((await g.call('read_file', { path: '/ok' })) as { ok: boolean }).ok, true);
+  g.close();
+  s.close();
+  // other tables are still rejected (non-stat tables stay forbidden)
+  raw(p, 'CREATE TABLE stat9_extra(x)');
+  assert.deepEqual(opens(p), ['corrupt', 'corrupt']);
+});

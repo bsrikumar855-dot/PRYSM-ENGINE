@@ -528,7 +528,7 @@ function checkSchema(db: DatabaseSync): void {
     const sql = r.sql ?? '';
     if (r.type === 'table') {
       if (/^\s*create\s+virtual\s/i.test(sql)) throw new StoreError('corrupt');
-      if (r.name !== 'events' && r.name !== 'meta' && r.name !== 'sqlite_sequence') throw new StoreError('corrupt');
+      if (r.name !== 'events' && r.name !== 'meta' && r.name !== 'sqlite_sequence' && !/^sqlite_stat[1-4]$/.test(r.name)) throw new StoreError('corrupt');
       tables.add(r.name);
     } else if (r.type === 'index') {
       if (!r.name.startsWith('sqlite_autoindex_') && !EXPECTED_INDEXES.has(r.name)) throw new StoreError('corrupt');

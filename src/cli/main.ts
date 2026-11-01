@@ -29,7 +29,8 @@ commands:
       Verify the hash chain. Exit 0 only when ok. --allow-pruned accepts ANY pruning (development only).
       Without --anchor, tail truncation and full rewrites are not detectable.
   anchor --db <file> [--out <file>] [--force] [--no-verify]
-      Verifies the chain first (refuses with exit 1 on errors unless --no-verify). Print the store anchor (genesis_hash, head_seq, head_hash, ts_ms). Store it where an attacker with
+         [--anchor <file> | --anchor-log <file>] [--expect-pruned <file> | --expect-pruned-log <file>] [--allow-pruned]
+      Verifies the chain first with the same inputs as verify-chain (exit 1 on errors; --no-verify disables the check, last resort). Print the store anchor (genesis_hash, head_seq, head_hash, ts_ms). Store it where an attacker with
       access to the database cannot rewrite it. Warnings are printed to stderr as notes.
   simulate --policy <A.json> [--policy-b <B.json>] --requests <file.jsonl> [--json]
       Evaluate request lines {tool,args,ctx[,id]} against one or two policies (max 10 MiB, 100000 lines).
@@ -63,7 +64,13 @@ const SPECS: Readonly<Record<string, CommandSpec>> = {
     positionals: 0,
     flags: { ...STORE_FLAGS, '--anchor': 'value', '--anchor-log': 'value', '--expect-pruned': 'value', '--expect-pruned-log': 'value', '--allow-pruned': 'bool' },
   },
-  anchor: { positionals: 0, flags: { ...STORE_FLAGS, '--out': 'value', '--force': 'bool', '--no-verify': 'bool' } },
+  anchor: {
+    positionals: 0,
+    flags: {
+      ...STORE_FLAGS, '--out': 'value', '--force': 'bool', '--no-verify': 'bool', '--anchor': 'value', '--anchor-log': 'value',
+      '--expect-pruned': 'value', '--expect-pruned-log': 'value', '--allow-pruned': 'bool',
+    },
+  },
   simulate: { positionals: 0, flags: { '--policy': 'value', '--policy-b': 'value', '--requests': 'value' } },
   report: {
     positionals: 0,
@@ -287,6 +294,9 @@ function cmdAnchor(p: Parsed, io: Io): number {
   const out = optStr(p, '--out');
   const force = flagBool(p, '--force');
   const target = out === undefined ? undefined : checkOutPath(out, protectedFor(p, db, keyPath));
+  const prevAnchor = loadAnchor(p);
+  const expected = loadExpected(p);
+  const allowPruned = flagBool(p, '--allow-pruned');
   if (target !== undefined && target.exists && !force) throw new CliExit(2, '--out: file exists (use --force to overwrite)');
   const store = openReadOnly(db, keyPath);
   let line: string;
@@ -294,14 +304,21 @@ function cmdAnchor(p: Parsed, io: Io): number {
     if (!flagBool(p, '--no-verify')) {
       // an anchor must never bless a broken chain: verify first (errors => exit 1, codes only)
       let v;
+      const vo: VerifyOptions = {};
+      if (prevAnchor !== undefined) vo.anchor = prevAnchor;
+      if (expected !== undefined) vo.expectPruned = expected;
+      if (allowPruned) vo.allowPruned = true;
       try {
-        v = store.verify();
+        v = store.verify(vo);
       } catch (e) {
         throw new CliExit(2, `verify failed (${e instanceof StoreError ? e.code : 'unknown'})`);
       }
       if (!v.ok) {
         const codes = [...new Set(v.errors.map((e) => esc(e.code)))].join(', ');
-        throw new CliExit(1, `chain does not verify (${codes}); no anchor written (use --no-verify to override)`);
+        const pruned = v.errors.some((e) => e.code === 'history_pruned' || e.code === 'checkpoint_missing');
+        throw new CliExit(1, `chain does not verify (${codes}); no anchor written` + (pruned
+          ? '. Pruned history needs the externally logged checkpoint: pass --expect-pruned-log <log> (or --expect-pruned <file>) with the checkpoint lines from the proxy/guard log. --no-verify disables the integrity check entirely; use it only as a last resort'
+          : '. --no-verify disables the integrity check entirely; use it only as a last resort'));
       }
       for (const w of v.warnings) io.err(`note: seq=${w.seq} code=${esc(w.code)}`);
     }
