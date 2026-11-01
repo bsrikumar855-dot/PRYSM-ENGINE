@@ -72,7 +72,46 @@ export interface GuardAdmin {
    * (`outcome.event = "tools_replaced"`) is appended BEFORE the swap; if that append fails, setTools throws and the
    * registry is unchanged.
    */
-  setTools(tools: ToolRegistryInput): void;
+  setTools(tools: ToolRegistryInput, meta?: ToolsMeta): void;
+  /**
+   * Writes a best-effort deny decision row for a call to a tool the host chose not to expose (pre_evaluate budget,
+   * dropped_before accounting). `enforcement` is "enforced" regardless of policy mode. Never executes anything.
+   */
+  denyUnexposed(toolName: unknown, reason: UnexposedReason): { decision_id: string };
+}
+
+export type UnexposedReason = 'schema_changed' | 'no_pin' | 'tool_not_offered' | 'not_ready';
+/** Small descriptive fields merged into the tools_replaced row: <= 8 keys, integers / short strings, one nested level. */
+export type ToolsMeta = Record<string, number | string | Record<string, number>>;
+const UNEXPOSED = new Set<string>(['schema_changed', 'no_pin', 'tool_not_offered', 'not_ready']);
+const META_KEY = /^[A-Za-z0-9_]{1,32}$/;
+
+function checkMeta(meta: unknown): Record<string, unknown> {
+  if (meta === undefined) return {};
+  if (typeof meta !== 'object' || meta === null || Array.isArray(meta)) throw new TypeError('invalid meta');
+  const keys = Object.keys(meta);
+  if (keys.length > 8) throw new TypeError('invalid meta');
+  const out: Record<string, unknown> = {};
+  const scalar = (v: unknown): boolean => (typeof v === 'number' && Number.isSafeInteger(v)) || (typeof v === 'string' && v.length <= 64);
+  for (const k of keys) {
+    if (!META_KEY.test(k) || k === '__proto__') throw new TypeError('invalid meta');
+    const v = (meta as Record<string, unknown>)[k];
+    if (scalar(v)) { out[k] = v; continue; }
+    if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
+      const nk = Object.keys(v);
+      if (nk.length > 8) throw new TypeError('invalid meta');
+      const nested: Record<string, unknown> = {};
+      for (const k2 of nk) {
+        const v2 = (v as Record<string, unknown>)[k2];
+        if (!META_KEY.test(k2) || k2 === '__proto__' || !(typeof v2 === 'number' && Number.isSafeInteger(v2))) throw new TypeError('invalid meta');
+        nested[k2] = v2;
+      }
+      out[k] = nested;
+      continue;
+    }
+    throw new TypeError('invalid meta');
+  }
+  return out;
 }
 
 export type GuardErrorCode = 'session_limit' | 'invalid_session_id';
@@ -741,8 +780,9 @@ export function createGuardWithAdmin(opts: CreateGuardOptions): { guard: Guard; 
     },
   };
   const admin: GuardAdmin = Object.freeze({
-    setTools: (tools: ToolRegistryInput): void => {
+    setTools: (tools: ToolRegistryInput, meta?: ToolsMeta): void => {
       const next = buildRegistry(tools); // throws before anything else happens
+      const extra = checkMeta(meta);
       const names = Object.keys(next).sort();
       // durable, audited row BEFORE the swap; a failure leaves the registry unchanged
       store.append({
@@ -756,6 +796,7 @@ export function createGuardWithAdmin(opts: CreateGuardOptions): { guard: Guard; 
         policy_version: policy.policy_version,
         engine_version: ENGINE_VERSION,
         outcome: {
+          ...extra,
           event: 'tools_replaced',
           tool_names_hash: createHash('sha256').update(jcs(names), 'utf8').digest('hex'),
           policy_version: policy.policy_version,
@@ -763,6 +804,25 @@ export function createGuardWithAdmin(opts: CreateGuardOptions): { guard: Guard; 
         },
       });
       registry = next;
+    },
+    denyUnexposed: (toolName: unknown, reason: UnexposedReason): { decision_id: string } => {
+      const decision_id = randomUUID();
+      try {
+        const n = ++counter;
+        const nameOk = typeof toolName === 'string';
+        const known = nameOk && inPolicy(toolName);
+        const outcome: Record<string, unknown> = { reason: UNEXPOSED.has(reason) ? reason : 'tool_not_offered' };
+        if (!known) {
+          try { outcome['tool_hmac'] = store.hmac('tool', nameOk ? toolName : 'non-string:' + typeof toolName); } catch { /* none */ }
+        }
+        bestEffort({
+          id: decision_id, kind: 'decision', ts_ms: nowTs(), execution_id: 'admin#' + String(n), session_id: null, agent_id: agentId,
+          tool: known ? toolName : '?', policy_version: policy.policy_version, engine_version: ENGINE_VERSION,
+          enforcement: 'enforced', effect: 'deny', reason_code: 'unknown_tool', rule_ids: [], request_digest: null,
+          args_hmac: null, args_redacted: null, session_tainted: 0, provenance_asserted: UNTRUSTED, outcome,
+        }, 'pre_evaluate');
+      } catch { /* best effort */ }
+      return { decision_id };
     },
   });
   return Object.freeze({ guard: Object.freeze(guard), admin });

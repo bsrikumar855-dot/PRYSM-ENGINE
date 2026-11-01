@@ -140,7 +140,7 @@ test('Guard has no setTools; createGuard returns only the guard; createGuardWith
   const both = createGuardWithAdmin({ policy: k.policy, store: k.store, agentId: 'a', tools: defaultTools({}), secondarySink: () => {} });
   assert.deepEqual(Object.keys(both).sort(), ['admin', 'guard']);
   assert.deepEqual(Object.keys(both.guard).sort(), ['call', 'close', 'session']);
-  assert.deepEqual(Object.keys(both.admin), ['setTools']);
+  assert.deepEqual(Object.keys(both.admin), ['setTools', 'denyUnexposed']);
   assert.ok(Object.isFrozen(both.admin) && Object.isFrozen(both.guard));
   k.store.close();
 });
