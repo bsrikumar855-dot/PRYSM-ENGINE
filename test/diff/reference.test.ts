@@ -591,3 +591,89 @@ test("loader: forbidden-character scan across all code points (§11.14)", () => 
   const lone = JSON.stringify(baseDoc()).replace('"name":"t"', '"name":"t\\ud800"');
   assert.equal(loads(lone), false, "lone surrogate escape rejected");
 });
+
+// ---------- v1.4 rulings (POLICY-SPEC §12) ----------
+test("§12.1 limits take precedence over validity (the 18 previously disagreeing minimal shapes)", () => {
+  const big = "a".repeat(8193);
+  const code = (args: unknown, ctx: unknown = CTX): string => refDecide(sample, { tool: "search_docs", args, ctx }).reason_code;
+  const arr = Array.from({ length: 257 }, () => "a");
+  assert.equal(code({ query: "x", e: ["\ud800"], big }), "limit_exceeded", "invalid before limit");
+  assert.equal(code({ query: "x", big, e: ["\ud800"] }), "limit_exceeded", "limit before invalid");
+  assert.equal(code({ query: "x", e: undefined, big }), "limit_exceeded");
+  assert.equal(code({ query: "x", e: 1n, big }), "limit_exceeded");
+  assert.equal(code({ query: "x", e: new Date(0), big }), "limit_exceeded");
+  assert.equal(code({ query: "x", e: arr, [Symbol("k")]: 1 }), "limit_exceeded", "symbol key + limit");
+  assert.equal(code({ query: "x", e: arr, [Symbol("k")]: 1 } as never), "limit_exceeded");
+  assert.equal(code(new Proxy({ query: "x", e: arr }, {})), "limit_exceeded", "proxy + limit");
+  assert.equal(code({ query: "x", e: "a\ud800" + "a".repeat(8200) }), "limit_exceeded", "lone surrogate + long string");
+  assert.equal(code({ query: "x", g: ["\ud800"] }, { agentId: "a", provenance: { query: arr } }), "limit_exceeded");
+  assert.equal(refDecide(sample, { tool: undefined, args: { query: "x", e: arr }, ctx: CTX }).reason_code, "limit_exceeded");
+  assert.equal(refDecide(sample, { args: { query: "x", e: big }, ctx: CTX }).reason_code, "limit_exceeded", "missing tool + limit");
+  // each fault alone keeps its own code
+  assert.equal(code({ query: "x", e: arr }), "limit_exceeded");
+  assert.equal(code({ query: "x", e: ["\ud800"] }), "invalid_request");
+  assert.equal(code({ query: "x", [Symbol("k")]: 1 }), "invalid_request");
+  assert.equal(code(new Proxy({ query: "x" }, {})), "invalid_request");
+  const cyc: Record<string, unknown> = { query: "x" };
+  cyc.self = cyc;
+  assert.equal(code(cyc), "invalid_request");
+});
+
+test("§12.2 size limit measured on the NFC snapshot", () => {
+  const mk = (q: string, target: number): unknown => {
+    const req = { tool: "search_docs", args: { query: q, pad: [] as string[] }, ctx: CTX };
+    const bytes = (): number => Buffer.byteLength(JSON.stringify(req), "utf8");
+    const pad = req.args.pad;
+    while (bytes() < target) {
+      const L = Math.min(8000, target - bytes() - 2 - (pad.length ? 1 : 0));
+      if (L < 0) break;
+      pad.push("a".repeat(L));
+    }
+    return req;
+  };
+  const code = (r: unknown): string => refDecide(sample, r).reason_code;
+  // raw 65 537 bytes; NFC form is 1 byte shorter (e + U+0301 -> U+00E9) => 65 536 => within the limit
+  assert.equal(code(mk("e\u0301", 65537)), "invalid_args");
+  assert.equal(code(mk("e\u0301", 65538)), "limit_exceeded");
+  assert.equal(code(mk("x", 65536)), "invalid_args");
+  assert.equal(code(mk("x", 65537)), "limit_exceeded");
+});
+
+test("§12.3 drive-prefixed path_within roots", () => {
+  const p = refLoadPolicy(JSON.stringify({
+    policy_schema_version: 1, name: "n", mode: "enforce",
+    tools: { t: { risk: "low", external_effect: false, read_only: true, fail_mode: "closed", args: { p: { type: "string" } } } },
+    rules: [
+      { id: "d", effect: "permit", reason_code: "ok", match: { args: { p: { path_within: { root: "C:/work", case_insensitive: false } } } } },
+      { id: "u", effect: "permit", reason_code: "ok2", match: { args: { p: { path_within: { root: "/work", case_insensitive: false } } } } },
+    ],
+  }));
+  const m = (v: string): { deny: string[]; permit: string[] } => refDecide(p, { tool: "t", args: { p: v }, ctx: CTX }).matched;
+  assert.deepEqual(m("C:/work/x").permit, ["d"]);
+  assert.deepEqual(m("c:\\work\\x").permit, ["d"], "drive letter upper-cased");
+  assert.deepEqual(m("/work/x").permit, ["u"], "drive root never matches unix path and vice versa");
+  assert.deepEqual(m("D:/work/x").permit, []);
+  for (const root of ["c:/work", "C:", "C:/a/../b", "C:/a//b", "C:/a/", "CC:/a"]) {
+    const d = JSON.parse(JSON.stringify({
+      policy_schema_version: 1, name: "n", mode: "enforce", tools: {},
+      rules: [],
+    }));
+    assert.equal(loads(d), true);
+    const bad = baseDoc();
+    bad.rules[0].match.args.path = { path_within: { root, case_insensitive: false } };
+    assert.equal(loads(bad), false, root);
+  }
+});
+
+test("§12.4 string / string[] arguments are compatible without a tools clause", () => {
+  const d = baseDoc();
+  d.tools.lst.args.path = { type: "string[]" }; // `path` is `string` in tool `files`
+  d.rules = [{ id: "r", effect: "deny", reason_code: "x", match: { args: { path: { equals: "x" } } } }];
+  assert.equal(loads(d), true);
+  d.rules[0].match.args.path = { range: { min: 1 } };
+  assert.equal(loads(d), false, "range on string argument still rejected");
+  const e = baseDoc();
+  e.tools.lst.args.n = { type: "boolean" }; // `n` is number in `files`
+  e.rules = [{ id: "r", effect: "deny", reason_code: "x", match: { args: { n: { equals: 1 } } } }];
+  assert.equal(loads(e), false, "incompatible required type");
+});

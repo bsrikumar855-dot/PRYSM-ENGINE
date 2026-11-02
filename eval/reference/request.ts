@@ -44,11 +44,19 @@ function hasLoneSurrogate(s: string): boolean {
   return false;
 }
 
+
+// v1.4 §12.1: limits take precedence over validity. Validity faults are recorded in `st.invalid`
+// (the walk continues where it safely can) and reported only if no limit is exceeded.
 interface State {
   nodes: number;
   containers: number;
   bytes: number;
   stack: Set<object>;
+  invalid: string | null;
+}
+
+function flag(st: State, m: string): void {
+  if (st.invalid === null) st.invalid = m;
 }
 
 function addBytes(st: State, n: number): void {
@@ -56,12 +64,13 @@ function addBytes(st: State, n: number): void {
   if (st.bytes > LIMITS.bytes) over("size");
 }
 
+// size is measured on the NFC snapshot (§12.2)
 function strBytes(s: string): number {
-  return Buffer.byteLength(JSON.stringify(s), "utf8");
+  return Buffer.byteLength(JSON.stringify(s.normalize("NFC")), "utf8");
 }
 
-function checkStr(s: string): void {
-  if (hasLoneSurrogate(s)) bad("lone surrogate");
+function checkStr(s: string, st: State): void {
+  if (hasLoneSurrogate(s)) flag(st, "lone surrogate");
   if (s.length > LIMITS.strUnits) over("string too long");
 }
 
@@ -77,66 +86,82 @@ function walk(v: unknown, depth: number, st: State): unknown {
       addBytes(st, v ? 4 : 5);
       return v;
     case "number": {
-      if (!Number.isFinite(v)) bad("non-finite");
+      if (!Number.isFinite(v)) {
+        flag(st, "non-finite");
+        return null;
+      }
       const n = Object.is(v, -0) ? 0 : v;
       addBytes(st, String(n).length);
       return n;
     }
     case "string": {
-      checkStr(v);
+      checkStr(v, st);
       addBytes(st, strBytes(v));
       return v.normalize("NFC");
     }
     case "object":
       break;
     default:
-      return bad("non-JSON type");
+      flag(st, "non-JSON type");
+      return null;
   }
   const o = v as object;
-  if (types.isProxy(o)) bad("proxy");
-  if (st.stack.has(o)) bad("cycle");
+  if (st.stack.has(o)) {
+    flag(st, "cycle");
+    return null;
+  }
+  if (types.isProxy(o)) flag(st, "proxy"); // still traversed so limits can be detected
   st.containers++;
   if (st.containers > LIMITS.containers) over("containers");
   if (depth > LIMITS.depth) over("depth");
   st.stack.add(o);
   try {
     if (Array.isArray(o)) {
-      if (Object.getPrototypeOf(o) !== Array.prototype) bad("array prototype");
+      if (Object.getPrototypeOf(o) !== Array.prototype) flag(st, "array prototype");
       if (o.length > LIMITS.items) over("array too long");
       const keys = Reflect.ownKeys(o);
-      if (keys.length !== o.length + 1) bad("sparse or extra array props");
+      if (keys.length !== o.length + 1) flag(st, "sparse or extra array props");
       addBytes(st, 2);
       const out: unknown[] = [];
+      let first = true;
       for (let i = 0; i < o.length; i++) {
         const d = Object.getOwnPropertyDescriptor(o, String(i));
-        if (!d || !("value" in d)) bad("accessor/sparse element");
-        if (i > 0) addBytes(st, 1);
-        out.push(walk((d as PropertyDescriptor).value, depth + 1, st));
+        if (!d || !("value" in d)) {
+          flag(st, "accessor/sparse element");
+          continue;
+        }
+        if (!first) addBytes(st, 1);
+        first = false;
+        out.push(walk(d.value, depth + 1, st));
       }
       return Object.freeze(out);
     }
     const proto = Object.getPrototypeOf(o);
-    if (proto !== Object.prototype && proto !== null) bad("non-plain object");
+    if (proto !== Object.prototype && proto !== null) flag(st, "non-plain object");
     const keys = Reflect.ownKeys(o);
-    for (const k of keys) if (typeof k === "symbol") bad("symbol key");
     if (keys.length > LIMITS.keys) over("too many keys");
     addBytes(st, 2);
     const out: { [k: string]: unknown } = {};
     const seen = new Set<string>();
     let first = true;
-    for (const k of keys as string[]) {
-      if (FORBIDDEN_KEYS.has(k)) bad("forbidden key");
-      checkStr(k);
+    for (const k of keys) {
+      if (typeof k === "symbol") {
+        flag(st, "symbol key");
+        continue;
+      }
+      if (FORBIDDEN_KEYS.has(k)) flag(st, "forbidden key");
+      checkStr(k, st);
       const d = Object.getOwnPropertyDescriptor(o, k) as PropertyDescriptor;
-      if (!("value" in d)) bad("accessor");
-      if (!d.enumerable) bad("non-enumerable");
+      if (!("value" in d)) flag(st, "accessor");
+      if (!d.enumerable) flag(st, "non-enumerable");
       addBytes(st, strBytes(k) + 1 + (first ? 0 : 1));
       first = false;
       const nk = k.normalize("NFC");
-      if (FORBIDDEN_KEYS.has(nk)) bad("forbidden key");
-      if (seen.has(nk)) bad("duplicate key after NFC");
+      if (FORBIDDEN_KEYS.has(nk)) flag(st, "forbidden key");
+      if (seen.has(nk)) flag(st, "duplicate key after NFC");
       seen.add(nk);
-      out[nk] = walk(d.value, depth + 1, st);
+      if (!("value" in d)) continue;
+      Object.defineProperty(out, nk, { value: walk(d.value, depth + 1, st), enumerable: true, writable: true, configurable: true });
     }
     return Object.freeze(out);
   } finally {
@@ -145,7 +170,10 @@ function walk(v: unknown, depth: number, st: State): unknown {
 }
 
 export function refSnapshot(raw: unknown): unknown {
-  return walk(raw, 1, { nodes: 0, containers: 0, bytes: 0, stack: new Set() });
+  const st: State = { nodes: 0, containers: 0, bytes: 0, stack: new Set(), invalid: null };
+  const out = walk(raw, 1, st);
+  if (st.invalid !== null) bad(st.invalid);
+  return out;
 }
 
 export const LABEL_RE = /^[A-Za-z0-9_.:-]{1,64}$/;

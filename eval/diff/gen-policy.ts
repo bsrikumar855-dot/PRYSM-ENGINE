@@ -49,8 +49,7 @@ function baseOf(t: ArgType): "string" | "number" | "boolean" {
   return t === "string[]" ? "string" : t;
 }
 
-/** `ambiguous`: also exercise spec readings where the reference is deny-safe-strict (drive roots, string vs string[] conflicts). */
-export function genPolicy(rng: Rng, ambiguous = false): GenPolicy {
+export function genPolicy(rng: Rng): GenPolicy {
   // tool set
   const toolNames = rng.sample(TOOL_NAMES, rng.range(1, 6));
   const tools: GenTool[] = [];
@@ -127,7 +126,7 @@ export function genPolicy(rng: Rng, ambiguous = false): GenPolicy {
         } else {
           const types = new Set(tools.map((t) => typeOf(t, an)).filter((x) => x !== undefined));
           const bs = new Set([...types].map((t) => baseOf(t as ArgType)));
-          if (ambiguous ? bs.size !== 1 : types.size !== 1) continue;
+          if (bs.size !== 1) continue;
         }
         out.push(an);
       }
@@ -141,7 +140,7 @@ export function genPolicy(rng: Rng, ambiguous = false): GenPolicy {
         const holders = (ruleTools ?? tools).filter((t) => typeOf(t, name) !== undefined);
         const bases = new Set(holders.map((t) => baseOf(typeOf(t, name) as ArgType)));
         if (bases.size !== 1) continue;
-        argsM[name] = genPredicate(rng, [...bases][0] as "string" | "number" | "boolean", name, addHint, ambiguous);
+        argsM[name] = genPredicate(rng, [...bases][0] as "string" | "number" | "boolean", name, addHint);
       }
       if (Object.keys(argsM).length > 0) match.args = argsM;
     }
@@ -178,7 +177,6 @@ function genPredicate(
   base: "string" | "number" | "boolean",
   arg: string,
   addHint: (a: string, h: Hint) => void,
-  ambiguous = false,
 ): Doc {
   if (base === "number") {
     const k = rng.int(4);
@@ -246,7 +244,7 @@ function genPredicate(
       return { [rng.chance(0.6) ? "domain_suffix" : "domain_exact"]: d, accept: acc };
     }
     default: {
-      const root = ambiguous && rng.chance(0.6) ? rng.pick(DRIVE_ROOTS) : rng.pick(ROOTS);
+      const root = rng.chance(0.2) ? rng.pick(DRIVE_ROOTS) : rng.pick(ROOTS);
       addHint(arg, { kind: "path", root });
       return { path_within: { root, case_insensitive: rng.chance(0.5) } };
     }
@@ -384,7 +382,7 @@ const MUTS: Mut[] = [
   (d) => {
     ADD_TOOL(d);
     d.tools["zz_tool2"] = { risk: "low", external_effect: false, read_only: true, fail_mode: "closed", args: { zs: { type: "string[]" } } };
-    return T("arg-string-vs-strarr-conflict", ruleWith(d, { args: { zs: { equals: "x" } } }));
+    return T("arg-string-vs-strarr-compatible-ok", ruleWith(d, { args: { zs: { equals: "x" } } }), "accept");
   },
   (d) => { ADD_TOOL(d); return T("prov-undeclared", ruleWith(d, { tools: ["zz_tool"], provenance: { nope: { all_in: ["x"] } } })); },
   (d) => { ADD_TOOL(d); return T("prov-entry-empty", ruleWith(d, { tools: ["zz_tool"], provenance: { zs: {} } })); },
@@ -423,7 +421,8 @@ const MUTS: Mut[] = [
   },
   (d) => ({ name: "lone-surrogate-escape", expect: "reject", input: JSON.stringify(d).replace('"name":"', '"name":"\\ud800') }),
   (d) => T("nonascii-root-fullwidth", ruleWith(ADDED(d), { tools: ["zz_tool"], args: { zs: { path_within: { root: "/\uff57", case_insensitive: false } } } })),
-  (d) => T("drive-root", ruleWith(ADDED(d), { tools: ["zz_tool"], args: { zs: { path_within: { root: "C:/work", case_insensitive: false } } } })),
+  (d) => T("drive-root-ok", ruleWith(ADDED(d), { tools: ["zz_tool"], args: { zs: { path_within: { root: "C:/work", case_insensitive: false } } } }), "accept"),
+  (d, r) => T("drive-root-bad", ruleWith(ADDED(d), { tools: ["zz_tool"], args: { zs: { path_within: { root: r.pick(["c:/work", "C:/", "C:", "C:/a/../b", "C:/a//b", "C:/a/", "CC:/a", "C:\work"]), case_insensitive: false } } } })),
   (d) => T("missing-mode", (() => { const c = clone(d); delete c.mode; return c; })()),
   (d) => T("missing-name", (() => { const c = clone(d); delete c.name; return c; })()),
   (d) => T("missing-rules", (() => { const c = clone(d); delete c.rules; return c; })()),

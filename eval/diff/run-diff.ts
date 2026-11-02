@@ -14,9 +14,7 @@ import { derive, seedFrom } from "./prng.ts";
 export const DEFAULT_SEED = 20261102;
 export const DEFAULT_CASES = 100_000;
 export const QUICK_CASES = 5_000;
-const PER_POLICY = 20;
-const AMBIGUOUS_EVERY = 10; // 1 in 10 generated policies uses spec-ambiguous readings (ref loaded leniently)
-const MAX_DISTINCT = 30;
+const PER_POLICY = 20;const MAX_DISTINCT = 30;
 
 export interface DiffOptions {
   cases: number;
@@ -84,8 +82,6 @@ export interface DiffReport {
     effect_mismatch: number;
     reason_mismatch_same_effect: number;
     precedence_invalid_vs_limit: number;
-    ambiguity_probe_cases: number;
-    ambiguity_probe_disagree: number;
     matched_mismatch_same_decision: number;
     prod_threw: number;
     ref_engine_error: number;
@@ -298,7 +294,7 @@ export function runDiff(opts: DiffOptions): DiffReport {
     },
     decide: {
       compared: 0, agree: 0, disagree: 0, effect_mismatch: 0, reason_mismatch_same_effect: 0,
-      precedence_invalid_vs_limit: 0, ambiguity_probe_cases: 0, ambiguity_probe_disagree: 0,
+      precedence_invalid_vs_limit: 0,
       matched_mismatch_same_decision: 0, prod_threw: 0, ref_engine_error: 0,
       outcome_histogram: {}, disagreements_by_family: {},
     },
@@ -316,17 +312,15 @@ export function runDiff(opts: DiffOptions): DiffReport {
   const loadSigSeen = new Set<string>();
 
   for (let pi = 0; pi < nPolicies; pi++) {
-    const amb = pi % AMBIGUOUS_EVERY === AMBIGUOUS_EVERY - 1;
-    const gp: GenPolicy = genPolicy(derive(seed, pi, 0), amb);
-    const loadOpts = amb ? { driveRoots: true, lenientStringArrayConflict: true } : {};
+    const gp: GenPolicy = genPolicy(derive(seed, pi, 0));
     caseHash.update("P" + gp.text + "\n");
-    const a = tryLoad(() => refLoadPolicy(gp.text, loadOpts));
+    const a = tryLoad(() => refLoadPolicy(gp.text));
     const b = tryLoad(() => loadPolicy(gp.text));
     rep.load.valid_policies++;
     if (a.ok && b.ok) rep.load.valid_agree++;
     else {
       rep.load.valid_disagree++;
-      const sig = `${amb ? "amb:" : ""}valid-policy:ref=${a.ok ? "accept" : "reject"}:prod=${b.ok ? "accept" : "reject"}`;
+      const sig = `valid-policy:ref=${a.ok ? "accept" : "reject"}:prod=${b.ok ? "accept" : "reject"}`;
       loadSigSeen.add(sig);
       const ex = lSig.get(sig);
       if (ex) ex.count++;
@@ -345,7 +339,6 @@ export function runDiff(opts: DiffOptions): DiffReport {
         caseHash.update(`R${c.family}|${rd}\n`);
         rep.cases++;
         rep.decide.compared++;
-        if (amb) rep.decide.ambiguity_probe_cases++;
 
         const t1 = process.hrtime.bigint();
         const ro = outcomeOfRef(a.v, c.request);
@@ -366,14 +359,13 @@ export function runDiff(opts: DiffOptions): DiffReport {
           continue;
         }
         rep.decide.disagree++;
-        if (amb) rep.decide.ambiguity_probe_disagree++;
         if (kind === "precedence_invalid_vs_limit") rep.decide.precedence_invalid_vs_limit++;
         else if (kind === "effect_mismatch") rep.decide.effect_mismatch++;
         else if (kind === "reason_mismatch") rep.decide.reason_mismatch_same_effect++;
         else rep.decide.matched_mismatch_same_decision++;
         rep.decide.disagreements_by_family[c.family] = (rep.decide.disagreements_by_family[c.family] ?? 0) + 1;
         const matchedSig = kind === "matched_mismatch" ? `|matched` : "";
-        const sig = `${amb ? "amb:" : ""}${c.family}|ref:${ro.effect}/${ro.reason}|prod:${po.effect}/${po.reason}${matchedSig}`;
+        const sig = `${c.family}|ref:${ro.effect}/${ro.reason}|prod:${po.effect}/${po.reason}${matchedSig}`;
         const ex = dSig.get(sig);
         if (ex) ex.count++;
         else {
@@ -393,7 +385,7 @@ export function runDiff(opts: DiffOptions): DiffReport {
     }
 
     // one mutated (mostly invalid) policy per generated policy, load agreement only
-    const pc = genPolicyCase(derive(seed, pi, 1_000_000), amb ? genPolicy(derive(seed, pi, 2_000_000), false) : gp);
+    const pc = genPolicyCase(derive(seed, pi, 1_000_000), gp);
     caseHash.update(`M${pc.name}|${inputDesc(pc.input)}\n`);
     const ma = tryLoad(() => refLoadPolicy(pc.input));
     const mb = tryLoad(() => loadPolicy(pc.input));
@@ -460,10 +452,11 @@ export function runDiff(opts: DiffOptions): DiffReport {
 }
 
 // ---------- CLI ----------
-function parseArgs(argv: string[]): { cases: number; seed: string; out?: string; failOnDiff: boolean; quick: boolean } {
+function parseArgs(argv: string[]): { cases: number; seed: string; seeds: string[]; out?: string; failOnDiff: boolean; quick: boolean } {
   let cases = DEFAULT_CASES;
   let casesGiven = false;
   let seed = String(DEFAULT_SEED);
+  let seeds: string[] = [];
   let out: string | undefined;
   let failOnDiff = false;
   let quick = false;
@@ -473,6 +466,7 @@ function parseArgs(argv: string[]): { cases: number; seed: string; out?: string;
       cases = Number(argv[++i]);
       casesGiven = true;
     } else if (a === "--seed") seed = String(argv[++i]);
+    else if (a === "--seeds") seeds = String(argv[++i]).split(",").filter((x) => x !== "");
     else if (a === "--out") out = argv[++i];
     else if (a === "--quick") quick = true;
     else if (a === "--fail-on-diff") failOnDiff = true;
@@ -480,7 +474,7 @@ function parseArgs(argv: string[]): { cases: number; seed: string; out?: string;
   }
   if (quick && !casesGiven) cases = QUICK_CASES;
   if (!Number.isInteger(cases) || cases < 1) throw new Error("--cases must be a positive integer");
-  return { cases, seed, ...(out !== undefined ? { out } : {}), failOnDiff, quick };
+  return { cases, seed, seeds, ...(out !== undefined ? { out } : {}), failOnDiff, quick };
 }
 
 function summary(r: DiffReport): string {
@@ -490,7 +484,6 @@ function summary(r: DiffReport): string {
     `seed=${r.seed_arg} (numeric ${r.seed})  cases=${r.cases}  policies=${r.policies}`,
     `case_digest=${r.case_digest}`,
     `decide: compared=${d.compared} agree=${d.agree} disagree=${d.disagree} (effect=${d.effect_mismatch}, reason=${d.reason_mismatch_same_effect}, invalid-vs-limit precedence=${d.precedence_invalid_vs_limit}, matched-ids=${d.matched_mismatch_same_decision}) prod_threw=${d.prod_threw} ref_engine_error=${d.ref_engine_error}`,
-    `ambiguity-probe policies (lenient ref): cases=${d.ambiguity_probe_cases} disagree=${d.ambiguity_probe_disagree}`,
     `load(valid generated): ${l.valid_agree}/${l.valid_policies} agree, ${l.valid_disagree} disagree`,
     `load(mutated): ${l.mutated_agree}/${l.mutated_policies} agree, ${l.mutated_disagree} disagree, both-contradict-expectation=${l.mutated_both_contradict_expectation}`,
     `distinct decide signatures=${r.distinct_decide_signatures}  distinct load signatures=${r.distinct_load_signatures}`,
@@ -511,15 +504,19 @@ if (isMain) {
     console.error((e as Error).message);
     process.exit(2);
   }
-  console.log(`prysm differential run: seed=${args.seed} cases=${args.cases}${args.quick ? " (quick)" : ""}`);
-  const report = runDiff({ cases: args.cases, seed: args.seed });
-  console.log(summary(report));
-  if (args.out) {
-    const p = resolve(args.out);
-    mkdirSync(dirname(p), { recursive: true });
-    writeFileSync(p, JSON.stringify(report, null, 2) + "\n");
-    console.log(`report written to ${p}`);
+  const list = args.seeds.length > 0 ? args.seeds : [args.seed];
+  let anyDiff = false;
+  for (const sd of list) {
+    console.log(`prysm differential run: seed=${sd} cases=${args.cases}${args.quick ? " (quick)" : ""}`);
+    const report = runDiff({ cases: args.cases, seed: sd });
+    console.log(summary(report));
+    if (args.out) {
+      const p = resolve(list.length > 1 ? args.out.replace(/(\.json)?$/, `-seed${sd}$1`) : args.out);
+      mkdirSync(dirname(p), { recursive: true });
+      writeFileSync(p, JSON.stringify(report, null, 2) + "\n");
+      console.log(`report written to ${p}`);
+    }
+    if (report.decide.disagree > 0 || report.load.valid_disagree > 0 || report.load.mutated_disagree > 0) anyDiff = true;
   }
-  const anyDiff = report.decide.disagree > 0 || report.load.valid_disagree > 0 || report.load.mutated_disagree > 0;
   process.exit(args.failOnDiff && anyDiff ? 1 : 0);
 }
