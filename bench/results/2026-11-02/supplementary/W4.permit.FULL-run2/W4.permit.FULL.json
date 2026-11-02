@@ -1,0 +1,307 @@
+{
+ "case": "W4.permit.FULL",
+ "workload": "W4",
+ "title": "guard.call() no-op tool, permit path, store synchronous=FULL",
+ "profile": "full",
+ "seed": 20260101,
+ "machine": {
+  "cpu_model": "AMD Ryzen 7 4800H with Radeon Graphics",
+  "logical_cores": 16,
+  "ram_bytes": 16556584960,
+  "os": "win32 10.0.26200 (Windows 11 Home Single Language)",
+  "arch": "x64",
+  "node": "v24.13.1",
+  "date": "2026-11-02T06:37:09.864Z",
+  "power_plan": "Performance"
+ },
+ "failed_runs": [],
+ "runs": [
+  {
+   "rep": 1,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 2000,
+   "iters": 2000,
+   "wall_ms": 8554.8,
+   "output": {
+    "kind": "latency",
+    "stats": {
+     "n": 2000,
+     "min": 1560500,
+     "max": 21715200,
+     "mean": 2162802.6,
+     "p50": 2001900,
+     "p95": 2406700,
+     "p99": 10889700,
+     "hist_log2_ns": {
+      "20": 1481,
+      "21": 490,
+      "22": 4,
+      "23": 24,
+      "24": 1
+     }
+    },
+    "first_iteration_ns": 1991500,
+    "extra": {
+     "calls_total": 4000,
+     "rows_per_call": 2,
+     "rows_expected_min": 7992,
+     "rows_expected_max": 8016,
+     "audit_rows": 8001,
+     "unexpected_results": 0
+    }
+   }
+  },
+  {
+   "rep": 2,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 2000,
+   "iters": 2000,
+   "wall_ms": 12644.2329,
+   "output": {
+    "kind": "latency",
+    "stats": {
+     "n": 2000,
+     "min": 1606400,
+     "max": 126610800,
+     "mean": 4133448.85,
+     "p50": 2303600,
+     "p95": 12782900,
+     "p99": 20556200,
+     "hist_log2_ns": {
+      "20": 829,
+      "21": 707,
+      "22": 214,
+      "23": 203,
+      "24": 43,
+      "25": 2,
+      "26": 2
+     }
+    },
+    "first_iteration_ns": 2347300,
+    "extra": {
+     "calls_total": 4000,
+     "rows_per_call": 2,
+     "rows_expected_min": 7992,
+     "rows_expected_max": 8016,
+     "audit_rows": 8001,
+     "unexpected_results": 0
+    }
+   }
+  },
+  {
+   "rep": 3,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 2000,
+   "iters": 2000,
+   "wall_ms": 21714.0511,
+   "output": {
+    "kind": "latency",
+    "stats": {
+     "n": 2000,
+     "min": 1621000,
+     "max": 110552700,
+     "mean": 2377719.15,
+     "p50": 2101600,
+     "p95": 2952000,
+     "p99": 9861400,
+     "hist_log2_ns": {
+      "20": 989,
+      "21": 981,
+      "22": 5,
+      "23": 20,
+      "24": 4,
+      "26": 1
+     }
+    },
+    "first_iteration_ns": 2729400,
+    "extra": {
+     "calls_total": 4000,
+     "rows_per_call": 2,
+     "rows_expected_min": 7992,
+     "rows_expected_max": 8016,
+     "audit_rows": 8001,
+     "unexpected_results": 0
+    }
+   }
+  },
+  {
+   "rep": 4,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 2000,
+   "iters": 2000,
+   "wall_ms": 10329.6199,
+   "output": {
+    "kind": "latency",
+    "stats": {
+     "n": 2000,
+     "min": 1408600,
+     "max": 108443300,
+     "mean": 2576404.45,
+     "p50": 2238900,
+     "p95": 3161800,
+     "p99": 13091600,
+     "hist_log2_ns": {
+      "20": 572,
+      "21": 1386,
+      "22": 8,
+      "23": 27,
+      "24": 6,
+      "26": 1
+     }
+    },
+    "first_iteration_ns": 2542500,
+    "extra": {
+     "calls_total": 4000,
+     "rows_per_call": 2,
+     "rows_expected_min": 7992,
+     "rows_expected_max": 8016,
+     "audit_rows": 8001,
+     "unexpected_results": 0
+    }
+   }
+  },
+  {
+   "rep": 5,
+   "cold": false,
+   "seed_base": 20260101,
+   "warmup": 2000,
+   "iters": 2000,
+   "wall_ms": 9813.5909,
+   "output": {
+    "kind": "latency",
+    "stats": {
+     "n": 2000,
+     "min": 1539600,
+     "max": 108844200,
+     "mean": 2385881.85,
+     "p50": 2050700,
+     "p95": 2842100,
+     "p99": 11753200,
+     "hist_log2_ns": {
+      "20": 1194,
+      "21": 770,
+      "22": 9,
+      "23": 23,
+      "24": 2,
+      "26": 2
+     }
+    },
+    "first_iteration_ns": 2164000,
+    "extra": {
+     "calls_total": 4000,
+     "rows_per_call": 2,
+     "rows_expected_min": 7992,
+     "rows_expected_max": 8016,
+     "audit_rows": 8001,
+     "unexpected_results": 0
+    }
+   }
+  }
+ ],
+ "cold": {
+  "rep": 0,
+  "cold": true,
+  "seed_base": 20260101,
+  "warmup": 0,
+  "iters": 100,
+  "wall_ms": 263.6666,
+  "output": {
+   "kind": "latency",
+   "stats": {
+    "n": 100,
+    "min": 1811400,
+    "max": 7125900,
+    "mean": 2357490,
+    "p50": 2290600,
+    "p95": 2919100,
+    "p99": 4261700,
+    "hist_log2_ns": {
+     "20": 32,
+     "21": 66,
+     "22": 2
+    }
+   },
+   "first_iteration_ns": 7125900,
+   "extra": {
+    "calls_total": 100,
+    "rows_per_call": 2,
+    "rows_expected_min": 199,
+    "rows_expected_max": 216,
+    "audit_rows": 201,
+    "unexpected_results": 0
+   }
+  }
+ },
+ "aggregate": {
+  "runs": 5,
+  "n_per_run": 2000,
+  "p50": {
+   "median": 2101600,
+   "min": 2001900,
+   "max": 2303600,
+   "cv": 0.05961598838203734
+  },
+  "p95": {
+   "median": 2952000,
+   "min": 2406700,
+   "max": 12782900,
+   "cv": 0.922499720595328
+  },
+  "p99": {
+   "median": 11753200,
+   "min": 9861400,
+   "max": 20556200,
+   "cv": 0.3222232791814203
+  },
+  "min_ns": 1408600,
+  "max_ns": 126610800,
+  "mean": {
+   "median": 2385881.85,
+   "min": 2162802.6,
+   "max": 4133448.85,
+   "cv": 0.29318975498689787
+  }
+ },
+ "extra_aggregate": {
+  "calls_total": {
+   "median": 4000,
+   "min": 4000,
+   "max": 4000,
+   "cv": 0
+  },
+  "rows_per_call": {
+   "median": 2,
+   "min": 2,
+   "max": 2,
+   "cv": 0
+  },
+  "rows_expected_min": {
+   "median": 7992,
+   "min": 7992,
+   "max": 7992,
+   "cv": 0
+  },
+  "rows_expected_max": {
+   "median": 8016,
+   "min": 8016,
+   "max": 8016,
+   "cv": 0
+  },
+  "audit_rows": {
+   "median": 8001,
+   "min": 8001,
+   "max": 8001,
+   "cv": 0
+  },
+  "unexpected_results": {
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "cv": 0
+  }
+ }
+}

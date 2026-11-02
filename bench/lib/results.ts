@@ -55,10 +55,12 @@ export interface Summary {
     w5_throughput_per_s: Record<string, { median: number; min: number; max: number }>;
   };
   hypotheses: HypothesisResult[];
+  /** Cases re-run after the original run (later date, with the reason); their files and this summary were replaced consistently. */
+  reruns: { date: string; cases: string[]; note: string }[];
   failures: { case: string; rep: number; cold: boolean; error: string }[];
 }
 
-export function buildSummary(results: readonly CaseResult[], profile: Profile, seed: number, machine: MachineInfo): Summary {
+export function buildSummary(results: readonly CaseResult[], profile: Profile, seed: number, machine: MachineInfo, reruns: Summary['reruns'] = []): Summary {
   const latency: Summary['latency_ms'] = {};
   const w8: Record<string, unknown> = {};
   const aggregates: Record<string, Aggregate | undefined> = {};
@@ -111,6 +113,7 @@ export function buildSummary(results: readonly CaseResult[], profile: Profile, s
       w5_throughput_per_s: w5,
     },
     hypotheses: evaluateHypotheses({ aggregates, verifyWallMs }),
+    reruns,
     failures,
   };
 }

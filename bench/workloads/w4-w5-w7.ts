@@ -7,6 +7,7 @@ import type { Store } from '../../src/store/index.ts';
 import { benchGuard, CALLS, openBenchStore, stubStore } from '../lib/guardkit.ts';
 import type { Path } from '../lib/guardkit.ts';
 import { PROCS } from '../lib/config.ts';
+import { checkRows } from '../lib/accounting.ts';
 import { timeAsync, timeConcurrent } from '../lib/timer.ts';
 import type { CaseCtx, CaseDef, CaseOutput } from '../lib/types.ts';
 
@@ -34,7 +35,8 @@ async function guardCase(c: CaseCtx, path: Path, store: Store, extra: Record<str
   const rows = store.count();
   guard.close();
   store.close();
-  return { kind: 'latency', samplesNs, extra: { ...extra, calls_total: c.warmup + c.iters, audit_rows: rows, unexpected_results: unexpected(path, tally) } };
+  const acc = checkRows(`W4/W7 ${path}`, c.warmup + c.iters, path === 'permit' ? 2 : 1, rows);
+  return { kind: 'latency', samplesNs, extra: { ...extra, ...acc, unexpected_results: unexpected(path, tally) } };
 }
 
 const w4 = (path: Path, sync: 'FULL' | 'NORMAL'): CaseDef => ({
@@ -57,7 +59,8 @@ const w5 = (lanes: number): CaseDef => ({
     const rows = store.count();
     guard.close();
     store.close();
-    return { kind: 'latency', samplesNs: samples, extra: { lanes, throughput_per_s: c.iters / (wallNs / 1e9), audit_rows: rows, unexpected_results: unexpected('permit', tally) } };
+    const acc = checkRows(`W5 c${lanes}`, c.warmup + c.iters, 2, rows);
+    return { kind: 'latency', samplesNs: samples, extra: { lanes, throughput_per_s: c.iters / (wallNs / 1e9), ...acc, unexpected_results: unexpected('permit', tally) } };
   },
 });
 
@@ -118,6 +121,8 @@ const procs4: CaseDef = {
       const check = openBenchStore(c.workDir, 'FULL');
       const rows = check.count();
       check.close();
+      const expected = PROCS * (warmPer + perProc);
+      if (rows !== expected) throw new Error(`W5 procs: audit row accounting failed: ${rows} rows, expected exactly ${expected}`);
       return {
         kind: 'latency', samplesNs,
         extra: { processes: PROCS, throughput_per_s: samplesNs.length / (wallNs / 1e9), audit_rows: rows, rows_expected: PROCS * (warmPer + perProc), worker_nonzero_exits: codes.filter((x) => x !== 0).length },

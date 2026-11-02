@@ -1,0 +1,130 @@
+{
+ "schema": "prysm-bench-summary/1",
+ "profile": "full",
+ "seed": 20260101,
+ "machine": {
+  "cpu_model": "AMD Ryzen 7 4800H with Radeon Graphics",
+  "logical_cores": 16,
+  "ram_bytes": 16556584960,
+  "os": "win32 10.0.26200 (Windows 11 Home Single Language)",
+  "arch": "x64",
+  "node": "v24.13.1",
+  "date": "2026-11-02T06:37:09.864Z",
+  "power_plan": "Performance"
+ },
+ "note": "Protocol run (BENCH-SPEC section 3).",
+ "latency_ms": {
+  "W4.permit.FULL": {
+   "n_per_run": 2000,
+   "runs": 5,
+   "p50": {
+    "median": 2.102,
+    "min": 2.002,
+    "max": 2.304,
+    "cv": 0.0596
+   },
+   "p95": {
+    "median": 2.952,
+    "min": 2.407,
+    "max": 12.783,
+    "cv": 0.9225
+   },
+   "p99": {
+    "median": 11.753,
+    "min": 9.861,
+    "max": 20.556,
+    "cv": 0.3222
+   },
+   "cold": {
+    "p50": 2.291,
+    "p99": 4.262,
+    "first_iteration": 7.126,
+    "n": 100
+   },
+   "extra": {
+    "calls_total": {
+     "median": 4000,
+     "min": 4000,
+     "max": 4000,
+     "cv": 0
+    },
+    "rows_per_call": {
+     "median": 2,
+     "min": 2,
+     "max": 2,
+     "cv": 0
+    },
+    "rows_expected_min": {
+     "median": 7992,
+     "min": 7992,
+     "max": 7992,
+     "cv": 0
+    },
+    "rows_expected_max": {
+     "median": 8016,
+     "min": 8016,
+     "max": 8016,
+     "cv": 0
+    },
+    "audit_rows": {
+     "median": 8001,
+     "min": 8001,
+     "max": 8001,
+     "cv": 0
+    },
+    "unexpected_results": {
+     "median": 0,
+     "min": 0,
+     "max": 0,
+     "cv": 0
+    }
+   }
+  }
+ },
+ "w8": {},
+ "derived": {
+  "w6_proxy_overhead_ms": null,
+  "w7_durable_write_cost_ms": {},
+  "w5_throughput_per_s": {}
+ },
+ "hypotheses": [
+  {
+   "id": "H1",
+   "statement": "decide() p99 < 1 ms at 200 rules",
+   "threshold": "< 1 ms",
+   "status": "not evaluated",
+   "numbers": "W2 not run",
+   "value": null,
+   "unit": "ms"
+  },
+  {
+   "id": "H2",
+   "statement": "guard overhead with sync audit p99 < 10 ms",
+   "threshold": "< 10 ms",
+   "status": "not evaluated",
+   "numbers": "W4 FULL not run",
+   "value": null,
+   "unit": "ms"
+  },
+  {
+   "id": "H3",
+   "statement": "proxy overhead p99 < 15 ms",
+   "threshold": "< 15 ms",
+   "status": "not evaluated",
+   "numbers": "W6 not run",
+   "value": null,
+   "unit": "ms"
+  },
+  {
+   "id": "H4",
+   "statement": "verify-chain of 100k rows < 30 s",
+   "threshold": "< 30 s",
+   "status": "not evaluated",
+   "numbers": "100k store not run in this profile",
+   "value": null,
+   "unit": "s"
+  }
+ ],
+ "reruns": [],
+ "failures": []
+}

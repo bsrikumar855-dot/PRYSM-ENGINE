@@ -15,6 +15,9 @@ import { mulberry32, caseRng } from '../../bench/lib/prng.ts';
 import { aggregateExtras, aggregateRuns, cv, log2Histogram, median, percentileNearestRank, summarize } from '../../bench/lib/stats.ts';
 import type { RunStats } from '../../bench/lib/stats.ts';
 import { stubStore, benchGuard } from '../../bench/lib/guardkit.ts';
+import { checkRows, expectedRows } from '../../bench/lib/accounting.ts';
+import { timeAsync, timeConcurrent, timeSync } from '../../bench/lib/timer.ts';
+import { writeFileSync } from 'node:fs';
 import { allCases } from '../../bench/workloads/index.ts';
 import { cleanup } from '../support/tmp.ts';
 
@@ -288,7 +291,7 @@ test('W8: store of N rows, report and verify-chain succeed with RSS recorded', {
 test('parent runs cases in separate child processes and writes valid, small JSON', { timeout: 240_000 }, async () => {
   const out = join(scratch(), 'results');
   const lines: string[] = [];
-  const r = await parentMain({ profile: 'smoke', only: ['W1', 'W4.permit.NORMAL', 'W8.rows50'], out, child: null }, (l) => { lines.push(l); });
+  const r = await parentMain({ profile: 'smoke', only: ['W1', 'W4.permit.NORMAL', 'W8.rows50'], out, note: null, child: null }, (l) => { lines.push(l); });
   assert.equal(r.summary.failures.length, 0, JSON.stringify(r.summary.failures));
   const files = readdirSync(out).sort();
   assert.deepEqual(files, ['W1.fixture-mix.json', 'W4.permit.NORMAL.json', 'W8.rows50.json', 'summary.json']);
@@ -319,5 +322,87 @@ test('parent runs cases in separate child processes and writes valid, small JSON
 });
 
 test('an unknown --only filter is an error, not an empty run', async () => {
-  await assert.rejects(parentMain({ profile: 'smoke', only: ['W99'], out: join(scratch(), 'x'), child: null }, () => undefined), /no case matches/);
+  await assert.rejects(parentMain({ profile: 'smoke', only: ['W99'], out: join(scratch(), 'x'), note: null, child: null }, () => undefined), /no case matches/);
+});
+
+// ---------------------------------------------------------------- warm-up exclusion
+const spin = (ms: number): void => { const t = process.hrtime.bigint(); while (Number(process.hrtime.bigint() - t) < ms * 1e6) { /* busy wait */ } };
+
+test('timeSync: measured samples exclude the (artificially slow) warm-up iterations', () => {
+  const calls: number[] = [];
+  const samples = timeSync((i) => { calls.push(i); if (i < 10) spin(5); }, 10, 50);
+  assert.equal(calls.length, 60, 'warm-up + measured iterations all ran');
+  assert.deepEqual(calls.slice(0, 3), [0, 1, 2]);
+  assert.equal(samples.length, 50);
+  assert.ok(Math.max(...samples) < 2e6, 'no 5 ms warm-up sample in the measured distribution');
+  assert.ok(summarize(samples).max < 2e6);
+});
+
+test('timeAsync and timeConcurrent: warm-up discarded as well', async () => {
+  const slowFirst = (n: number) => { let k = 0; return (): Promise<void> => { if (k++ < n) spin(5); return Promise.resolve(); }; };
+  const a = await timeAsync(slowFirst(10), 10, 40);
+  assert.equal(a.length, 40);
+  assert.ok(Math.max(...a) < 2e6);
+  const c = await timeConcurrent(slowFirst(10), 4, 10, 40);
+  assert.equal(c.samples.length, 40);
+  assert.ok(c.samples.every((x) => typeof x === 'number'));
+  assert.ok(Math.max(...c.samples) < 2e6);
+  assert.ok(c.wallNs > 0);
+});
+
+test('the cold run records no warm-up and measures from the first iteration (slow first calls DO show)', () => {
+  const samples = timeSync((i) => { if (i < 3) spin(5); }, 0, 20);
+  assert.ok(samples.slice(0, 3).every((x) => x >= 4e6));
+});
+
+// ---------------------------------------------------------------- row accounting
+test('row accounting: within range passes, missing or surplus rows fail', () => {
+  const e = expectedRows(4000, 2);
+  assert.equal(e.max, 8016);
+  assert.ok(e.min >= 7990 && e.min <= 8000);
+  const ok = checkRows('t', 4000, 2, 8001);
+  assert.equal(ok.audit_rows, 8001);
+  assert.equal(ok.rows_per_call, 2);
+  assert.throws(() => checkRows('t', 4000, 2, 5004), /accounting failed/); // the W6 bug: result rows dropped
+  assert.throws(() => checkRows('t', 4000, 1, 8001), /accounting failed/);
+  assert.doesNotThrow(() => checkRows('t', 4000, 1, 4001));
+});
+
+test('guard cases record expected vs actual rows (permit 2 per call, deny 1)', async () => {
+  const calls = smoke.warmup + smoke.guardIters;
+  for (const [id, per] of [['W4.permit.FULL', 2], ['W4.deny.NORMAL', 1], ['W7.permit.stub', 2]] as const) {
+    const rec = await executeRun(caseById(id), smoke, false, 1);
+    if (rec.output.kind !== 'latency') throw new Error('latency expected');
+    const x = rec.output.extra;
+    assert.equal(x['rows_per_call'], per);
+    assert.equal(x['calls_total'], calls);
+    assert.ok((x['audit_rows'] as number) >= (x['rows_expected_min'] as number) && (x['audit_rows'] as number) <= (x['rows_expected_max'] as number));
+  }
+});
+
+test('a case that drops result rows FAILS (budget forced to 1 result row)', async () => {
+  const { createGuard } = await import('../../src/guard/index.ts');
+  const { openBenchStore } = await import('../../bench/lib/guardkit.ts');
+  const dir = scratch();
+  const store = openBenchStore(dir, 'NORMAL');
+  const guard = createGuard({ policy: loadFixturePolicy(), store, agentId: 'a', tools: { read_file: () => 'ok' }, secondarySink: () => undefined, maxResultRowsPerWindow: 1 });
+  for (let i = 0; i < 40; i++) await guard.call('read_file', { path: '/workspace/docs/a.md' }, { scopes: ['sales'] });
+  assert.throws(() => checkRows('forced', 40, 2, store.count()), /accounting failed/);
+  guard.close();
+  store.close();
+});
+
+// ---------------------------------------------------------------- subset re-run merges consistently
+test('re-running a subset into an existing directory replaces only that case and regenerates the summary', { timeout: 240_000 }, async () => {
+  const out = join(scratch(), 'results');
+  await parentMain({ profile: 'smoke', only: ['W1', 'W3.fixture-mix'], out, note: null, child: null }, () => undefined);
+  const before = readFileSync(join(out, 'W1.fixture-mix.json'), 'utf8');
+  await parentMain({ profile: 'smoke', only: ['W3.fixture-mix'], out, note: 'because', child: null }, () => undefined);
+  assert.equal(readFileSync(join(out, 'W1.fixture-mix.json'), 'utf8'), before, 'other case untouched');
+  const sum = JSON.parse(readFileSync(join(out, 'summary.json'), 'utf8'));
+  assert.ok(sum.latency_ms['W1.fixture-mix'] && sum.latency_ms['W3.fixture-mix'], 'summary covers all case files');
+  assert.equal(sum.reruns.length, 1);
+  assert.deepEqual(sum.reruns[0].cases, ['W3.fixture-mix']);
+  assert.equal(sum.reruns[0].note, 'because');
+  writeFileSync(join(out, 'unused.txt'), '');
 });

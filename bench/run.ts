@@ -6,7 +6,10 @@ const { parseOptions, childMain, parentMain } = await import('./lib/orchestrate.
 try {
   const o = parseOptions(process.argv.slice(2));
   if (o.child !== null) await childMain(o);
-  else await parentMain(o);
+  else {
+    const r = await parentMain(o);
+    if (r.summary.failures.length > 0) process.exitCode = 1; // a failed run (including row-accounting failures) fails the benchmark
+  }
 } catch (e) {
   process.stderr.write(`bench: ${(e as Error).message}\n`);
   process.exitCode = 1;

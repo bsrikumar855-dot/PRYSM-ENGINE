@@ -894,27 +894,27 @@
    "n_per_run": 2000,
    "runs": 5,
    "p50": {
-    "median": 1.027,
-    "min": 1.024,
-    "max": 1.13,
-    "cv": 0.0435
+    "median": 1.098,
+    "min": 1.041,
+    "max": 1.118,
+    "cv": 0.0266
    },
    "p95": {
-    "median": 1.326,
-    "min": 1.27,
-    "max": 1.453,
-    "cv": 0.0537
+    "median": 1.432,
+    "min": 1.384,
+    "max": 1.442,
+    "cv": 0.0162
    },
    "p99": {
-    "median": 1.56,
-    "min": 1.521,
-    "max": 1.81,
-    "cv": 0.0728
+    "median": 1.639,
+    "min": 1.609,
+    "max": 1.713,
+    "cv": 0.024
    },
    "cold": {
-    "p50": 1.171,
-    "p99": 1.938,
-    "first_iteration": 1.938,
+    "p50": 1.306,
+    "p99": 2.234,
+    "first_iteration": 3.049,
     "n": 100
    },
    "extra": {
@@ -942,27 +942,27 @@
    "n_per_run": 2000,
    "runs": 5,
    "p50": {
-    "median": 2.777,
-    "min": 2.669,
-    "max": 2.906,
-    "cv": 0.0366
+    "median": 3.578,
+    "min": 3.526,
+    "max": 3.733,
+    "cv": 0.0265
    },
    "p95": {
-    "median": 3.445,
-    "min": 3.084,
-    "max": 3.531,
-    "cv": 0.0567
+    "median": 4.351,
+    "min": 4.161,
+    "max": 5.019,
+    "cv": 0.0733
    },
    "p99": {
-    "median": 4.71,
-    "min": 4.64,
-    "max": 6.493,
-    "cv": 0.1599
+    "median": 12.963,
+    "min": 11.122,
+    "max": 13.731,
+    "cv": 0.0873
    },
    "cold": {
-    "p50": 4.042,
-    "p99": 6.4,
-    "first_iteration": 9.53,
+    "p50": 4.492,
+    "p99": 6.946,
+    "first_iteration": 8.883,
     "n": 100
    },
    "extra": {
@@ -972,19 +972,43 @@
      "max": 4000,
      "cv": 0
     },
+    "rows_per_call": {
+     "median": 2,
+     "min": 2,
+     "max": 2,
+     "cv": 0
+    },
+    "rows_expected_min": {
+     "median": 7992,
+     "min": 7992,
+     "max": 7992,
+     "cv": 0
+    },
+    "rows_expected_max": {
+     "median": 8016,
+     "min": 8016,
+     "max": 8016,
+     "cv": 0
+    },
+    "audit_rows": {
+     "median": 8004,
+     "min": 8004,
+     "max": 8004,
+     "cv": 0
+    },
     "error_replies": {
      "median": 0,
      "min": 0,
      "max": 0,
      "cv": 0
     },
-    "audit_rows": {
-     "median": 5004,
-     "min": 5004,
-     "max": 5004,
+    "tool_decision_rows": {
+     "median": 4000,
+     "min": 4000,
+     "max": 4000,
      "cv": 0
     },
-    "tool_decision_rows": {
+    "tool_result_rows": {
      "median": 4000,
      "min": 4000,
      "max": 4000,
@@ -1066,10 +1090,10 @@
  },
  "derived": {
   "w6_proxy_overhead_ms": {
-   "p50": 1.75,
-   "p95": 2.119,
-   "p99": 3.15,
-   "audit_rows_proxy": 5004
+   "p50": 2.48,
+   "p95": 2.918,
+   "p99": 11.323,
+   "audit_rows_proxy": 8004
   },
   "w7_durable_write_cost_ms": {
    "permit.FULL": {
@@ -1141,8 +1165,8 @@
    "statement": "proxy overhead p99 < 15 ms (proxy p99 minus direct p99, medians of per-run p99)",
    "threshold": "< 15 ms",
    "status": "met",
-   "numbers": "overhead p99=3.15 ms, p50=1.75 ms (proxy p50 2.78/p99 4.71; direct p50 1.03/p99 1.56)",
-   "value": 3.1503,
+   "numbers": "overhead p99=11.32 ms, p50=2.48 ms (proxy p50 3.58/p99 12.96; direct p50 1.10/p99 1.64)",
+   "value": 11.3233,
    "unit": "ms"
   },
   {
@@ -1153,6 +1177,16 @@
    "numbers": "verify-chain wall=3.72 s",
    "value": 3.7161646,
    "unit": "s"
+  }
+ ],
+ "reruns": [
+  {
+   "date": "2026-11-02T06:34:18.280Z",
+   "cases": [
+    "W6.direct",
+    "W6.proxy"
+   ],
+   "note": "W6 re-run after the guard fix 7568da6: the original W6 proxy leg ran with the default tool_result budget (1000 rows/60 s) exhausted by warm-up, so most measured calls wrote no result row"
   }
  ],
  "failures": []
