@@ -106,7 +106,7 @@ export function directExecutor(tools: Record<string, ToolImpl>): Executor {
       try {
         return { tool, args, status: 'ok', reason: null, decisionId: null, text: JSON.stringify(await fn(args)) };
       } catch (e) {
-        return { tool, args, status: 'error', reason: 'tool_error', decisionId: null, text: e instanceof Error ? e.message : 'error' };
+        return { tool, args, status: 'error', reason: 'tool_error', decisionId: null, text: 'tool error' };
       }
     },
   };

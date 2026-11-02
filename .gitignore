@@ -6,3 +6,6 @@ node_modules/
 .env
 .prysm-sample/
 prysm-report.html
+*.key
+*.pem
+prysm-*.html

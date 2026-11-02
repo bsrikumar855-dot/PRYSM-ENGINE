@@ -77,3 +77,14 @@ M3-01..M3-06 Closed with evidence. P-01, P-03, F-03 Closed through the proxy; P-
 
 ### M4 gate (CLI + static report) closed, 2026-11-02
 security-engineer (2 passes): no Critical/High. M4-01 (--out names ending in dot/space) Closed, M4-03 (forged DB recursive view hang; schema allow-list on every open) Closed, M4-11 (anchor could not verify pruned stores and steered operators to --no-verify) Closed, M4-12 (ANALYZE statistics tables rejected) Closed, M4-02 (read-only opens leave -wal/-shm files) Open by design, documented. critical-reviewer (2 passes): MAJOR report named permit rules as the cause of a block Closed (outcome.deny_n plus shared src/explain), CLI non-rule-denial divergence Closed, test gaps added. Register: P-08 and P-10 Closed for M4 (no values, keys or absolute paths in CLI/report; HTML, terminal and JSON injection held under hostile rows built via raw store.append). Limits: symlink refusal not exercised on this OS; no real-browser testing of print or screen readers; forged-index/attached-schema tricks against checkSchema only partly probed; very large stores untested beyond 6000 rows. No claim that the system is secure.
+
+## M5 security gate (security-engineer, independent; static inspection + one `npm run demo` run; no penetration testing)
+Result: **no Critical, High or Medium finding.** Sample-app sandbox held in both the guarded and the unguarded executor (traversal, backslash, drive/UNC/`\?\`, ADS, device and 8.3 names, look-alikes, 5000-segment path); docs fixture binds 127.0.0.1 and reads nothing from disk; no shell spawns; no runtime dependencies or install scripts; 188 tracked files and 32 commits contain no key/env/db files or real credential patterns.
+| Id | Sev | Finding | Status |
+|---|---|---|---|
+| M5-01 | Low | Committed bench results contained a personal Windows path (username) and machine fingerprint | Fixed: paths scrubbed from results, harness records `<path>/basename`, regression test `test/eval/privacy.test.ts`. CPU/RAM/OS description is kept deliberately (needed to interpret numbers). Username was already pushed in earlier commits: history is not rewritten (owner decision) |
+| M5-02 | Low | Real username used as a test fixture; author email in commit metadata | Fixture renamed. Author email left as is (owner's account) |
+| M5-03 | Low | `.gitignore` lacked `*.key` | Fixed (`*.key`, `*.pem`, `prysm-*.html`) |
+| M5-04 | Low | Sample MCP server/direct executor returned raw error messages with absolute paths | Fixed: fixed text `tool error` |
+| M5-05 | Low (potential) | Test/demo runs leave temp directories | Open: documented; not measured how many the suite itself leaves |
+Not checked: planted symlink/junction in the workspace, non-Windows, orphan processes on failed runs, `npm audit`, whether the GitHub repo is public. Register: P-12 closed for the sample app, P-04 loopback-only, P-17 closed for M5 scope, P-08 Low items above.

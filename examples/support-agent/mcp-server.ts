@@ -50,7 +50,7 @@ rl.on('line', (line) => {
       if (impl === undefined) { send({ jsonrpc: '2.0', id, error: { code: -32602, message: 'unknown tool' } }); return; }
       impl((p['arguments'] ?? {}) as Json).then(
         (v) => { send({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: JSON.stringify(v) }] } }); },
-        (e: unknown) => { send({ jsonrpc: '2.0', id, result: { isError: true, content: [{ type: 'text', text: e instanceof Error ? e.message : 'error' }] } }); },
+        (e: unknown) => { send({ jsonrpc: '2.0', id, result: { isError: true, content: [{ type: 'text', text: 'tool error' }] } }); },
       );
       return;
     }

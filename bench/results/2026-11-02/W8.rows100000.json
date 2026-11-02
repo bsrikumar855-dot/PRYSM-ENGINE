@@ -35,7 +35,7 @@
       "exit_code": 0,
       "inproc_ms": 5451.0764,
       "peak_rss_mb": 248.33984375,
-      "stdout_first_line": "report written: C:\\Users\\babus\\AppData\\Local\\Temp\\prysm-bench-lD4LTQ\\report.html (1090429 bytes)",
+      "stdout_first_line": "report written: <path>/report.html (1090429 bytes)",
       "stderr_lines": 0,
       "html_bytes": 1090429
      },

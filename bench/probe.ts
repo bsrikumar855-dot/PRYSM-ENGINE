@@ -14,6 +14,6 @@ process.stdout.write('PROBE ' + JSON.stringify({
   inproc_ms: ms,
   // process.resourceUsage().maxRSS is in KiB (peak working set on Windows)
   peak_rss_mb: process.resourceUsage().maxRSS / 1024,
-  stdout_first_line: (outLines[0] ?? '').slice(0, 120),
+  stdout_first_line: (outLines[0] ?? '').replace(/[A-Za-z]:[\/][^\s]*[\/]([^\/\s]+)/g, '<path>/$1').slice(0, 120),
   stderr_lines: errLines.length,
 }) + '\n');

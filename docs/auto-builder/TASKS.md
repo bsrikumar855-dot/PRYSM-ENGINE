@@ -5,8 +5,8 @@
 | Field | Value |
 |---|---|
 | Current phase | Phase 5 implementation (Checkpoint A approved: "Approve, mock only", DEC-15/16) |
-| Current milestone | M4 gate passed (4 of 5 passes) → M5 benchmarks and measurement next |
-| Pass for this milestone (budget: 5 by default; edit here) | M4 closed after 4 / 5 passes (0 / 5 for M5) |
+| Current milestone | M5 gate passed (security review: no Critical/High/Medium; benchmark honesty audit corrected) → M6 final reviews and delivery report next |
+| Pass for this milestone (budget: 5 by default; edit here) | M5 closed (see DEC-40, SECURITY-REVIEW M5 section); M6 not started |
 | Total passes, all milestones | 14 |
 | Failing checks → attempts (one line per distinct check; max 3 each) | F-01..F-09: closed except F-05(glob only)/F-07 partial; N-01 deny/unparseable: 1 attempt; N-02 metering: 1; N-03 mutable toolInfo: 1; N-04 hidden chars: 2 (F-07 then N-04) |
 | Last verified commit | 2e6848e (M0) |

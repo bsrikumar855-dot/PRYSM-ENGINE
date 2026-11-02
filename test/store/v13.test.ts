@@ -107,21 +107,21 @@ const aclOut = (kp: string, lines: string[]) =>
 
 test('evaluateAcl: exactly one principal, the current user, inheritance removed', () => {
   const kp = 'C:\\keys\\prysm.key';
-  assert.equal(evaluateAcl(aclOut(kp, ['HOST\\babus:(R,W)']), kp, 'babus'), true);
-  assert.equal(evaluateAcl(aclOut(kp, ['babus:(R,W)']), kp, 'BABUS'), true, 'case-insensitive');
-  assert.equal(evaluateAcl(aclOut(kp, ['HOST\\babus:(R,W)', 'NT AUTHORITY\\SYSTEM:(F)']), kp, 'babus'), false, 'two principals');
-  assert.equal(evaluateAcl(aclOut(kp, ['HOST\\babus:(I)(F)']), kp, 'babus'), false, 'inherited entry');
-  assert.equal(evaluateAcl(aclOut(kp, ['HOST\\someone:(R,W)']), kp, 'babus'), false, 'another user');
+  assert.equal(evaluateAcl(aclOut(kp, ['HOST\\alice:(R,W)']), kp, 'alice'), true);
+  assert.equal(evaluateAcl(aclOut(kp, ['alice:(R,W)']), kp, 'ALICE'), true, 'case-insensitive');
+  assert.equal(evaluateAcl(aclOut(kp, ['HOST\\alice:(R,W)', 'NT AUTHORITY\\SYSTEM:(F)']), kp, 'alice'), false, 'two principals');
+  assert.equal(evaluateAcl(aclOut(kp, ['HOST\\alice:(I)(F)']), kp, 'alice'), false, 'inherited entry');
+  assert.equal(evaluateAcl(aclOut(kp, ['HOST\\someone:(R,W)']), kp, 'alice'), false, 'another user');
   assert.equal(evaluateAcl(aclOut(kp, ['Everyone:(R,W)']), kp, 'Everyone'), false, 'a group can never be the grantee');
   assert.equal(evaluateAcl(aclOut(kp, ['BUILTIN\\Users:(R,W)']), kp, 'BUILTIN\\Users'), false);
   assert.equal(evaluateAcl(aclOut(kp, ['NT AUTHORITY\\SYSTEM:(R,W)']), kp, 'SYSTEM'), false);
-  assert.equal(evaluateAcl('', kp, 'babus'), false);
-  assert.equal(evaluateAcl('garbage without entries', kp, 'babus'), false);
-  assert.equal(evaluateAcl(aclOut(kp, ['HOST\\babus:(R,W)']), kp, ''), false);
+  assert.equal(evaluateAcl('', kp, 'alice'), false);
+  assert.equal(evaluateAcl('garbage without entries', kp, 'alice'), false);
+  assert.equal(evaluateAcl(aclOut(kp, ['HOST\\alice:(R,W)']), kp, ''), false);
   for (const g of ['Everyone', 'Users', 'Authenticated Users', 'SYSTEM', 'BUILTIN\\Administrators', 'NT AUTHORITY\\Authenticated Users', 'everyone']) {
     assert.equal(isWellKnownGroup(g), true, g);
   }
-  assert.equal(isWellKnownGroup('babus'), false);
+  assert.equal(isWellKnownGroup('alice'), false);
 });
 
 test('store ACL status comes from re-reading the ACL on every open; meta and env vars are not trusted', () => {

@@ -35,7 +35,7 @@
       "exit_code": 0,
       "inproc_ms": 671.6997,
       "peak_rss_mb": 156.53125,
-      "stdout_first_line": "report written: C:\\Users\\babus\\AppData\\Local\\Temp\\prysm-bench-mlAVSh\\report.html (1082930 bytes)",
+      "stdout_first_line": "report written: <path>/report.html (1082930 bytes)",
       "stderr_lines": 0,
       "html_bytes": 1082930
      },
