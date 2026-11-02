@@ -962,7 +962,7 @@ export function createProxy(opts: ProxyOptions): ProxyHandle {
     goneFired = true;
     serverDead = true;
     resolveGone();
-    if (shuttingDown) return; // expected (client EOF path)
+    if (shuttingDown) { failAllPending(new ServerExitError('server_exit')); return; } // client EOF path: do not wait out forwards to a dead server
     shuttingDown = true;
     proxyLine('proxy_server_exit', { code, ...(signal !== null ? { signal } : {}) });
     failAllPending(new ServerExitError('server_exit'));

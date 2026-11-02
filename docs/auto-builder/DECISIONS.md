@@ -55,3 +55,6 @@ D1 language (TS) · D2 local-first, no SaaS · D7 real-LLM scenario model/spend 
 
 ## DEC-40 M5 gate closed (security review)
 No Critical/High/Medium. Low findings M5-01..M5-04 fixed, M5-05 open (litter). History is not rewritten to remove the already-pushed username; the owner may decide otherwise. Sample-app tool errors are now a fixed text so example code does not leak host paths.
+
+## DEC-41 M6 final reviews
+Three independent whole-project reviews (critical-reviewer, qa-engineer, security-engineer) found no Critical or High issue. Fixed: store.verify() crash above ~125,000 decision rows (S-01); proxy waited 30 s and left forwards unanswered when client EOF raced a dying server (QA F1; regression test `test/proxy/eof-crash.test.ts`, which fails without the fix); README/TASKS/spec staleness (critical review D1-D12). Not fixed, recorded as open: S-02 (guard.call trusts caller ctx; documented host duty, API change is backlog), S-03..S-09, M2-21, M5-05. Decision: ship with these disclosed rather than change the guard API at the end of the project; the owner may reopen S-02.

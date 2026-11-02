@@ -19,13 +19,17 @@ Node.js 24 or newer. No runtime dependencies. Development dependencies: TypeScri
 
 ```bash
 npm install --ignore-scripts
-npm test            # full suite (538 tests, 2 skipped; about 40-60 s on the benchmark machine)
+npm test            # full suite (539 tests, 2 skipped; about 40-60 s on the benchmark machine)
 npm run typecheck
 npm run corpus      # labelled adversarial policy corpus (563 cases: 435 decision, 128 policy-load)
 npm run eval        # accuracy runner incl. 326-case benign set (prints known false positives)
 npm run demo        # sample support agent, with and without PRYSM (mock model)
+npm run diff        # differential test against the independent reference implementation
+npm run bench       # performance harness (full protocol takes a long time; `bench:quick` is a rough profile and writes `bench/results/<date>-quick/`, git-ignored)
 npm run prysm -- help   # CLI: validate, events, explain, verify-chain, anchor, simulate, report
 ```
+
+`prysm simulate` takes JSONL requests of the form `{"tool": "...", "args": {...}, "ctx": {"agentId": "..."}}`; `ctx.agentId` is required, otherwise every request is `invalid_request`.
 
 ## Library use (in-process)
 
@@ -61,7 +65,7 @@ node src/proxy/bin.ts --policy policy.json --db /secure/audit.db --key-path /sec
   --taint-tools search_docs --scopes sales -- node path/to/mcp-server.js
 ```
 
-Key flags: `--taint-tools` (retrieval tools whose use taints the session), `--list-mode hide|show`, `--require-pins`, `--tool-timeout-ms`, `--max-server-line-bytes`, `--allow-methods`, `--policy-sha256`. Full specification: `docs/auto-builder/PROXY-SPEC.md` (§9 is current). Exit codes: `0` clean shutdown, `1` server exit/crash, `2` bad flags/policy/store configuration, `3` server could not be started, `70` fatal error.
+Key flags: `--taint-tools` (retrieval tools whose use taints the session), `--list-mode hide|show`, `--require-pins`, `--tool-timeout-ms`, `--max-server-line-bytes`, `--allow-methods`, `--policy-sha256`. Full specification: `docs/auto-builder/PROXY-SPEC.md` (§9 is current). Exit codes: `0` clean shutdown (including a client that closes stdin first, even if the server dies at the same moment), `1` server exit/crash while the client is still connected, `2` bad flags/policy/store configuration, `3` server could not be started, `70` fatal error.
 
 ### Deployment duties (the proxy is only enforcing if you do these)
 

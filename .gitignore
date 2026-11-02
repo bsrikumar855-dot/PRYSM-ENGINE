@@ -9,3 +9,4 @@ prysm-report.html
 *.key
 *.pem
 prysm-*.html
+bench/results/*-quick/

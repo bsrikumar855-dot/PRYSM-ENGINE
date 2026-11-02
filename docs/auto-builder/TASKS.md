@@ -5,8 +5,8 @@
 | Field | Value |
 |---|---|
 | Current phase | Phase 5 implementation (Checkpoint A approved: "Approve, mock only", DEC-15/16) |
-| Current milestone | M5 gate passed (security review: no Critical/High/Medium; benchmark honesty audit corrected) → M6 final reviews and delivery report next |
-| Pass for this milestone (budget: 5 by default; edit here) | M5 closed (see DEC-40, SECURITY-REVIEW M5 section); M6 not started |
+| Current milestone | M6 final reviews done; delivery report written (DELIVERY-REPORT.md). Remaining: owner decisions on S-02 and history rewrite |
+| Pass for this milestone (budget: 5 by default; edit here) | M6 complete pending owner review (DEC-41) |
 | Total passes, all milestones | 14 (M0-M5) |
 | Failing checks → attempts (one line per distinct check; max 3 each) | F-01..F-09: closed except F-05(glob only)/F-07 partial; N-01 deny/unparseable: 1 attempt; N-02 metering: 1; N-03 mutable toolInfo: 1; N-04 hidden chars: 2 (F-07 then N-04) |
 | Last verified commit | 7b9375c (M5 gate; M6 doc and review commits follow) |
