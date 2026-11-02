@@ -1,4 +1,4 @@
-# PRYSM CLI & static report specification v1 (normative for M4)
+# PRYSM CLI & static report specification v1.2 (normative; amended by section 5)
 
 Implements F-08 (CLI), F-09 (viewer → static report per DEC-10), F-03 (explanations), A-03, A-08, A-13 (CLI part), F-11 (simulation, reduced). Consumes `src/store` (`openStore`, `query`, `getEvent`, `eventsByDecision`, `verify`, `anchor`, `iterate`, `count`, `head`) and `src/core` (`loadPolicy`, `evaluate`). No runtime dependencies. Files: `src/cli/*.ts` + `src/cli/bin.ts` (backend-engineer), `src/report/*.ts` (frontend-engineer), tests `test/cli/*.test.ts`, `test/report/*.test.ts`.
 

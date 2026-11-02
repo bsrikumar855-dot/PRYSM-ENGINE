@@ -1,4 +1,4 @@
-# PRYSM audit store & guard specification v1 (normative for M2)
+# PRYSM audit store & guard specification v1.4 (normative; amended by later sections, see section 8 for the latest)
 
 Implements DEC-01 (in-process half), DEC-03, DEC-04, DEC-05, DEC-06 and SECURITY-REVIEW items P-02, P-03, P-07, P-08, P-10, P-16, P-19, P-21 and F-03. Consumes `src/core` (POLICY-SPEC v1.3). Files: `src/store/*.ts`, `src/guard/*.ts`. `src/core` must not import store or guard.
 

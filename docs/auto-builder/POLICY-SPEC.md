@@ -1,4 +1,4 @@
-# PRYSM policy & decision specification v1.1 (normative for M1)
+# PRYSM policy & decision specification v1.5 (normative; v1.1 text amended by sections 10-13)
 
 v1.1 (2026-10-30) adds rulings for 15 ambiguities and 3 design holes found by the independent labeller (DEC-19): see §1 load rules, §2 domain `accept`, §3, §4 guidance, §5, §6.
 
