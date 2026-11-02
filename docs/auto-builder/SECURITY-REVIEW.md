@@ -1,34 +1,34 @@
 # Security review
 
-Method this round: **static inspection of design documents only** (security-engineer, independent, read-only). Automated scanning: none (no code). Penetration testing: not performed. All findings are *Potential* design-level; nothing is implemented. Overall status: **design not approved until the controls below are specified in code and tests (Phase M0–M3 gates)**. No claim of security is made.
+**Current status (M6, final):** no Critical or High finding is open in the reviewed scope. The register below shows the current state of each design-phase item (the original open/closed history is in DECISIONS.md and the milestone sections). Methods across the project: static inspection, the project's own tests, reviewers' local probe scripts. Penetration testing: not performed. Dependency scanning: not performed (no runtime dependencies). **No claim of security is made.**
 
-Gate status: no Critical. Potential High P-01..P-09 block their milestones until closed with `security-engineer` re-verification. No High accepted by the owner.
+Open items at delivery (all Medium or lower): S-02 (Medium, design: `guard.call` accepts caller-supplied scopes/userId/provenance; hosts must not hand the raw guard to untrusted agent code, see README), S-03, S-04, S-05, S-06, S-07, S-08 (M6 review, below), M2-21, M2-22a/b, M2-05, M3-11, M3-12, M4-02, M5-05, and the explain wording for uninterpretable values.
 
 ## Register (source: security-engineer report 2026-10-30; resolution in DECISIONS.md)
 
 | ID | Title | Sev | Milestone gate | Resolution reference | State |
 |---|---|---|---|---|---|
-| P-01 | Canonicalisation differential / TOCTOU (paths, URLs, getters/Proxy, dup keys) | High (Pot.) | M1, M3 | DEC-07 plain-JSON snapshot, sink-level differential tests | Open |
-| P-02 | Provenance spoofing/omission | High (Pot.) | M2 | DEC-04 default-untrusted, session taint, asserted label | Open |
-| P-03 | Fail-open on audit/store/engine failure | High (Pot.) | M2 | DEC-03 no fail-open on engine error, unknown tool deny | Open |
-| P-04 | SSRF via allowed URL tools | High (Pot.) | M5 | DEC-07 guarded fetch, dot-boundary suffix | Open |
-| P-05 | Viewer rebinding/token leakage/XSS | High (Pot.) | M6 | DEC-10 static report first; hardened live viewer last | Open |
-| P-06 | Policy parsing/injection (YAML, proto pollution, dup keys) | High (Pot.) | M1 | DEC-02 strict JSON, JCS hash | Open |
-| P-07 | Audit chain weakness (truncation, preimage, retention, concurrency) | High→Medium if documented (Pot.) | M2 | DEC-03 | Open |
-| P-08 | Secrets/PII in audit, errors, denial oracle | High (Pot.) | M2 | DEC-03/DEC-05 single redaction choke point, HMAC digests | Open |
-| P-09 | Tool-result injection / result laundering | High (Pot.) | M3 | DEC-04 session taint scenario test | Open |
-| P-10 | Audit log injection (newlines/ANSI/oversize) | Medium | M2/M4 | JSON-encode, escape, size caps | Open |
-| P-11 | Unicode confusables / bidi | Medium (High if IDN allowed) | M1 | DEC-02/DEC-07 | Open |
-| P-12 | Symlink/junction/path tricks | Medium (High for write tools) | M1/M5 | DEC-07 realpath | Open |
-| P-13 | ReDoS / eval DoS (sync, no wall-clock timeout) | Medium | M1 | linear matcher, size limits, `limit_exceeded` | Open |
-| P-14 | Precedence bugs, `monitor_only` kill switch | Medium | M1 | DEC-02/DEC-03 | Open |
-| P-15 | Policy tamper/rollback | Medium | M1/M2 | read-once, optional pin, no hot reload | Open |
-| P-16 | Identity spoofing / ctx race | Medium | M2 | immutable per-call ctx, concurrency test | Open |
-| P-17 | Supply chain, `node:sqlite` stability | Medium | M0 | lockfile, `npm ci`, ignore-scripts, import-graph test | Open |
-| P-18 | Adapter secrets / spend abuse | Medium | M5 | redaction, per-session cap | Open |
-| P-19 | Decision-id/result replay | Low | M2 | bind result to decision digest | Open |
-| P-20 | Timestamp trust | Low | docs | documented | Open |
-| P-21 | Retention vs evidence | Low | M2 | DEC-03 checkpoint | Open |
+| P-01 | Canonicalisation differential / TOCTOU (paths, URLs, getters/Proxy, dup keys) | High (Pot.) | M1, M3 | DEC-07 plain-JSON snapshot, sink-level differential tests | Closed (re-read in code by the M6 security review) |
+| P-02 | Provenance spoofing/omission | High (Pot.) | M2 | DEC-04 default-untrusted, session taint, asserted label | Closed (re-read in code by the M6 security review) |
+| P-03 | Fail-open on audit/store/engine failure | High (Pot.) | M2 | DEC-03 no fail-open on engine error, unknown tool deny | Closed (re-read in code by the M6 security review) |
+| P-04 | SSRF via allowed URL tools | High (Pot.) | M5 | DEC-07 guarded fetch, dot-boundary suffix | Closed for the sample app (loopback fixture); PRYSM matchers re-verified M6 |
+| P-05 | Viewer rebinding/token leakage/XSS | High (Pot.) | M6 | DEC-10 static report first; hardened live viewer last | N/A (no live viewer built; static report only) |
+| P-06 | Policy parsing/injection (YAML, proto pollution, dup keys) | High (Pot.) | M1 | DEC-02 strict JSON, JCS hash | Closed (re-read in code by the M6 security review) |
+| P-07 | Audit chain weakness (truncation, preimage, retention, concurrency) | High→Medium if documented (Pot.) | M2 | DEC-03 | Mitigated as documented (tamper-evident only; needs external anchor) |
+| P-08 | Secrets/PII in audit, errors, denial oracle | High (Pot.) | M2 | DEC-03/DEC-05 single redaction choke point, HMAC digests | Closed (re-read in code by the M6 security review) |
+| P-09 | Tool-result injection / result laundering | High (Pot.) | M3 | DEC-04 session taint scenario test | Closed (re-read in code by the M6 security review) |
+| P-10 | Audit log injection (newlines/ANSI/oversize) | Medium | M2/M4 | JSON-encode, escape, size caps | Closed (re-read in code by the M6 security review) |
+| P-11 | Unicode confusables / bidi | Medium (High if IDN allowed) | M1 | DEC-02/DEC-07 | Closed (re-read in code by the M6 security review) |
+| P-12 | Symlink/junction/path tricks | Medium (High for write tools) | M1/M5 | DEC-07 realpath | Closed (re-read in code by the M6 security review) |
+| P-13 | ReDoS / eval DoS (sync, no wall-clock timeout) | Medium | M1 | linear matcher, size limits, `limit_exceeded` | Closed (re-read in code by the M6 security review) |
+| P-14 | Precedence bugs, `monitor_only` kill switch | Medium | M1 | DEC-02/DEC-03 | Closed (re-read in code by the M6 security review) |
+| P-15 | Policy tamper/rollback | Medium | M1/M2 | read-once, optional pin, no hot reload | Closed (re-read in code by the M6 security review) |
+| P-16 | Identity spoofing / ctx race | Medium | M2 | immutable per-call ctx, concurrency test | Closed (re-read in code by the M6 security review) |
+| P-17 | Supply chain, `node:sqlite` stability | Medium | M0 | lockfile, `npm ci`, ignore-scripts, import-graph test | Closed for M5 scope (no runtime deps; no npm audit run) |
+| P-18 | Adapter secrets / spend abuse | Medium | M5 | redaction, per-session cap | N/A (no real model adapter; mock only) |
+| P-19 | Decision-id/result replay | Low | M2 | bind result to decision digest | Closed (re-read in code by the M6 security review) |
+| P-20 | Timestamp trust | Low | docs | documented | Documented limit |
+| P-21 | Retention vs evidence | Low | M2 | DEC-03 checkpoint | Mitigated (checkpoint/prune with strict expectPruned) |
 
 ## Claims downgraded from draft v1
 T2 (guarded handles) is a convention in-process, a control only in proxy deployment; T4 freeze is not sufficient (plain-JSON snapshot required); T9/T10 not verified controls yet; "tamper-evident" requires anchoring and does not cover a same-user attacker who rewrites everything; provenance is an assertion; "fail-closed" headline contradicted by D6 in v1 (fixed by DEC-03); acceptance IDs were cited before REQUIREMENTS.md was populated (now populated; security-engineer read it while empty).
@@ -88,3 +88,19 @@ Result: **no Critical, High or Medium finding.** Sample-app sandbox held in both
 | M5-04 | Low | Sample MCP server/direct executor returned raw error messages with absolute paths | Fixed: fixed text `tool error` |
 | M5-05 | Low (potential) | Test/demo runs leave temp directories | Open: documented; not measured how many the suite itself leaves |
 Not checked: planted symlink/junction in the workspace, non-Windows, orphan processes on failed runs, `npm audit`, whether the GitHub repo is public. Register: P-12 closed for the sample app, P-04 loopback-only, P-17 closed for M5 scope, P-08 Low items above.
+
+
+## M6 final security review (security-engineer, independent; static inspection + project tests + local probes; no penetration testing, no npm audit)
+Every register item marked fixed was re-read in current code and held (core, loader, guard, store, proxy, CLI, report). Findings:
+| Id | Sev | Finding | Status |
+|---|---|---|---|
+| S-01 | Medium (confirmed) | `Math.min(...decisions.map(...))` in `store.verify()` threw RangeError above ~125,000 decision rows, so `verify-chain`, `anchor` and the report integrity check failed (exit 2, fail-closed) on large stores | Fixed (reduce instead of spread). Verified manually against the reviewer's 130,000-row store (`verify-chain` OK, count 130000); no regression test in the suite because building such a store takes about 50 s |
+| S-02 | Medium (confirmed, design) | `guard.call(tool, args, ctx)` takes scopes, userId and provenance from the caller; untrusted code holding the guard can self-grant them (proxy path is safe: host flags) | **Open, documented.** Host duty: expose only a wrapper that fixes ctx. API change (host-only facet) is backlog |
+| S-03 | Low-Medium | Backslash is treated as a separator on every OS; on POSIX `/work/secret/a\..\..	mp` normalises outside the deny root. Only matters for POSIX hosts with tools that can create backslash-named entries | Open. Project verified on Windows only; not fixed because platform-specific behaviour would break determinism |
+| S-04 | Low-Medium (potential) | `--allow-methods` / `--allow-server-requests` forward content without audit rows or taint | Open, opt-in; documented here |
+| S-05 | Low | `guard.call` without a session uses an ephemeral state, so `taintsSession` tools do not taint later calls | Open; use sessions |
+| S-06 | Low | Windows key file created with the inherited ACL before `icacls` tightens it; failure leaves `unprotected` key with a verify-time warning only | Open |
+| S-07 | Low | `path_within` with `case_insensitive:false` on Windows is bypassable by case variants (policy author choice) | Open (hardening) |
+| S-08 | Low | Server `initialize.instructions`, tool descriptions and progress params are forwarded verbatim (prompt-injection channel to the client model); pins optional | Open; use `--require-pins` |
+| S-09 | Low | Stray empty `node_modules/@modelcontextprotocol`; `writeAtomic` temp file left after a crash; unthrottled proxy stderr lines for hostile server | Open (hygiene) |
+Not checked: dynamic/penetration testing, `npm audit`, real MCP servers, SIGINT/SIGTERM on a real console, POSIX behaviour, junction/symlink behaviour of `--out`, `src/report/build.ts` aggregation (skimmed), git history for secrets (the M5 review covered it), repository visibility.

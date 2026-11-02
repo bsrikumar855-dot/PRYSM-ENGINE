@@ -48,7 +48,7 @@ const r = await guard.call('search_docs', { query: 'hello' });
 //   | { ok: false, blocked: false, decision_id, error: 'tool_error'|'tool_timeout' }
 ```
 
-The tool function receives the guard's frozen, normalized snapshot of the arguments, never the caller's object. The agent-facing denial contains no rule ids, policy version or argument values; those are in the audit store only.
+**Trust boundary:** `guard.call(tool, args, ctx)` accepts `scopes`, `userId` and `provenance` in `ctx` and trusts them (they are host-asserted). Untrusted agent code must not hold the raw guard; give it a wrapper that fixes `ctx`, or use the proxy, where these come from host flags. Calls without a session use an ephemeral state, so use sessions if you rely on taint. The tool function receives the guard's frozen, normalized snapshot of the arguments, never the caller's object. The agent-facing denial contains no rule ids, policy version or argument values; those are in the audit store only.
 
 A policy is strict JSON: default deny, `deny` beats `permit`, no priorities. See `docs/auto-builder/POLICY-SPEC.md` and the example `eval/policies/support-agent.policy.json`.
 

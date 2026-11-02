@@ -1062,7 +1062,7 @@ export function openStore(opts: OpenStoreOptions): Store {
         }
       }
       // Results whose decision was pruned (they sit before the first retained decision) are not orphans.
-      const firstDecisionSeq = decisions.length > 0 ? Math.min(...decisions.map((d) => d.seq)) : Infinity;
+      const firstDecisionSeq = decisions.length > 0 ? decisions.reduce((m, d) => (d.seq < m ? d.seq : m), Infinity) : Infinity;
       for (const r of resultRows) {
         if (decisionIds.has(r.decision_id)) continue;
         if (prunedThrough !== null && checkpoints.length > 0 && r.seq < firstDecisionSeq) continue;
