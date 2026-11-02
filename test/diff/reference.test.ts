@@ -11,6 +11,7 @@ import {
   refMatchPath,
   refNormalizePath,
   codePoints,
+  refFaultKinds,
   type RefPolicy,
 } from "../../eval/reference/index.ts";
 
@@ -593,30 +594,57 @@ test("loader: forbidden-character scan across all code points (§11.14)", () => 
 });
 
 // ---------- v1.4 rulings (POLICY-SPEC §12) ----------
-test("§12.1 limits take precedence over validity (the 18 previously disagreeing minimal shapes)", () => {
+test("§13.1 multi-fault requests: any of invalid_request/limit_exceeded (deny); single faults keep their own code", () => {
   const big = "a".repeat(8193);
-  const code = (args: unknown, ctx: unknown = CTX): string => refDecide(sample, { tool: "search_docs", args, ctx }).reason_code;
   const arr = Array.from({ length: 257 }, () => "a");
-  assert.equal(code({ query: "x", e: ["\ud800"], big }), "limit_exceeded", "invalid before limit");
-  assert.equal(code({ query: "x", big, e: ["\ud800"] }), "limit_exceeded", "limit before invalid");
-  assert.equal(code({ query: "x", e: undefined, big }), "limit_exceeded");
-  assert.equal(code({ query: "x", e: 1n, big }), "limit_exceeded");
-  assert.equal(code({ query: "x", e: new Date(0), big }), "limit_exceeded");
-  assert.equal(code({ query: "x", e: arr, [Symbol("k")]: 1 }), "limit_exceeded", "symbol key + limit");
-  assert.equal(code({ query: "x", e: arr, [Symbol("k")]: 1 } as never), "limit_exceeded");
-  assert.equal(code(new Proxy({ query: "x", e: arr }, {})), "limit_exceeded", "proxy + limit");
-  assert.equal(code({ query: "x", e: "a\ud800" + "a".repeat(8200) }), "limit_exceeded", "lone surrogate + long string");
-  assert.equal(code({ query: "x", g: ["\ud800"] }, { agentId: "a", provenance: { query: arr } }), "limit_exceeded");
-  assert.equal(refDecide(sample, { tool: undefined, args: { query: "x", e: arr }, ctx: CTX }).reason_code, "limit_exceeded");
-  assert.equal(refDecide(sample, { args: { query: "x", e: big }, ctx: CTX }).reason_code, "limit_exceeded", "missing tool + limit");
-  // each fault alone keeps its own code
-  assert.equal(code({ query: "x", e: arr }), "limit_exceeded");
-  assert.equal(code({ query: "x", e: ["\ud800"] }), "invalid_request");
-  assert.equal(code({ query: "x", [Symbol("k")]: 1 }), "invalid_request");
-  assert.equal(code(new Proxy({ query: "x" }, {})), "invalid_request");
-  const cyc: Record<string, unknown> = { query: "x" };
-  cyc.self = cyc;
-  assert.equal(code(cyc), "invalid_request");
+  const run = (args: unknown, ctx: unknown = CTX): { effect: string; code: string } => {
+    const r = refDecide(sample, { tool: "search_docs", args, ctx });
+    return { effect: r.effect, code: r.reason_code };
+  };
+  const both = [
+    { query: "x", e: ["\ud800"], big },
+    { query: "x", big, e: ["\ud800"] },
+    { query: "x", e: undefined, big },
+    { query: "x", e: 1n, big },
+    { query: "x", e: new Date(0), big },
+    { query: "x", e: arr, [Symbol("k")]: 1 },
+    new Proxy({ query: "x", e: arr }, {}),
+    { query: "x", e: "a\ud800" + "a".repeat(8200) },
+  ];
+  for (const a of both) {
+    const r = run(a);
+    assert.equal(r.effect, "deny");
+    assert.ok(r.code === "invalid_request" || r.code === "limit_exceeded", r.code);
+    const fk = refFaultKinds({ tool: "search_docs", args: a, ctx: CTX });
+    assert.deepEqual(fk, { limit: true, invalid: true });
+  }
+  const q = { query: "x" };
+  assert.equal(run({ ...q, e: arr }).code, "limit_exceeded");
+  assert.equal(run({ ...q, big }).code, "limit_exceeded");
+  assert.equal(run({ ...q, e: ["\ud800"] }).code, "invalid_request");
+  assert.equal(run({ ...q, [Symbol("k")]: 1 }).code, "invalid_request");
+  assert.equal(run(new Proxy({ ...q }, {})).code, "invalid_request");
+  assert.deepEqual(refFaultKinds({ tool: "search_docs", args: { ...q, e: arr }, ctx: CTX }), { limit: true, invalid: false });
+  assert.deepEqual(refFaultKinds({ tool: "search_docs", args: { ...q, e: ["\ud800"] }, ctx: CTX }), { limit: false, invalid: true });
+  assert.deepEqual(refFaultKinds({ tool: "search_docs", args: q, ctx: CTX }), { limit: false, invalid: false });
+  assert.deepEqual(refFaultKinds({ args: { ...q, big }, ctx: CTX }), { limit: true, invalid: true }, "missing tool is a validity fault");
+});
+
+test("§13.2 `X:/` drive root is legal and matches every path on that drive", () => {
+  const p = refLoadPolicy(JSON.stringify({
+    policy_schema_version: 1, name: "n", mode: "enforce",
+    tools: { t: { risk: "low", external_effect: false, read_only: true, fail_mode: "closed", args: { p: { type: "string" } } } },
+    rules: [{ id: "d", effect: "permit", reason_code: "ok", match: { args: { p: { path_within: { root: "C:/", case_insensitive: false } } } } }],
+  }));
+  const m = (v: string): string[] => refDecide(p, { tool: "t", args: { p: v }, ctx: CTX }).matched.permit;
+  assert.deepEqual(m("C:/"), ["d"]);
+  assert.deepEqual(m("C:/a/b"), ["d"]);
+  assert.deepEqual(m("c:\\a"), ["d"]);
+  assert.deepEqual(m("D:/a"), []);
+  assert.deepEqual(m("/a"), []);
+  const bad = baseDoc();
+  bad.rules[0].match.args.path = { path_within: { root: "c:/", case_insensitive: false } };
+  assert.equal(loads(bad), false, "lowercase drive letter rejected");
 });
 
 test("§12.2 size limit measured on the NFC snapshot", () => {

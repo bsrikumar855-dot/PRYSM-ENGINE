@@ -5,7 +5,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { loadPolicy, decide } from "../../src/core/index.ts";
-import { refDecide, refLoadPolicy, type RefPolicy } from "../reference/index.ts";
+import { refDecide, refFaultKinds, refLoadPolicy, type RefPolicy } from "../reference/index.ts";
 import { describe } from "./describe.ts";
 import { genPolicy, genPolicyCase, type GenPolicy } from "./gen-policy.ts";
 import { genCase } from "./gen-request.ts";
@@ -81,7 +81,7 @@ export interface DiffReport {
     disagree: number;
     effect_mismatch: number;
     reason_mismatch_same_effect: number;
-    precedence_invalid_vs_limit: number;
+    equivalent_multifault_code_difference: number;
     matched_mismatch_same_decision: number;
     prod_threw: number;
     ref_engine_error: number;
@@ -294,7 +294,7 @@ export function runDiff(opts: DiffOptions): DiffReport {
     },
     decide: {
       compared: 0, agree: 0, disagree: 0, effect_mismatch: 0, reason_mismatch_same_effect: 0,
-      precedence_invalid_vs_limit: 0,
+      equivalent_multifault_code_difference: 0,
       matched_mismatch_same_decision: 0, prod_threw: 0, ref_engine_error: 0,
       outcome_histogram: {}, disagreements_by_family: {},
     },
@@ -353,14 +353,22 @@ export function runDiff(opts: DiffOptions): DiffReport {
         rep.decide.outcome_histogram[hk] = (rep.decide.outcome_histogram[hk] ?? 0) + 1;
         if (ro.reason === "engine_error") rep.decide.ref_engine_error++;
         if (po.effect === "THROW") rep.decide.prod_threw++;
-        const kind = classify(ro, po);
+        let kind = classify(ro, po);
+        if (kind === "precedence_invalid_vs_limit") {
+          // v1.5 §13.1: equivalent only if the request really carries both a limit fault and a validity fault
+          const fk = refFaultKinds(c.request);
+          if (fk.limit && fk.invalid) {
+            rep.decide.equivalent_multifault_code_difference++;
+            continue;
+          }
+          kind = "reason_mismatch";
+        }
         if (!kind) {
           rep.decide.agree++;
           continue;
         }
         rep.decide.disagree++;
-        if (kind === "precedence_invalid_vs_limit") rep.decide.precedence_invalid_vs_limit++;
-        else if (kind === "effect_mismatch") rep.decide.effect_mismatch++;
+        if (kind === "effect_mismatch") rep.decide.effect_mismatch++;
         else if (kind === "reason_mismatch") rep.decide.reason_mismatch_same_effect++;
         else rep.decide.matched_mismatch_same_decision++;
         rep.decide.disagreements_by_family[c.family] = (rep.decide.disagreements_by_family[c.family] ?? 0) + 1;
@@ -483,7 +491,7 @@ function summary(r: DiffReport): string {
   const lines = [
     `seed=${r.seed_arg} (numeric ${r.seed})  cases=${r.cases}  policies=${r.policies}`,
     `case_digest=${r.case_digest}`,
-    `decide: compared=${d.compared} agree=${d.agree} disagree=${d.disagree} (effect=${d.effect_mismatch}, reason=${d.reason_mismatch_same_effect}, invalid-vs-limit precedence=${d.precedence_invalid_vs_limit}, matched-ids=${d.matched_mismatch_same_decision}) prod_threw=${d.prod_threw} ref_engine_error=${d.ref_engine_error}`,
+    `decide: compared=${d.compared} agree=${d.agree} equivalent-multifault=${d.equivalent_multifault_code_difference} disagree=${d.disagree} (effect=${d.effect_mismatch}, reason=${d.reason_mismatch_same_effect}, matched-ids=${d.matched_mismatch_same_decision}) prod_threw=${d.prod_threw} ref_engine_error=${d.ref_engine_error}`,
     `load(valid generated): ${l.valid_agree}/${l.valid_policies} agree, ${l.valid_disagree} disagree`,
     `load(mutated): ${l.mutated_agree}/${l.mutated_policies} agree, ${l.mutated_disagree} disagree, both-contradict-expectation=${l.mutated_both_contradict_expectation}`,
     `distinct decide signatures=${r.distinct_decide_signatures}  distinct load signatures=${r.distinct_load_signatures}`,

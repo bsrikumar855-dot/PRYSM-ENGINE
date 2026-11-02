@@ -133,7 +133,7 @@ function validRoot(r: string): boolean {
   if (r.includes("\\")) return false;
   if (/^[A-Z]:\//.test(r)) {
     const rest = r.slice(3);
-    if (rest === "") return false;
+    if (rest === "") return true; // v1.5 §13.2: `X:/` is a legal root
     return rest.split("/").every((seg) => seg !== "" && seg !== "." && seg !== "..");
   }
   if (!r.startsWith("/")) return false; // drive-prefixed roots rejected by default (deny-safe, see report)

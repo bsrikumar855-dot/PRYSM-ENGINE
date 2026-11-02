@@ -232,6 +232,7 @@ export function refMatchPath(
     r = r.toLowerCase();
   }
   if (r === "/") return np.prefix === "" ? "match" : "no_match";
+  if (r.length === 3 && r.endsWith(":/")) return np.prefix.toLowerCase() === r.slice(0, 2).toLowerCase() ? "match" : "no_match"; // `X:/` root
   if (norm === r || norm.startsWith(r + "/")) return "match";
   return "no_match";
 }

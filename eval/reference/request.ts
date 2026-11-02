@@ -53,15 +53,26 @@ interface State {
   bytes: number;
   stack: Set<object>;
   invalid: string | null;
+  /** collect mode (fault analysis only): record faults instead of throwing */
+  collect: boolean;
+  limit: boolean;
 }
 
+// v1.5 §13.1: for a request with both a limit and a validity fault the code is not contractual;
+// reading adopted: first fault in walk order wins (throws immediately).
 function flag(st: State, m: string): void {
+  if (!st.collect) bad(m);
   if (st.invalid === null) st.invalid = m;
+}
+
+function lim(st: State, m: string): void {
+  if (!st.collect) over(m);
+  st.limit = true;
 }
 
 function addBytes(st: State, n: number): void {
   st.bytes += n;
-  if (st.bytes > LIMITS.bytes) over("size");
+  if (st.bytes > LIMITS.bytes) lim(st, "size");
 }
 
 // size is measured on the NFC snapshot (§12.2)
@@ -71,12 +82,12 @@ function strBytes(s: string): number {
 
 function checkStr(s: string, st: State): void {
   if (hasLoneSurrogate(s)) flag(st, "lone surrogate");
-  if (s.length > LIMITS.strUnits) over("string too long");
+  if (s.length > LIMITS.strUnits) lim(st, "string too long");
 }
 
 function walk(v: unknown, depth: number, st: State): unknown {
   st.nodes++;
-  if (st.nodes > LIMITS.nodes) over("nodes");
+  if (st.nodes > LIMITS.nodes) lim(st, "nodes");
   if (v === null) {
     addBytes(st, 4);
     return null;
@@ -112,13 +123,13 @@ function walk(v: unknown, depth: number, st: State): unknown {
   }
   if (types.isProxy(o)) flag(st, "proxy"); // still traversed so limits can be detected
   st.containers++;
-  if (st.containers > LIMITS.containers) over("containers");
-  if (depth > LIMITS.depth) over("depth");
+  if (st.containers > LIMITS.containers) lim(st, "containers");
+  if (depth > LIMITS.depth) lim(st, "depth");
   st.stack.add(o);
   try {
     if (Array.isArray(o)) {
       if (Object.getPrototypeOf(o) !== Array.prototype) flag(st, "array prototype");
-      if (o.length > LIMITS.items) over("array too long");
+      if (o.length > LIMITS.items) lim(st, "array too long");
       const keys = Reflect.ownKeys(o);
       if (keys.length !== o.length + 1) flag(st, "sparse or extra array props");
       addBytes(st, 2);
@@ -139,7 +150,7 @@ function walk(v: unknown, depth: number, st: State): unknown {
     const proto = Object.getPrototypeOf(o);
     if (proto !== Object.prototype && proto !== null) flag(st, "non-plain object");
     const keys = Reflect.ownKeys(o);
-    if (keys.length > LIMITS.keys) over("too many keys");
+    if (keys.length > LIMITS.keys) lim(st, "too many keys");
     addBytes(st, 2);
     const out: { [k: string]: unknown } = {};
     const seen = new Set<string>();
@@ -170,10 +181,28 @@ function walk(v: unknown, depth: number, st: State): unknown {
 }
 
 export function refSnapshot(raw: unknown): unknown {
-  const st: State = { nodes: 0, containers: 0, bytes: 0, stack: new Set(), invalid: null };
-  const out = walk(raw, 1, st);
-  if (st.invalid !== null) bad(st.invalid);
-  return out;
+  const st: State = { nodes: 0, containers: 0, bytes: 0, stack: new Set(), invalid: null, collect: false, limit: false };
+  return walk(raw, 1, st);
+}
+
+/** Fault analysis (spec-derived, independent of production): which kinds of fault does a request carry? */
+export function refFaultKinds(raw: unknown): { limit: boolean; invalid: boolean } {
+  const st: State = { nodes: 0, containers: 0, bytes: 0, stack: new Set(), invalid: null, collect: true, limit: false };
+  let copy: unknown;
+  try {
+    copy = walk(raw, 1, st);
+  } catch {
+    return { limit: st.limit, invalid: true };
+  }
+  let invalid = st.invalid !== null;
+  if (!invalid) {
+    try {
+      refValidateShape(copy);
+    } catch {
+      invalid = true;
+    }
+  }
+  return { limit: st.limit, invalid };
 }
 
 export const LABEL_RE = /^[A-Za-z0-9_.:-]{1,64}$/;

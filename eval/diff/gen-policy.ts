@@ -40,7 +40,7 @@ const LITS = ["admin", "a/b", "\u00e9", "x y", "", "Hello", "0", "true", "e\u030
 const NUMS = [0, 1, -1, 5, 10, 0.5, 100, 1e21, 1e-7, 255, -3.5, 9007199254740991];
 const DOMAINS = ["corp.com", "docs.corp.com", "a.b.example.org", "xn--nxasmq6b.com", "x-y.io", "localhost", "a1.co", "example.com"];
 const ROOTS = ["/", "/workspace", "/workspace/secrets", "/a/b/c", "/Users/Bob", "/tmp", "/Program Files", "/data.v2", "/etc"];
-const DRIVE_ROOTS = ["C:/work", "D:/Data/x", "C:/Program Files"];
+const DRIVE_ROOTS = ["C:/", "C:/work", "D:/Data/x", "C:/Program Files"];
 const SAMPLES = ["/workspace/a.txt", "report-2024.pdf", "https://corp.com/x/y", "bob@corp.com", "hello world", "abc", "/a/b/c/d", "x.y.z"];
 const REASONS = ["ok", "blocked", "rule_a", "R-1", "why:not", "policy.deny"];
 const RULE_ID_PREFIX = ["rule", "r", "perm", "deny.x", "id:"];
@@ -422,7 +422,7 @@ const MUTS: Mut[] = [
   (d) => ({ name: "lone-surrogate-escape", expect: "reject", input: JSON.stringify(d).replace('"name":"', '"name":"\\ud800') }),
   (d) => T("nonascii-root-fullwidth", ruleWith(ADDED(d), { tools: ["zz_tool"], args: { zs: { path_within: { root: "/\uff57", case_insensitive: false } } } })),
   (d) => T("drive-root-ok", ruleWith(ADDED(d), { tools: ["zz_tool"], args: { zs: { path_within: { root: "C:/work", case_insensitive: false } } } }), "accept"),
-  (d, r) => T("drive-root-bad", ruleWith(ADDED(d), { tools: ["zz_tool"], args: { zs: { path_within: { root: r.pick(["c:/work", "C:/", "C:", "C:/a/../b", "C:/a//b", "C:/a/", "CC:/a", "C:\work"]), case_insensitive: false } } } })),
+  (d, r) => T("drive-root-bad", ruleWith(ADDED(d), { tools: ["zz_tool"], args: { zs: { path_within: { root: r.pick(["c:/work", "C:", "C:/a/../b", "C:/a//b", "C:/a/", "CC:/a", "C:\work"]), case_insensitive: false } } } })),
   (d) => T("missing-mode", (() => { const c = clone(d); delete c.mode; return c; })()),
   (d) => T("missing-name", (() => { const c = clone(d); delete c.name; return c; })()),
   (d) => T("missing-rules", (() => { const c = clone(d); delete c.rules; return c; })()),
