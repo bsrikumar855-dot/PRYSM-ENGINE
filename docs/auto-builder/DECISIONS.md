@@ -58,3 +58,6 @@ No Critical/High/Medium. Low findings M5-01..M5-04 fixed, M5-05 open (litter). H
 
 ## DEC-41 M6 final reviews
 Three independent whole-project reviews (critical-reviewer, qa-engineer, security-engineer) found no Critical or High issue. Fixed: store.verify() crash above ~125,000 decision rows (S-01); proxy waited 30 s and left forwards unanswered when client EOF raced a dying server (QA F1; regression test `test/proxy/eof-crash.test.ts`, which fails without the fix); README/TASKS/spec staleness (critical review D1-D12). Not fixed, recorded as open: S-02 (guard.call trusts caller ctx; documented host duty, API change is backlog), S-03..S-09, M2-21, M5-05. Decision: ship with these disclosed rather than change the guard API at the end of the project; the owner may reopen S-02.
+
+## DEC-42 Delivery accepted by owner
+Owner accepted delivery at 28bb8c2 with S-02 (guard.call trusts caller ctx), S-03..S-09, M2-21, M5-05 and the history/username question left open and disclosed in DELIVERY-REPORT.md. Reopening S-02 (host-only context facet) is the recommended first follow-up.
