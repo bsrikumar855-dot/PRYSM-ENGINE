@@ -1,0 +1,2632 @@
+{
+  "tool": "prysm-diff",
+  "seed": 20261102,
+  "seed_arg": "20261102",
+  "cases": 100000,
+  "policies": 5000,
+  "per_policy": 20,
+  "case_digest": "sha256:53a6c8867a3d0de6ec6d05715b13696b1a313473c5e0e6e770f0968f35e77012",
+  "result_digest": "sha256:4f4e3d58a026d576cdf38921943a2ec3d1da52c3633a0990ba9f49357f717cb7",
+  "elapsed_ms": {
+    "total": 42397,
+    "ref": 10508,
+    "prod": 13290
+  },
+  "load": {
+    "valid_policies": 5000,
+    "valid_agree": 5000,
+    "valid_disagree": 0,
+    "mutated_policies": 5000,
+    "mutated_agree": 4912,
+    "mutated_disagree": 88,
+    "mutated_both_contradict_expectation": 0,
+    "mutated_by_name": {
+      "invalid-utf8": {
+        "n": 35,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "bytes-ok": {
+        "n": 47,
+        "ref_accept": 47,
+        "prod_accept": 47,
+        "expect": "accept"
+      },
+      "missing-rules": {
+        "n": 44,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "name-forbidden-char": {
+        "n": 38,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "forbidden-key": {
+        "n": 61,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "domain-bad-accept": {
+        "n": 45,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "bad-reason": {
+        "n": 37,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "version-other": {
+        "n": 40,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "pretty-ok": {
+        "n": 45,
+        "ref_accept": 45,
+        "prod_accept": 45,
+        "expect": "accept"
+      },
+      "open-not-readonly": {
+        "n": 52,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "dup-rule-id": {
+        "n": 46,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "two-ops": {
+        "n": 43,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "agent-charset": {
+        "n": 44,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "schema-hash-forbidden": {
+        "n": 41,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "domain-bad-value": {
+        "n": 43,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "domain-on-number": {
+        "n": 52,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "bom-bytes": {
+        "n": 46,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "domain-empty-accept": {
+        "n": 45,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "empty-id": {
+        "n": 42,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "pred-nonobject": {
+        "n": 45,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "unknown-match-key": {
+        "n": 61,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "bad-name": {
+        "n": 49,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "unknown-tool-in-match": {
+        "n": 38,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "dup-key": {
+        "n": 53,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "arg-undeclared": {
+        "n": 37,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "drive-root": {
+        "n": 46,
+        "ref_accept": 0,
+        "prod_accept": 46,
+        "expect": "reject"
+      },
+      "not-json": {
+        "n": 60,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "tools-clause-on-optional-ok": {
+        "n": 43,
+        "ref_accept": 43,
+        "prod_accept": 43,
+        "expect": "accept"
+      },
+      "empty-prov-obj": {
+        "n": 45,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "glob-257": {
+        "n": 55,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "range-string-bound": {
+        "n": 42,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "bom-string": {
+        "n": 46,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "version-missing": {
+        "n": 43,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "pw-ci-nonbool": {
+        "n": 47,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "too-large": {
+        "n": 44,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "empty-match": {
+        "n": 38,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "unknown-arg-key": {
+        "n": 40,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "in-empty": {
+        "n": 52,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "glob-accept": {
+        "n": 42,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "bad-arg-type": {
+        "n": 40,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "bad-mode": {
+        "n": 43,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "zero-ops": {
+        "n": 38,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "maxlen-bad": {
+        "n": 47,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "name-65": {
+        "n": 53,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "equals-null": {
+        "n": 44,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "missing-name": {
+        "n": 38,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "arg-type-conflict-no-tools": {
+        "n": 46,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "empty-tools-list": {
+        "n": 48,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "range-unknown-key": {
+        "n": 47,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "empty-agents": {
+        "n": 43,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "glob-on-number": {
+        "n": 41,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "list-256-ok": {
+        "n": 46,
+        "ref_accept": 46,
+        "prod_accept": 46,
+        "expect": "accept"
+      },
+      "domain-no-accept": {
+        "n": 44,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "prov-undeclared": {
+        "n": 35,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "domain-on-strarr-ok": {
+        "n": 40,
+        "ref_accept": 40,
+        "prod_accept": 40,
+        "expect": "accept"
+      },
+      "number-1e999": {
+        "n": 44,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "empty-ok": {
+        "n": 35,
+        "ref_accept": 35,
+        "prod_accept": 35,
+        "expect": "accept"
+      },
+      "in-mixed": {
+        "n": 38,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "list-257": {
+        "n": 46,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "pw-bad-root": {
+        "n": 45,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "trailing-comma": {
+        "n": 35,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "pw-on-number": {
+        "n": 41,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "missing-mode": {
+        "n": 36,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "equals-array": {
+        "n": 39,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "deep-unknown": {
+        "n": 53,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "prov-entry-empty": {
+        "n": 58,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "equals-type": {
+        "n": 31,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "comment": {
+        "n": 35,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "pw-no-ci": {
+        "n": 32,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "unknown-rule-key": {
+        "n": 47,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "version-1.0-ok": {
+        "n": 43,
+        "ref_accept": 43,
+        "prod_accept": 43,
+        "expect": "accept"
+      },
+      "pw-extra-key": {
+        "n": 34,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "glob-5-stars": {
+        "n": 48,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "optional-nonbool": {
+        "n": 34,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "range-empty": {
+        "n": 35,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "arg-not-on-all-tools": {
+        "n": 53,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "missing-tools": {
+        "n": 32,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "range-min-only-ok": {
+        "n": 42,
+        "ref_accept": 42,
+        "prod_accept": 42,
+        "expect": "accept"
+      },
+      "domain-dup-accept-ok": {
+        "n": 30,
+        "ref_accept": 30,
+        "prod_accept": 30,
+        "expect": "accept"
+      },
+      "rules-1001": {
+        "n": 42,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "domain-two-ops": {
+        "n": 34,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "glob-4-stars-ok": {
+        "n": 34,
+        "ref_accept": 34,
+        "prod_accept": 34,
+        "expect": "accept"
+      },
+      "prov-unknown-key": {
+        "n": 39,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "array-root": {
+        "n": 49,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "nonascii-root-fullwidth": {
+        "n": 42,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "range-minmax": {
+        "n": 43,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "pw-on-strarr-ok": {
+        "n": 55,
+        "ref_accept": 55,
+        "prod_accept": 55,
+        "expect": "accept"
+      },
+      "range-on-string": {
+        "n": 54,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "prov-all-empty": {
+        "n": 43,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "literal-ok-unicode": {
+        "n": 47,
+        "ref_accept": 47,
+        "prod_accept": 47,
+        "expect": "accept"
+      },
+      "forbidden-key-nested": {
+        "n": 50,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "version-1e0-ok": {
+        "n": 38,
+        "ref_accept": 38,
+        "prod_accept": 38,
+        "expect": "accept"
+      },
+      "prov-label-bad": {
+        "n": 50,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "unknown-top-key": {
+        "n": 53,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "bad-risk": {
+        "n": 41,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "open-on-high": {
+        "n": 40,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "equals-number-ok": {
+        "n": 36,
+        "ref_accept": 36,
+        "prod_accept": 36,
+        "expect": "accept"
+      },
+      "in-257": {
+        "n": 40,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "arg-string-vs-strarr-conflict": {
+        "n": 42,
+        "ref_accept": 0,
+        "prod_accept": 42,
+        "expect": "reject"
+      },
+      "version-string": {
+        "n": 42,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "pw-no-root": {
+        "n": 49,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "lone-surrogate-escape": {
+        "n": 46,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "empty-scopes": {
+        "n": 44,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "tool-name-colon": {
+        "n": 33,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "unknown-tool-key": {
+        "n": 38,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "schema-hash-nonstring": {
+        "n": 37,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "glob-256-ok": {
+        "n": 46,
+        "ref_accept": 46,
+        "prod_accept": 46,
+        "expect": "accept"
+      },
+      "arg-name-colon": {
+        "n": 30,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "prov-both-ok": {
+        "n": 40,
+        "ref_accept": 40,
+        "prod_accept": 40,
+        "expect": "accept"
+      },
+      "empty-args-obj": {
+        "n": 44,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "rules-1000-ok": {
+        "n": 40,
+        "ref_accept": 40,
+        "prod_accept": 40,
+        "expect": "accept"
+      },
+      "bad-effect": {
+        "n": 43,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "rule-missing-reason": {
+        "n": 42,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "tainted-nonbool": {
+        "n": 54,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "maxlen-on-bool": {
+        "n": 39,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      },
+      "literal-forbidden-char": {
+        "n": 30,
+        "ref_accept": 0,
+        "prod_accept": 0,
+        "expect": "reject"
+      }
+    }
+  },
+  "decide": {
+    "compared": 100000,
+    "agree": 99981,
+    "disagree": 19,
+    "effect_mismatch": 0,
+    "reason_mismatch_same_effect": 1,
+    "precedence_invalid_vs_limit": 18,
+    "ambiguity_probe_cases": 10000,
+    "ambiguity_probe_disagree": 2,
+    "matched_mismatch_same_decision": 0,
+    "prod_threw": 0,
+    "ref_engine_error": 0,
+    "outcome_histogram": {
+      "deny/denied_by_rule": 34337,
+      "deny/invalid_args": 7201,
+      "deny/invalid_request": 20010,
+      "deny/default_deny": 12973,
+      "deny/unknown_tool": 5222,
+      "deny/limit_exceeded": 4136,
+      "permit/permitted": 13495,
+      "deny/tainted_session": 2626
+    },
+    "disagreements_by_family": {
+      "unicode": 7,
+      "numeric": 1,
+      "limit-size": 1,
+      "js-proxy-args": 1,
+      "path": 1,
+      "js-proxy-root": 3,
+      "js-symbol-key": 5
+    }
+  },
+  "distinct_decide_signatures": 9,
+  "distinct_load_signatures": 2,
+  "decide_disagreements": [
+    {
+      "signature": "unicode|ref:deny/invalid_request|prod:deny/limit_exceeded",
+      "kind": "precedence_invalid_vs_limit",
+      "count": 7,
+      "family": "unicode",
+      "policy_index": 637,
+      "request_index": 4,
+      "ref": {
+        "effect": "deny",
+        "reason": "invalid_request",
+        "matched": {
+          "deny": [],
+          "permit": []
+        }
+      },
+      "prod": {
+        "effect": "deny",
+        "reason": "limit_exceeded",
+        "matched": {
+          "deny": [],
+          "permit": []
+        }
+      },
+      "policy": {
+        "policy_schema_version": 1,
+        "name": "test.policy_1",
+        "mode": "monitor_only",
+        "tools": {
+          "a": {
+            "risk": "low",
+            "external_effect": true,
+            "read_only": false,
+            "fail_mode": "closed",
+            "args": {
+              "x-y": {
+                "type": "string"
+              },
+              "cc": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              },
+              "to": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "rules": [
+          {
+            "id": "perm0",
+            "effect": "deny",
+            "reason_code": "ok",
+            "match": {
+              "args": {
+                "cc": {
+                  "max_length": 8192
+                }
+              }
+            }
+          },
+          {
+            "id": "r1",
+            "effect": "permit",
+            "reason_code": "policy.deny",
+            "match": {
+              "tools": [
+                "a"
+              ],
+              "agents": [
+                "admin:root"
+              ],
+              "scopes_any": [
+                "s-1",
+                "admin",
+                "sales"
+              ],
+              "args": {
+                "url": {
+                  "max_length": 8192
+                }
+              }
+            }
+          },
+          {
+            "id": "deny.x2",
+            "effect": "deny",
+            "reason_code": "rule_a",
+            "match": {
+              "agents": [
+                "bot"
+              ]
+            }
+          },
+          {
+            "id": "deny.x3",
+            "effect": "permit",
+            "reason_code": "rule_a",
+            "match": {
+              "tools": [
+                "a"
+              ],
+              "scopes_any": [
+                "admin",
+                "write:x",
+                "read"
+              ],
+              "session_tainted": true,
+              "args": {
+                "cc": {
+                  "path_within": {
+                    "root": "/Program Files",
+                    "case_insensitive": false
+                  }
+                },
+                "url": {
+                  "in": [
+                    "0"
+                  ]
+                }
+              },
+              "provenance": {
+                "x-y": {
+                  "all_in": [
+                    "web:page",
+                    "policy-constant",
+                    "a.b-c:d"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": "perm4",
+            "effect": "deny",
+            "reason_code": "policy.deny",
+            "match": {
+              "tools": [
+                "a"
+              ],
+              "agents": [
+                "agent-1",
+                "admin:root",
+                "agent-2"
+              ],
+              "session_tainted": false,
+              "args": {
+                "url": {
+                  "max_length": 8192
+                },
+                "x-y": {
+                  "path_within": {
+                    "root": "/etc",
+                    "case_insensitive": false
+                  }
+                }
+              }
+            }
+          },
+          {
+            "id": "perm5",
+            "effect": "deny",
+            "reason_code": "ok",
+            "match": {
+              "tools": [
+                "a"
+              ],
+              "args": {
+                "to": {
+                  "equals": "0"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "request": "{\"tool\":\"a\",\"args\":{\"x-y\":\"/etc/x/y.txt\",\"cc\":\"<str len=8194 head=aaaaaaaaaaaaaaaaaaaaaaaa sha=3311872f2b>\",\"url\":\"<str len=8191 head=aaaaaaaaaaaaaaaaaaaaaaaa sha=d691798dcd>\",\"to\":\"0\"},\"ctx\":{\"agentId\":\"agent-2\",\"scopes\":[],\"sessionTainted\":true,\"provenance\":{\"x-y\":[\"web:page\",\"a.b-c:d\"],\"cc\":[],\"to\":[\"trusted-user\",\"policy-constant\"]}}}",
+      "minimised": {
+        "policy": {
+          "policy_schema_version": 1,
+          "name": "test.policy_1",
+          "mode": "monitor_only",
+          "tools": {},
+          "rules": []
+        },
+        "request": "{\"args\":{\"cc\":\"<str len=8193 head=aaaaaaaaaaaaaaaaaaaaaaaa sha=f444dedadb>\"}}",
+        "evaluations": 31
+      }
+    },
+    {
+      "signature": "numeric|ref:deny/invalid_request|prod:deny/limit_exceeded",
+      "kind": "precedence_invalid_vs_limit",
+      "count": 1,
+      "family": "numeric",
+      "policy_index": 877,
+      "request_index": 9,
+      "ref": {
+        "effect": "deny",
+        "reason": "invalid_request",
+        "matched": {
+          "deny": [],
+          "permit": []
+        }
+      },
+      "prod": {
+        "effect": "deny",
+        "reason": "limit_exceeded",
+        "matched": {
+          "deny": [],
+          "permit": []
+        }
+      },
+      "policy": {
+        "policy_schema_version": 1,
+        "name": "p",
+        "mode": "enforce",
+        "tools": {
+          "send_email": {
+            "risk": "low",
+            "external_effect": false,
+            "read_only": true,
+            "fail_mode": "open_on_audit_failure",
+            "args": {
+              "path": {
+                "type": "string"
+              },
+              "to": {
+                "type": "string"
+              },
+              "body": {
+                "type": "string"
+              },
+              "q": {
+                "type": "string"
+              }
+            }
+          },
+          "delete": {
+            "risk": "medium",
+            "external_effect": true,
+            "read_only": true,
+            "fail_mode": "closed",
+            "args": {
+              "body": {
+                "type": "string"
+              },
+              "flags": {
+                "type": "string[]",
+                "optional": true
+              },
+              "q": {
+                "type": "string",
+                "optional": true
+              },
+              "path": {
+                "type": "string"
+              }
+            }
+          },
+          "a": {
+            "risk": "low",
+            "external_effect": false,
+            "read_only": true,
+            "fail_mode": "open_on_audit_failure",
+            "args": {}
+          },
+          "tool-2": {
+            "risk": "low",
+            "external_effect": false,
+            "read_only": true,
+            "fail_mode": "open_on_audit_failure",
+            "args": {
+              "path": {
+                "type": "string"
+              },
+              "q": {
+                "type": "string"
+              },
+              "x-y": {
+                "type": "string"
+              }
+            }
+          },
+          "query": {
+            "risk": "low",
+            "external_effect": true,
+            "read_only": false,
+            "fail_mode": "closed",
+            "args": {
+              "files": {
+                "type": "string[]"
+              },
+              "body": {
+                "type": "string"
+              },
+              "x-y": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              }
+            }
+          },
+          "read_file": {
+            "risk": "medium",
+            "external_effect": true,
+            "read_only": false,
+            "fail_mode": "closed",
+            "args": {
+              "path": {
+                "type": "string[]"
+              },
+              "cc": {
+                "type": "string"
+              },
+              "on": {
+                "type": "boolean",
+                "optional": false
+              },
+              "n": {
+                "type": "number",
+                "optional": true
+              }
+            }
+          }
+        },
+        "rules": [
+          {
+            "id": "rule0",
+            "effect": "deny",
+            "reason_code": "policy.deny",
+            "match": {
+              "args": {
+                "flags": {
+                  "max_length": 8
+                },
+                "to": {
+                  "glob": "?a/b/c/d"
+                }
+              }
+            }
+          },
+          {
+            "id": "rule1",
+            "effect": "deny",
+            "reason_code": "ok",
+            "match": {
+              "tools": [
+                "read_file",
+                "send_email"
+              ],
+              "agents": [
+                "bot"
+              ],
+              "session_tainted": true
+            }
+          },
+          {
+            "id": "perm2",
+            "effect": "permit",
+            "reason_code": "blocked",
+            "match": {
+              "args": {
+                "x-y": {
+                  "max_length": 8192
+                },
+                "cc": {
+                  "max_length": 8192
+                }
+              },
+              "provenance": {
+                "flags": {
+                  "any_in": [
+                    "policy-constant"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": "deny.x3",
+            "effect": "permit",
+            "reason_code": "rule_a",
+            "match": {
+              "tools": [
+                "tool-2"
+              ],
+              "args": {
+                "q": {
+                  "path_within": {
+                    "root": "/workspace",
+                    "case_insensitive": false
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "request": "{\"tool\":\"read_file\",\"args\":{\"path\":[\"true\"],\"cc\":\"<str len=8193 head=😀😀😀😀😀😀😀😀😀😀😀😀 sha=9cf3745a12>\",\"on\":true,\"n\":9007199254740992},\"ctx\":{\"agentId\":\"bot\",\"sessionTainted\":true,\"provenance\":{\"on\":[\"trusted-user\",\"policy-constant\"]}}}",
+      "minimised": {
+        "policy": {
+          "policy_schema_version": 1,
+          "name": "p",
+          "mode": "enforce",
+          "tools": {},
+          "rules": []
+        },
+        "request": "{\"args\":{\"cc\":\"<str len=8193 head=😀😀😀😀😀😀😀😀😀😀😀😀 sha=9cf3745a12>\"}}",
+        "evaluations": 28
+      }
+    },
+    {
+      "signature": "limit-size|ref:deny/limit_exceeded|prod:deny/invalid_args",
+      "kind": "reason_mismatch",
+      "count": 1,
+      "family": "limit-size",
+      "policy_index": 1208,
+      "request_index": 3,
+      "ref": {
+        "effect": "deny",
+        "reason": "limit_exceeded",
+        "matched": {
+          "deny": [],
+          "permit": []
+        }
+      },
+      "prod": {
+        "effect": "deny",
+        "reason": "invalid_args",
+        "matched": {
+          "deny": [],
+          "permit": []
+        }
+      },
+      "policy": {
+        "policy_schema_version": 1,
+        "name": "x:y",
+        "mode": "enforce",
+        "tools": {
+          "tool-2": {
+            "risk": "high",
+            "external_effect": false,
+            "read_only": true,
+            "fail_mode": "closed",
+            "args": {
+              "cc": {
+                "type": "string",
+                "optional": true
+              },
+              "url": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "rules": [
+          {
+            "id": "id:0",
+            "effect": "deny",
+            "reason_code": "R-1",
+            "match": {
+              "tools": [
+                "tool-2"
+              ],
+              "args": {
+                "url": {
+                  "path_within": {
+                    "root": "/etc",
+                    "case_insensitive": false
+                  }
+                },
+                "cc": {
+                  "max_length": 16
+                }
+              }
+            }
+          },
+          {
+            "id": "deny.x1",
+            "effect": "permit",
+            "reason_code": "blocked",
+            "match": {
+              "tools": [
+                "tool-2"
+              ],
+              "args": {
+                "path": {
+                  "max_length": 1
+                }
+              },
+              "provenance": {
+                "url": {
+                  "all_in": [
+                    "web:page"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": "deny.x2",
+            "effect": "deny",
+            "reason_code": "R-1",
+            "match": {
+              "tools": [
+                "tool-2"
+              ],
+              "args": {
+                "path": {
+                  "path_within": {
+                    "root": "/workspace/secrets",
+                    "case_insensitive": false
+                  }
+                }
+              }
+            }
+          },
+          {
+            "id": "perm3",
+            "effect": "permit",
+            "reason_code": "why:not",
+            "match": {
+              "tools": [
+                "tool-2"
+              ],
+              "scopes_any": [
+                "admin",
+                "s-1",
+                "write:x"
+              ],
+              "args": {
+                "url": {
+                  "equals": "true"
+                },
+                "cc": {
+                  "in": [
+                    "admin"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": "deny.x4",
+            "effect": "permit",
+            "reason_code": "why:not",
+            "match": {
+              "tools": [
+                "tool-2"
+              ],
+              "session_tainted": true,
+              "args": {
+                "cc": {
+                  "equals": "0"
+                }
+              }
+            }
+          },
+          {
+            "id": "deny.x5",
+            "effect": "deny",
+            "reason_code": "policy.deny",
+            "match": {
+              "tools": [
+                "tool-2"
+              ],
+              "agents": [
+                "admin:root",
+                "agent-2",
+                "A.b_c"
+              ],
+              "scopes_any": [
+                "s-1",
+                "admin"
+              ],
+              "args": {
+                "url": {
+                  "equals": "Hello"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "request": "{\"tool\":\"tool-2\",\"args\":{\"url\":\"true\",\"path\":\"alphaé\",\"pad\":[\"<str len=8000 head=aaaaaaaaaaaaaaaaaaaaaaaa sha=e3aee17254>\",\"<str len=8000 head=aaaaaaaaaaaaaaaaaaaaaaaa sha=e3aee17254>\",\"<str len=8000 head=aaaaaaaaaaaaaaaaaaaaaaaa sha=e3aee17254>\",\"<str len=8000 head=aaaaaaaaaaaaaaaaaaaaaaaa sha=e3aee17254>\",\"<str len=8000 head=aaaaaaaaaaaaaaaaaaaaaaaa sha=e3aee17254>\",\"<str len=8000 head=aaaaaaaaaaaaaaaaaaaaaaaa sha=e3aee17254>\",\"<str len=8000 head=aaaaaaaaaaaaaaaaaaaaaaaa sha=e3aee17254>\",\"<str len=8000 head=aaaaaaaaaaaaaaaaaaaaaaaa sha=e3aee17254>\",\"<str len=1369 head=aaaaaaaaaaaaaaaaaaaaaaaa sha=d3d8b06355>\"]},\"ctx\":{\"agentId\":\"agent-2\",\"sessionTainted\":false,\"provenance\":{\"path\":[]}}}",
+      "minimised": {
+        "policy": {
+          "policy_schema_version": 1,
+          "name": "x:y",
+          "mode": "enforce",
+          "tools": {
+            "tool-2": {
+              "risk": "high",
+              "external_effect": false,
+              "read_only": true,
+              "fail_mode": "closed",
+              "args": {
+                "cc": {
+                  "type": "string",
+                  "optional": true
+                },
+                "url": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "rules": []
+        },
+        "request": "{\"tool\":\"tool-2\",\"args\":{\"url\":\"true\",\"path\":\"alphaé\",\"pad\":[\"<str len=8000 head=aaaaaaaaaaaaaaaaaaaaaaaa sha=e3aee17254>\",\"<str len=8000 head=aaaaaaaaaaaaaaaaaaaaaaaa sha=e3aee17254>\",\"<str len=8000 head=aaaaaaaaaaaaaaaaaaaaaaaa sha=e3aee17254>\",\"<str len=8000 head=aaaaaaaaaaaaaaaaaaaaaaaa sha=e3aee17254>\",\"<str len=8000 head=aaaaaaaaaaaaaaaaaaaaaaaa sha=e3aee17254>\",\"<str len=8000 head=aaaaaaaaaaaaaaaaaaaaaaaa sha=e3aee17254>\",\"<str len=8000 head=aaaaaaaaaaaaaaaaaaaaaaaa sha=e3aee17254>\",\"<str len=8000 head=aaaaaaaaaaaaaaaaaaaaaaaa sha=e3aee17254>\",\"<str len=1369 head=aaaaaaaaaaaaaaaaaaaaaaaa sha=d3d8b06355>\"]},\"ctx\":{\"agentId\":\"agent-2\",\"sessionTainted\":false,\"provenance\":{\"path\":[]}}}",
+        "evaluations": 79
+      }
+    },
+    {
+      "signature": "js-proxy-args|ref:deny/invalid_request|prod:deny/limit_exceeded",
+      "kind": "precedence_invalid_vs_limit",
+      "count": 1,
+      "family": "js-proxy-args",
+      "policy_index": 1510,
+      "request_index": 13,
+      "ref": {
+        "effect": "deny",
+        "reason": "invalid_request",
+        "matched": {
+          "deny": [],
+          "permit": []
+        }
+      },
+      "prod": {
+        "effect": "deny",
+        "reason": "limit_exceeded",
+        "matched": {
+          "deny": [],
+          "permit": []
+        }
+      },
+      "policy": {
+        "policy_schema_version": 1,
+        "name": "test.policy_1",
+        "mode": "monitor_only",
+        "tools": {
+          "query": {
+            "risk": "medium",
+            "external_effect": false,
+            "read_only": false,
+            "fail_mode": "closed",
+            "args": {
+              "url": {
+                "type": "string"
+              },
+              "cc": {
+                "type": "string",
+                "optional": false
+              }
+            },
+            "schema_hash": "sha256:abababababababab"
+          },
+          "t.x": {
+            "risk": "low",
+            "external_effect": false,
+            "read_only": false,
+            "fail_mode": "closed",
+            "args": {
+              "files": {
+                "type": "string[]",
+                "optional": true
+              },
+              "k.1": {
+                "type": "string[]",
+                "optional": true
+              }
+            }
+          },
+          "Tool_9": {
+            "risk": "low",
+            "external_effect": true,
+            "read_only": true,
+            "fail_mode": "open_on_audit_failure",
+            "args": {
+              "files": {
+                "type": "string[]"
+              }
+            }
+          }
+        },
+        "rules": [
+          {
+            "id": "perm0",
+            "effect": "permit",
+            "reason_code": "blocked",
+            "match": {
+              "tools": [
+                "query",
+                "Tool_9",
+                "t.x"
+              ]
+            }
+          },
+          {
+            "id": "rule1",
+            "effect": "permit",
+            "reason_code": "R-1",
+            "match": {
+              "agents": [
+                "admin:root",
+                "agent-2",
+                "bot"
+              ],
+              "scopes_any": [
+                "sales",
+                "read",
+                "write:x"
+              ],
+              "args": {
+                "k.1": {
+                  "max_length": 0
+                }
+              }
+            }
+          },
+          {
+            "id": "perm2",
+            "effect": "deny",
+            "reason_code": "blocked",
+            "match": {
+              "tools": [
+                "Tool_9",
+                "t.x",
+                "query"
+              ]
+            }
+          },
+          {
+            "id": "r3",
+            "effect": "permit",
+            "reason_code": "ok",
+            "match": {
+              "args": {
+                "k.1": {
+                  "glob": "repo?t-2024*pdf"
+                }
+              }
+            }
+          },
+          {
+            "id": "perm4",
+            "effect": "deny",
+            "reason_code": "R-1",
+            "match": {
+              "tools": [
+                "query",
+                "t.x",
+                "Tool_9"
+              ]
+            }
+          },
+          {
+            "id": "id:5",
+            "effect": "permit",
+            "reason_code": "why:not",
+            "match": {
+              "tools": [
+                "query"
+              ]
+            }
+          }
+        ]
+      },
+      "request": "{\"tool\":\"Tool_9\",\"args\":<proxy>,\"ctx\":{\"agentId\":\"bot\"}}",
+      "minimised": {
+        "policy": {
+          "policy_schema_version": 1,
+          "name": "test.policy_1",
+          "mode": "monitor_only",
+          "tools": {},
+          "rules": []
+        },
+        "request": "{\"tool\":\"Tool_9\",\"args\":<proxy>,\"ctx\":{\"agentId\":\"bot\"}}",
+        "evaluations": 10
+      }
+    },
+    {
+      "signature": "path|ref:deny/invalid_request|prod:deny/limit_exceeded",
+      "kind": "precedence_invalid_vs_limit",
+      "count": 1,
+      "family": "path",
+      "policy_index": 1800,
+      "request_index": 16,
+      "ref": {
+        "effect": "deny",
+        "reason": "invalid_request",
+        "matched": {
+          "deny": [],
+          "permit": []
+        }
+      },
+      "prod": {
+        "effect": "deny",
+        "reason": "limit_exceeded",
+        "matched": {
+          "deny": [],
+          "permit": []
+        }
+      },
+      "policy": {
+        "policy_schema_version": 1,
+        "name": "test.policy_1",
+        "mode": "enforce",
+        "tools": {
+          "tool-2": {
+            "risk": "medium",
+            "external_effect": false,
+            "read_only": false,
+            "fail_mode": "closed",
+            "args": {
+              "q": {
+                "type": "string"
+              }
+            }
+          },
+          "read_file": {
+            "risk": "medium",
+            "external_effect": true,
+            "read_only": true,
+            "fail_mode": "closed",
+            "args": {
+              "body": {
+                "type": "string",
+                "optional": true
+              },
+              "flags": {
+                "type": "string[]",
+                "optional": true
+              }
+            }
+          },
+          "t.x": {
+            "risk": "high",
+            "external_effect": true,
+            "read_only": true,
+            "fail_mode": "closed",
+            "args": {}
+          }
+        },
+        "rules": [
+          {
+            "id": "deny.x0",
+            "effect": "permit",
+            "reason_code": "ok",
+            "match": {
+              "tools": [
+                "t.x",
+                "tool-2",
+                "read_file"
+              ]
+            }
+          },
+          {
+            "id": "id:1",
+            "effect": "deny",
+            "reason_code": "R-1",
+            "match": {
+              "tools": [
+                "tool-2",
+                "t.x"
+              ]
+            }
+          },
+          {
+            "id": "id:2",
+            "effect": "permit",
+            "reason_code": "rule_a",
+            "match": {
+              "tools": [
+                "read_file",
+                "t.x"
+              ]
+            }
+          },
+          {
+            "id": "deny.x3",
+            "effect": "deny",
+            "reason_code": "ok",
+            "match": {
+              "tools": [
+                "tool-2",
+                "read_file",
+                "t.x"
+              ]
+            }
+          },
+          {
+            "id": "id:4",
+            "effect": "deny",
+            "reason_code": "rule_a",
+            "match": {
+              "tools": [
+                "t.x",
+                "read_file",
+                "tool-2"
+              ],
+              "scopes_any": [
+                "read",
+                "write:x"
+              ]
+            }
+          },
+          {
+            "id": "rule5",
+            "effect": "deny",
+            "reason_code": "ok",
+            "match": {
+              "tools": [
+                "tool-2",
+                "read_file"
+              ],
+              "agents": [
+                "agent-2",
+                "bot",
+                "admin:root"
+              ]
+            }
+          },
+          {
+            "id": "id:6",
+            "effect": "deny",
+            "reason_code": "blocked",
+            "match": {
+              "tools": [
+                "t.x",
+                "tool-2",
+                "read_file"
+              ]
+            }
+          },
+          {
+            "id": "r7",
+            "effect": "deny",
+            "reason_code": "rule_a",
+            "match": {
+              "tools": [
+                "tool-2",
+                "t.x",
+                "read_file"
+              ]
+            }
+          },
+          {
+            "id": "id:8",
+            "effect": "deny",
+            "reason_code": "policy.deny",
+            "match": {
+              "tools": [
+                "read_file"
+              ],
+              "session_tainted": true,
+              "args": {
+                "flags": {
+                  "path_within": {
+                    "root": "/data.v2",
+                    "case_insensitive": true
+                  }
+                },
+                "body": {
+                  "max_length": 8192
+                }
+              },
+              "provenance": {
+                "body": {
+                  "any_in": [
+                    "policy-constant"
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "request": "{\"tool\":\"read_file\",\"args\":{\"body\":\"<str len=8194 head=😀😀😀😀😀😀😀😀😀😀😀😀 sha=ef331526ce>\",\"flags\":[\"/data.v2/Sub/X/aux.txt\"]},\"ctx\":{\"agentId\":\"bot\"}}",
+      "minimised": {
+        "policy": {
+          "policy_schema_version": 1,
+          "name": "test.policy_1",
+          "mode": "enforce",
+          "tools": {},
+          "rules": []
+        },
+        "request": "{\"args\":{\"body\":\"<str len=8193 head=😀😀😀😀😀😀😀😀😀😀😀😀 sha=8f875a5610>\"}}",
+        "evaluations": 30
+      }
+    },
+    {
+      "signature": "js-proxy-root|ref:deny/invalid_request|prod:deny/limit_exceeded",
+      "kind": "precedence_invalid_vs_limit",
+      "count": 2,
+      "family": "js-proxy-root",
+      "policy_index": 1974,
+      "request_index": 4,
+      "ref": {
+        "effect": "deny",
+        "reason": "invalid_request",
+        "matched": {
+          "deny": [],
+          "permit": []
+        }
+      },
+      "prod": {
+        "effect": "deny",
+        "reason": "limit_exceeded",
+        "matched": {
+          "deny": [],
+          "permit": []
+        }
+      },
+      "policy": {
+        "policy_schema_version": 1,
+        "name": "x:y",
+        "mode": "enforce",
+        "tools": {
+          "tool-2": {
+            "risk": "high",
+            "external_effect": false,
+            "read_only": false,
+            "fail_mode": "closed",
+            "args": {}
+          },
+          "send_email": {
+            "risk": "medium",
+            "external_effect": false,
+            "read_only": false,
+            "fail_mode": "closed",
+            "args": {
+              "q": {
+                "type": "string"
+              },
+              "n": {
+                "type": "number"
+              }
+            }
+          },
+          "read_file": {
+            "risk": "high",
+            "external_effect": false,
+            "read_only": false,
+            "fail_mode": "closed",
+            "args": {
+              "cc": {
+                "type": "string"
+              },
+              "files": {
+                "type": "string[]"
+              },
+              "n": {
+                "type": "number"
+              },
+              "path": {
+                "type": "string",
+                "optional": true
+              }
+            }
+          },
+          "a": {
+            "risk": "low",
+            "external_effect": false,
+            "read_only": true,
+            "fail_mode": "open_on_audit_failure",
+            "args": {
+              "amount": {
+                "type": "number",
+                "optional": true
+              },
+              "files": {
+                "type": "string[]",
+                "optional": true
+              },
+              "flags": {
+                "type": "string[]"
+              },
+              "on": {
+                "type": "boolean",
+                "optional": true
+              }
+            }
+          },
+          "delete": {
+            "risk": "medium",
+            "external_effect": true,
+            "read_only": false,
+            "fail_mode": "closed",
+            "args": {
+              "x-y": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "rules": [
+          {
+            "id": "id:0",
+            "effect": "deny",
+            "reason_code": "why:not",
+            "match": {
+              "tools": [
+                "tool-2",
+                "a"
+              ],
+              "agents": [
+                "agent-2",
+                "admin:root"
+              ]
+            }
+          },
+          {
+            "id": "id:1",
+            "effect": "deny",
+            "reason_code": "ok",
+            "match": {
+              "tools": [
+                "a",
+                "tool-2",
+                "send_email"
+              ],
+              "agents": [
+                "agent-1",
+                "bot",
+                "admin:root"
+              ]
+            }
+          },
+          {
+            "id": "perm2",
+            "effect": "permit",
+            "reason_code": "why:not",
+            "match": {
+              "tools": [
+                "send_email",
+                "a"
+              ]
+            }
+          },
+          {
+            "id": "deny.x3",
+            "effect": "permit",
+            "reason_code": "rule_a",
+            "match": {
+              "tools": [
+                "a"
+              ],
+              "scopes_any": [
+                "admin",
+                "write:x",
+                "sales"
+              ]
+            }
+          },
+          {
+            "id": "deny.x4",
+            "effect": "deny",
+            "reason_code": "blocked",
+            "match": {
+              "tools": [
+                "send_email"
+              ]
+            }
+          }
+        ]
+      },
+      "request": "<proxy>",
+      "minimised": {
+        "policy": {
+          "policy_schema_version": 1,
+          "name": "x:y",
+          "mode": "enforce",
+          "tools": {},
+          "rules": []
+        },
+        "request": "<proxy>",
+        "evaluations": 11
+      }
+    },
+    {
+      "signature": "js-symbol-key|ref:deny/invalid_request|prod:deny/limit_exceeded",
+      "kind": "precedence_invalid_vs_limit",
+      "count": 4,
+      "family": "js-symbol-key",
+      "policy_index": 1987,
+      "request_index": 11,
+      "ref": {
+        "effect": "deny",
+        "reason": "invalid_request",
+        "matched": {
+          "deny": [],
+          "permit": []
+        }
+      },
+      "prod": {
+        "effect": "deny",
+        "reason": "limit_exceeded",
+        "matched": {
+          "deny": [],
+          "permit": []
+        }
+      },
+      "policy": {
+        "policy_schema_version": 1,
+        "name": "x:y",
+        "mode": "monitor_only",
+        "tools": {
+          "send_email": {
+            "risk": "low",
+            "external_effect": false,
+            "read_only": true,
+            "fail_mode": "closed",
+            "args": {
+              "k.1": {
+                "type": "string[]"
+              },
+              "to": {
+                "type": "string"
+              },
+              "n": {
+                "type": "boolean"
+              },
+              "flags": {
+                "type": "string[]",
+                "optional": false
+              }
+            }
+          },
+          "query": {
+            "risk": "low",
+            "external_effect": false,
+            "read_only": false,
+            "fail_mode": "closed",
+            "args": {}
+          },
+          "Tool_9": {
+            "risk": "high",
+            "external_effect": false,
+            "read_only": false,
+            "fail_mode": "closed",
+            "args": {
+              "on": {
+                "type": "boolean"
+              },
+              "to": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string",
+                "optional": false
+              },
+              "n": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "rules": [
+          {
+            "id": "id:0",
+            "effect": "deny",
+            "reason_code": "R-1",
+            "match": {
+              "tools": [
+                "query",
+                "Tool_9"
+              ]
+            }
+          },
+          {
+            "id": "perm1",
+            "effect": "permit",
+            "reason_code": "ok",
+            "match": {
+              "tools": [
+                "query"
+              ]
+            }
+          },
+          {
+            "id": "rule2",
+            "effect": "deny",
+            "reason_code": "policy.deny",
+            "match": {
+              "args": {
+                "flags": {
+                  "equals": "true"
+                }
+              }
+            }
+          },
+          {
+            "id": "deny.x3",
+            "effect": "permit",
+            "reason_code": "ok",
+            "match": {
+              "tools": [
+                "query",
+                "send_email"
+              ],
+              "scopes_any": [
+                "read"
+              ],
+              "session_tainted": true
+            }
+          },
+          {
+            "id": "id:4",
+            "effect": "deny",
+            "reason_code": "ok",
+            "match": {
+              "tools": [
+                "query",
+                "Tool_9"
+              ]
+            }
+          },
+          {
+            "id": "r5",
+            "effect": "permit",
+            "reason_code": "why:not",
+            "match": {
+              "args": {
+                "k.1": {
+                  "path_within": {
+                    "root": "/tmp",
+                    "case_insensitive": false
+                  }
+                },
+                "on": {
+                  "equals": false
+                }
+              }
+            }
+          },
+          {
+            "id": "id:6",
+            "effect": "permit",
+            "reason_code": "blocked",
+            "match": {
+              "agents": [
+                "A.b_c",
+                "bot"
+              ]
+            }
+          },
+          {
+            "id": "r7",
+            "effect": "deny",
+            "reason_code": "ok",
+            "match": {
+              "args": {
+                "flags": {
+                  "path_within": {
+                    "root": "/tmp",
+                    "case_insensitive": true
+                  }
+                },
+                "k.1": {
+                  "domain_suffix": "x-y.io",
+                  "accept": [
+                    "url",
+                    "host"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": "r8",
+            "effect": "deny",
+            "reason_code": "why:not",
+            "match": {
+              "tools": [
+                "query",
+                "send_email"
+              ],
+              "scopes_any": [
+                "sales"
+              ]
+            }
+          }
+        ]
+      },
+      "request": "{\"tool\":\"send_email\",\"args\":{\"k.1\":[\"/tmp/Sub/X\"],\"to\":\"Beta\",\"n\":false,\"flags\":[\"gamma-3\",\"\",\"alpha\",\"a.b\",\"hello world\",\"ID-7\",\"true\",\"gamma-3\",\"0\",\"0\",\"gamma-3\",\"gamma-3\",\"ID-7\",\"\",\"true\",\"gamma-3\",\"x\",\"gamma-3\",\"hello world\",\"\",\"Beta\",\"x\",\"a.b\",\"\",\"hello world\",\"\",\"ID-7\",\"Beta\",\"true\",\"Beta\",\"true\",\"alpha\",\"true\",\"a.b\",\"alpha\",\"a.b\",\"hello world\",\"hello world\",\"hello world\",\"0\",\"ID-7\",\"true\",\"0\",\"0\",\"gamma-3\",\"0\",\"0\",\"alpha\",\"alpha\",\"Beta\",\"a.b\",\"x\",\"x\",\"hello world\",\"Beta\",\"true\",\"a.b\",\"ID-7\",\"hello world\",\"hello world\",\"alpha\",\"ID-7\",\"\",\"alpha\",\"ID-7\",\"a.b\",\"alpha\",\"x\",\"0\",\"true\",\"\",\"gamma-3\",\"x\",\"gamma-3\",\"gamma-3\",\"ID-7\",\"x\",\"x\",\"a.b\",\"alpha\",\"hello world\",\"x\",\"ID-7\",\"x\",\"true\",\"x\",\"ID-7\",\"0\",\"hello world\",\"0\",\"hello world\",\"true\",\"true\",\"alpha\",\"true\",\"true\",\"gamma-3\",\"0\",\"hello world\",\"alpha\",\"a.b\",\"alpha\",\"a.b\",\"true\",\"ID-7\",\"true\",\"0\",\"gamma-3\",\"a.b\",\"a.b\",\"ID-7\",\"a.b\",\"ID-7\",\"alpha\",\"true\",\"ID-7\",\"hello world\",\"\",\"\",\"alpha\",\"a.b\",\"ID-7\",\"a.b\",\"x\",\"a.b\",\"a.b\",\"x\",\"ID-7\",\"0\",\"gamma-3\",\"alpha\",\"gamma-3\",\"0\",\"ID-7\",\"gamma-3\",\"\",\"true\",\"\",\"alpha\",\"x\",\"\",\"Beta\",\"hello world\",\"\",\"hello world\",\"ID-7\",\"0\",\"hello world\",\"hello world\",\"\",\"alpha\",\"Beta\",\"hello world\",\"Beta\",\"\",\"ID-7\",\"\",\"gamma-3\",\"alpha\",\"hello world\",\"0\",\"\",\"true\",\"Beta\",\"\",\"alpha\",\"alpha\",\"true\",\"ID-7\",\"hello world\",\"0\",\"a.b\",\"0\",\"\",\"Beta\",\"true\",\"ID-7\",\"gamma-3\",\"hello world\",\"\",\"alpha\",\"0\",\"alpha\",\"true\",\"ID-7\",\"ID-7\",\"0\",\"Beta\",\"0\",\"x\",\"Beta\",\"\",\"ID-7\",\"\",\"hello world\",\"ID-7\",\"true\",\"ID-7\",\"gamma-3\",\"a.b\",\"true\",\"alpha\",\"a.b\",\"hello world\",\"ID-7\",\"hello world\",\"Beta\",\"0\",\"Beta\",\"ID-7\",\"\",\"Beta\",\"true\",\"gamma-3\",\"Beta\",\"ID-7\",\"true\",\"0\",\"gamma-3\",\"Beta\",\"0\",\"gamma-3\",\"gamma-3\",\"\",\"hello world\",\"hello world\",\"true\",\"x\",\"alpha\",\"alpha\",\"\",\"hello world\",\"Beta\",\"0\",\"hello world\",\"0\",\"a.b\",\"a.b\",\"gamma-3\",\"0\",\"alpha\",\"true\",\"hello world\",\"x\",\"\",\"0\",\"\",\"ID-7\",\"hello world\",\"hello world\",\"Beta\",\"a.b\",\"gamma-3\",\"alpha\",\"hello world\",\"Beta\",\"ID-7\"],<symbolkey>},\"ctx\":{\"agentId\":\"A.b_c\",\"sessionTainted\":false,\"provenance\":{\"to\":[],\"n\":[\"untrusted:unknown\",\"policy-constant\",\"trusted-user\"]}}}",
+      "minimised": {
+        "policy": {
+          "policy_schema_version": 1,
+          "name": "x:y",
+          "mode": "monitor_only",
+          "tools": {},
+          "rules": []
+        },
+        "request": "{\"tool\":\"send_email\",\"args\":{\"k.1\":[\"/tmp/Sub/X\"],\"to\":\"Beta\",\"n\":false,\"flags\":[\"gamma-3\",\"\",\"alpha\",\"a.b\",\"hello world\",\"ID-7\",\"true\",\"gamma-3\",\"0\",\"0\",\"gamma-3\",\"gamma-3\",\"ID-7\",\"\",\"true\",\"gamma-3\",\"x\",\"gamma-3\",\"hello world\",\"\",\"Beta\",\"x\",\"a.b\",\"\",\"hello world\",\"\",\"ID-7\",\"Beta\",\"true\",\"Beta\",\"true\",\"alpha\",\"true\",\"a.b\",\"alpha\",\"a.b\",\"hello world\",\"hello world\",\"hello world\",\"0\",\"ID-7\",\"true\",\"0\",\"0\",\"gamma-3\",\"0\",\"0\",\"alpha\",\"alpha\",\"Beta\",\"a.b\",\"x\",\"x\",\"hello world\",\"Beta\",\"true\",\"a.b\",\"ID-7\",\"hello world\",\"hello world\",\"alpha\",\"ID-7\",\"\",\"alpha\",\"ID-7\",\"a.b\",\"alpha\",\"x\",\"0\",\"true\",\"\",\"gamma-3\",\"x\",\"gamma-3\",\"gamma-3\",\"ID-7\",\"x\",\"x\",\"a.b\",\"alpha\",\"hello world\",\"x\",\"ID-7\",\"x\",\"true\",\"x\",\"ID-7\",\"0\",\"hello world\",\"0\",\"hello world\",\"true\",\"true\",\"alpha\",\"true\",\"true\",\"gamma-3\",\"0\",\"hello world\",\"alpha\",\"a.b\",\"alpha\",\"a.b\",\"true\",\"ID-7\",\"true\",\"0\",\"gamma-3\",\"a.b\",\"a.b\",\"ID-7\",\"a.b\",\"ID-7\",\"alpha\",\"true\",\"ID-7\",\"hello world\",\"\",\"\",\"alpha\",\"a.b\",\"ID-7\",\"a.b\",\"x\",\"a.b\",\"a.b\",\"x\",\"ID-7\",\"0\",\"gamma-3\",\"alpha\",\"gamma-3\",\"0\",\"ID-7\",\"gamma-3\",\"\",\"true\",\"\",\"alpha\",\"x\",\"\",\"Beta\",\"hello world\",\"\",\"hello world\",\"ID-7\",\"0\",\"hello world\",\"hello world\",\"\",\"alpha\",\"Beta\",\"hello world\",\"Beta\",\"\",\"ID-7\",\"\",\"gamma-3\",\"alpha\",\"hello world\",\"0\",\"\",\"true\",\"Beta\",\"\",\"alpha\",\"alpha\",\"true\",\"ID-7\",\"hello world\",\"0\",\"a.b\",\"0\",\"\",\"Beta\",\"true\",\"ID-7\",\"gamma-3\",\"hello world\",\"\",\"alpha\",\"0\",\"alpha\",\"true\",\"ID-7\",\"ID-7\",\"0\",\"Beta\",\"0\",\"x\",\"Beta\",\"\",\"ID-7\",\"\",\"hello world\",\"ID-7\",\"true\",\"ID-7\",\"gamma-3\",\"a.b\",\"true\",\"alpha\",\"a.b\",\"hello world\",\"ID-7\",\"hello world\",\"Beta\",\"0\",\"Beta\",\"ID-7\",\"\",\"Beta\",\"true\",\"gamma-3\",\"Beta\",\"ID-7\",\"true\",\"0\",\"gamma-3\",\"Beta\",\"0\",\"gamma-3\",\"gamma-3\",\"\",\"hello world\",\"hello world\",\"true\",\"x\",\"alpha\",\"alpha\",\"\",\"hello world\",\"Beta\",\"0\",\"hello world\",\"0\",\"a.b\",\"a.b\",\"gamma-3\",\"0\",\"alpha\",\"true\",\"hello world\",\"x\",\"\",\"0\",\"\",\"ID-7\",\"hello world\",\"hello world\",\"Beta\",\"a.b\",\"gamma-3\",\"alpha\",\"hello world\",\"Beta\",\"ID-7\"],<symbolkey>},\"ctx\":{\"agentId\":\"A.b_c\",\"sessionTainted\":false,\"provenance\":{\"to\":[],\"n\":[\"untrusted:unknown\",\"policy-constant\",\"trusted-user\"]}}}",
+        "evaluations": 13
+      }
+    },
+    {
+      "signature": "amb:js-proxy-root|ref:deny/invalid_request|prod:deny/limit_exceeded",
+      "kind": "precedence_invalid_vs_limit",
+      "count": 1,
+      "family": "js-proxy-root",
+      "policy_index": 2999,
+      "request_index": 12,
+      "ref": {
+        "effect": "deny",
+        "reason": "invalid_request",
+        "matched": {
+          "deny": [],
+          "permit": []
+        }
+      },
+      "prod": {
+        "effect": "deny",
+        "reason": "limit_exceeded",
+        "matched": {
+          "deny": [],
+          "permit": []
+        }
+      },
+      "policy": {
+        "policy_schema_version": 1,
+        "name": "p",
+        "mode": "monitor_only",
+        "tools": {
+          "Tool_9": {
+            "risk": "medium",
+            "external_effect": true,
+            "read_only": true,
+            "fail_mode": "closed",
+            "args": {
+              "x-y": {
+                "type": "string[]"
+              },
+              "files": {
+                "type": "string[]",
+                "optional": false
+              }
+            }
+          },
+          "a": {
+            "risk": "low",
+            "external_effect": true,
+            "read_only": true,
+            "fail_mode": "closed",
+            "args": {
+              "url": {
+                "type": "string"
+              },
+              "files": {
+                "type": "string[]",
+                "optional": true
+              }
+            }
+          },
+          "query": {
+            "risk": "medium",
+            "external_effect": true,
+            "read_only": true,
+            "fail_mode": "closed",
+            "args": {
+              "amount": {
+                "type": "string",
+                "optional": true
+              }
+            },
+            "schema_hash": "sha256:abababababababab"
+          },
+          "delete": {
+            "risk": "low",
+            "external_effect": false,
+            "read_only": true,
+            "fail_mode": "open_on_audit_failure",
+            "args": {
+              "files": {
+                "type": "string[]"
+              },
+              "k.1": {
+                "type": "string[]"
+              }
+            }
+          },
+          "send_email": {
+            "risk": "medium",
+            "external_effect": false,
+            "read_only": true,
+            "fail_mode": "closed",
+            "args": {
+              "cc": {
+                "type": "string",
+                "optional": true
+              },
+              "x-y": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "rules": [
+          {
+            "id": "rule0",
+            "effect": "permit",
+            "reason_code": "policy.deny",
+            "match": {
+              "tools": [
+                "send_email",
+                "delete",
+                "query"
+              ],
+              "agents": [
+                "agent-1"
+              ],
+              "scopes_any": [
+                "sales",
+                "s-1"
+              ]
+            }
+          },
+          {
+            "id": "perm1",
+            "effect": "deny",
+            "reason_code": "rule_a",
+            "match": {
+              "tools": [
+                "a",
+                "Tool_9"
+              ],
+              "args": {
+                "files": {
+                  "path_within": {
+                    "root": "/Users/Bob",
+                    "case_insensitive": false
+                  }
+                }
+              }
+            }
+          },
+          {
+            "id": "id:2",
+            "effect": "permit",
+            "reason_code": "rule_a",
+            "match": {
+              "scopes_any": [
+                "admin",
+                "write:x"
+              ],
+              "args": {
+                "k.1": {
+                  "glob": "*lo worl*"
+                }
+              },
+              "provenance": {
+                "x-y": {
+                  "all_in": [
+                    "untrusted:unknown",
+                    "user_1",
+                    "a.b-c:d"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": "r3",
+            "effect": "deny",
+            "reason_code": "R-1",
+            "match": {
+              "tools": [
+                "Tool_9"
+              ],
+              "scopes_any": [
+                "admin"
+              ],
+              "args": {
+                "x-y": {
+                  "in": [
+                    "é",
+                    "Hello",
+                    ""
+                  ]
+                },
+                "files": {
+                  "domain_suffix": "xn--nxasmq6b.com",
+                  "accept": [
+                    "host"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": "deny.x4",
+            "effect": "permit",
+            "reason_code": "R-1",
+            "match": {
+              "agents": [
+                "A.b_c"
+              ]
+            }
+          }
+        ]
+      },
+      "request": "<proxy>",
+      "minimised": {
+        "policy": {
+          "policy_schema_version": 1,
+          "name": "p",
+          "mode": "monitor_only",
+          "tools": {},
+          "rules": []
+        },
+        "request": "<proxy>",
+        "evaluations": 11
+      }
+    },
+    {
+      "signature": "amb:js-symbol-key|ref:deny/invalid_request|prod:deny/limit_exceeded",
+      "kind": "precedence_invalid_vs_limit",
+      "count": 1,
+      "family": "js-symbol-key",
+      "policy_index": 4629,
+      "request_index": 15,
+      "ref": {
+        "effect": "deny",
+        "reason": "invalid_request",
+        "matched": {
+          "deny": [],
+          "permit": []
+        }
+      },
+      "prod": {
+        "effect": "deny",
+        "reason": "limit_exceeded",
+        "matched": {
+          "deny": [],
+          "permit": []
+        }
+      },
+      "policy": {
+        "policy_schema_version": 1,
+        "name": "support-agent",
+        "mode": "enforce",
+        "tools": {
+          "read_file": {
+            "risk": "medium",
+            "external_effect": true,
+            "read_only": true,
+            "fail_mode": "closed",
+            "args": {
+              "cc": {
+                "type": "string"
+              },
+              "body": {
+                "type": "string"
+              },
+              "n": {
+                "type": "number"
+              },
+              "k.1": {
+                "type": "string[]",
+                "optional": true
+              }
+            }
+          },
+          "delete": {
+            "risk": "low",
+            "external_effect": true,
+            "read_only": false,
+            "fail_mode": "closed",
+            "args": {
+              "url": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string"
+              }
+            }
+          },
+          "query": {
+            "risk": "medium",
+            "external_effect": true,
+            "read_only": true,
+            "fail_mode": "closed",
+            "args": {
+              "files": {
+                "type": "string[]"
+              },
+              "k.1": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "rules": [
+          {
+            "id": "rule0",
+            "effect": "deny",
+            "reason_code": "rule_a",
+            "match": {
+              "tools": [
+                "read_file",
+                "delete",
+                "query"
+              ],
+              "scopes_any": [
+                "read",
+                "write:x",
+                "admin"
+              ]
+            }
+          },
+          {
+            "id": "deny.x1",
+            "effect": "deny",
+            "reason_code": "policy.deny",
+            "match": {
+              "tools": [
+                "query"
+              ],
+              "provenance": {
+                "k.1": {
+                  "any_in": [
+                    "web:page",
+                    "trusted-user"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": "perm2",
+            "effect": "permit",
+            "reason_code": "ok",
+            "match": {
+              "tools": [
+                "read_file",
+                "delete"
+              ]
+            }
+          },
+          {
+            "id": "r3",
+            "effect": "permit",
+            "reason_code": "why:not",
+            "match": {
+              "tools": [
+                "delete",
+                "read_file"
+              ]
+            }
+          },
+          {
+            "id": "id:4",
+            "effect": "deny",
+            "reason_code": "rule_a",
+            "match": {
+              "tools": [
+                "query",
+                "delete"
+              ],
+              "session_tainted": true
+            }
+          },
+          {
+            "id": "r5",
+            "effect": "permit",
+            "reason_code": "rule_a",
+            "match": {
+              "tools": [
+                "read_file",
+                "delete"
+              ],
+              "scopes_any": [
+                "admin",
+                "sales"
+              ]
+            }
+          },
+          {
+            "id": "id:6",
+            "effect": "permit",
+            "reason_code": "blocked",
+            "match": {
+              "tools": [
+                "delete"
+              ],
+              "args": {
+                "mode": {
+                  "path_within": {
+                    "root": "/workspace/secrets",
+                    "case_insensitive": true
+                  }
+                },
+                "url": {
+                  "domain_suffix": "x-y.io",
+                  "accept": [
+                    "url"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": "r7",
+            "effect": "deny",
+            "reason_code": "R-1",
+            "match": {
+              "tools": [
+                "query",
+                "read_file"
+              ],
+              "args": {
+                "k.1": {
+                  "in": [
+                    "true"
+                  ]
+                }
+              },
+              "provenance": {
+                "k.1": {
+                  "all_in": [
+                    "user_1",
+                    "policy-constant",
+                    "a.b-c:d"
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "request": "{\"tool\":\"query\",\"args\":{\"files\":[\"hello world\",\"alpha\",\"x\",\"hello world\",\"alpha\",\"alpha\",\"true\",\"true\",\"\",\"true\",\"true\",\"\",\"a.b\",\"true\",\"x\",\"alpha\",\"ID-7\",\"x\",\"hello world\",\"true\",\"a.b\",\"true\",\"hello world\",\"true\",\"0\",\"hello world\",\"hello world\",\"0\",\"0\",\"hello world\",\"a.b\",\"ID-7\",\"0\",\"alpha\",\"ID-7\",\"a.b\",\"hello world\",\"alpha\",\"a.b\",\"\",\"true\",\"0\",\"hello world\",\"\",\"x\",\"ID-7\",\"0\",\"\",\"0\",\"x\",\"0\",\"0\",\"0\",\"alpha\",\"alpha\",\"x\",\"\",\"x\",\"hello world\",\"x\",\"a.b\",\"x\",\"hello world\",\"hello world\",\"alpha\",\"alpha\",\"x\",\"alpha\",\"hello world\",\"hello world\",\"x\",\"alpha\",\"ID-7\",\"ID-7\",\"0\",\"gamma-3\",\"a.b\",\"ID-7\",\"ID-7\",\"x\",\"true\",\"\",\"a.b\",\"hello world\",\"x\",\"alpha\",\"a.b\",\"\",\"true\",\"hello world\",\"ID-7\",\"true\",\"Beta\",\"a.b\",\"\",\"x\",\"x\",\"x\",\"Beta\",\"hello world\",\"Beta\",\"gamma-3\",\"ID-7\",\"\",\"alpha\",\"\",\"alpha\",\"ID-7\",\"Beta\",\"x\",\"alpha\",\"Beta\",\"\",\"a.b\",\"gamma-3\",\"Beta\",\"Beta\",\"gamma-3\",\"x\",\"true\",\"true\",\"gamma-3\",\"true\",\"Beta\",\"a.b\",\"true\",\"hello world\",\"0\",\"hello world\",\"0\",\"Beta\",\"x\",\"alpha\",\"Beta\",\"x\",\"x\",\"alpha\",\"0\",\"0\",\"0\",\"0\",\"0\",\"hello world\",\"hello world\",\"true\",\"0\",\"0\",\"\",\"alpha\",\"true\",\"Beta\",\"hello world\",\"gamma-3\",\"a.b\",\"gamma-3\",\"0\",\"\",\"alpha\",\"gamma-3\",\"0\",\"hello world\",\"alpha\",\"Beta\",\"alpha\",\"0\",\"a.b\",\"\",\"Beta\",\"Beta\",\"Beta\",\"Beta\",\"hello world\",\"\",\"\",\"alpha\",\"x\",\"0\",\"0\",\"a.b\",\"ID-7\",\"gamma-3\",\"Beta\",\"alpha\",\"0\",\"Beta\",\"gamma-3\",\"hello world\",\"ID-7\",\"true\",\"a.b\",\"0\",\"hello world\",\"gamma-3\",\"0\",\"Beta\",\"a.b\",\"0\",\"ID-7\",\"x\",\"true\",\"x\",\"gamma-3\",\"hello world\",\"gamma-3\",\"a.b\",\"hello world\",\"ID-7\",\"ID-7\",\"a.b\",\"0\",\"0\",\"Beta\",\"Beta\",\"0\",\"ID-7\",\"gamma-3\",\"a.b\",\"0\",\"alpha\",\"0\",\"ID-7\",\"alpha\",\"a.b\",\"a.b\",\"ID-7\",\"hello world\",\"ID-7\",\"x\",\"hello world\",\"hello world\",\"\",\"ID-7\",\"Beta\",\"x\",\"gamma-3\",\"x\",\"Beta\",\"\",\"hello world\",\"true\",\"alpha\",\"true\",\"0\",\"a.b\",\"Beta\",\"\",\"true\",\"a.b\",\"x\",\"a.b\",\"Beta\",\"Beta\",\"0\",\"hello world\",\"ID-7\",\"ID-7\",\"true\"],\"k.1\":\"true\",<symbolkey>},\"ctx\":{\"agentId\":\"x\",\"scopes\":[]}}",
+      "minimised": {
+        "policy": {
+          "policy_schema_version": 1,
+          "name": "support-agent",
+          "mode": "enforce",
+          "tools": {},
+          "rules": []
+        },
+        "request": "{\"tool\":\"query\",\"args\":{\"files\":[\"hello world\",\"alpha\",\"x\",\"hello world\",\"alpha\",\"alpha\",\"true\",\"true\",\"\",\"true\",\"true\",\"\",\"a.b\",\"true\",\"x\",\"alpha\",\"ID-7\",\"x\",\"hello world\",\"true\",\"a.b\",\"true\",\"hello world\",\"true\",\"0\",\"hello world\",\"hello world\",\"0\",\"0\",\"hello world\",\"a.b\",\"ID-7\",\"0\",\"alpha\",\"ID-7\",\"a.b\",\"hello world\",\"alpha\",\"a.b\",\"\",\"true\",\"0\",\"hello world\",\"\",\"x\",\"ID-7\",\"0\",\"\",\"0\",\"x\",\"0\",\"0\",\"0\",\"alpha\",\"alpha\",\"x\",\"\",\"x\",\"hello world\",\"x\",\"a.b\",\"x\",\"hello world\",\"hello world\",\"alpha\",\"alpha\",\"x\",\"alpha\",\"hello world\",\"hello world\",\"x\",\"alpha\",\"ID-7\",\"ID-7\",\"0\",\"gamma-3\",\"a.b\",\"ID-7\",\"ID-7\",\"x\",\"true\",\"\",\"a.b\",\"hello world\",\"x\",\"alpha\",\"a.b\",\"\",\"true\",\"hello world\",\"ID-7\",\"true\",\"Beta\",\"a.b\",\"\",\"x\",\"x\",\"x\",\"Beta\",\"hello world\",\"Beta\",\"gamma-3\",\"ID-7\",\"\",\"alpha\",\"\",\"alpha\",\"ID-7\",\"Beta\",\"x\",\"alpha\",\"Beta\",\"\",\"a.b\",\"gamma-3\",\"Beta\",\"Beta\",\"gamma-3\",\"x\",\"true\",\"true\",\"gamma-3\",\"true\",\"Beta\",\"a.b\",\"true\",\"hello world\",\"0\",\"hello world\",\"0\",\"Beta\",\"x\",\"alpha\",\"Beta\",\"x\",\"x\",\"alpha\",\"0\",\"0\",\"0\",\"0\",\"0\",\"hello world\",\"hello world\",\"true\",\"0\",\"0\",\"\",\"alpha\",\"true\",\"Beta\",\"hello world\",\"gamma-3\",\"a.b\",\"gamma-3\",\"0\",\"\",\"alpha\",\"gamma-3\",\"0\",\"hello world\",\"alpha\",\"Beta\",\"alpha\",\"0\",\"a.b\",\"\",\"Beta\",\"Beta\",\"Beta\",\"Beta\",\"hello world\",\"\",\"\",\"alpha\",\"x\",\"0\",\"0\",\"a.b\",\"ID-7\",\"gamma-3\",\"Beta\",\"alpha\",\"0\",\"Beta\",\"gamma-3\",\"hello world\",\"ID-7\",\"true\",\"a.b\",\"0\",\"hello world\",\"gamma-3\",\"0\",\"Beta\",\"a.b\",\"0\",\"ID-7\",\"x\",\"true\",\"x\",\"gamma-3\",\"hello world\",\"gamma-3\",\"a.b\",\"hello world\",\"ID-7\",\"ID-7\",\"a.b\",\"0\",\"0\",\"Beta\",\"Beta\",\"0\",\"ID-7\",\"gamma-3\",\"a.b\",\"0\",\"alpha\",\"0\",\"ID-7\",\"alpha\",\"a.b\",\"a.b\",\"ID-7\",\"hello world\",\"ID-7\",\"x\",\"hello world\",\"hello world\",\"\",\"ID-7\",\"Beta\",\"x\",\"gamma-3\",\"x\",\"Beta\",\"\",\"hello world\",\"true\",\"alpha\",\"true\",\"0\",\"a.b\",\"Beta\",\"\",\"true\",\"a.b\",\"x\",\"a.b\",\"Beta\",\"Beta\",\"0\",\"hello world\",\"ID-7\",\"ID-7\",\"true\"],\"k.1\":\"true\",<symbolkey>},\"ctx\":{\"agentId\":\"x\",\"scopes\":[]}}",
+        "evaluations": 12
+      }
+    }
+  ],
+  "load_disagreements": [
+    {
+      "signature": "mutation:drive-root:ref=reject:prod=accept",
+      "count": 46,
+      "name": "drive-root",
+      "expect": "reject",
+      "ref": "reject: $.rules[7].match.args.zs $.rules[7].match.args.zs: bad root",
+      "prod": "accept",
+      "input": "{\"policy_schema_version\":1,\"name\":\"support-agent\",\"mode\":\"monitor_only\",\"tools\":{\"delete\":{\"risk\":\"low\",\"external_effect\":true,\"read_only\":true,\"fail_mode\":\"open_on_audit_failure\",\"args\":{\"amount\":{\"type\":\"number\",\"optional\":true},\"flags\":{\"type\":\"string[]\"}}},\"a\":{\"risk\":\"medium\",\"external_effect\":true,\"read_only\":true,\"fail_mode\":\"closed\",\"args\":{\"mode\":{\"type\":\"string\"},\"url\":{\"type\":\"string\"}}},\"t.x\":{\"risk\":\"medium\",\"external_effect\":false,\"read_only\":false,\"fail_mode\":\"closed\",\"args\":{}},\"http_get\":{\"risk\":\"high\",\"external_effect\":true,\"read_only\":false,\"fail_mode\":\"closed\",\"args\":{\"url\"…(1911 chars)"
+    },
+    {
+      "signature": "mutation:arg-string-vs-strarr-conflict:ref=reject:prod=accept",
+      "count": 42,
+      "name": "arg-string-vs-strarr-conflict",
+      "expect": "reject",
+      "ref": "reject: $.rules[4].match.args $.rules[4].match.args: arg type conflicts across tools",
+      "prod": "accept",
+      "input": "{\"policy_schema_version\":1,\"name\":\"x:y\",\"mode\":\"monitor_only\",\"tools\":{\"t.x\":{\"risk\":\"medium\",\"external_effect\":false,\"read_only\":false,\"fail_mode\":\"closed\",\"args\":{\"cc\":{\"type\":\"string\"}}},\"a\":{\"risk\":\"high\",\"external_effect\":true,\"read_only\":false,\"fail_mode\":\"closed\",\"args\":{\"body\":{\"type\":\"boolean\"},\"mode\":{\"type\":\"string\",\"optional\":true},\"path\":{\"type\":\"string\"}}},\"zz_tool\":{\"risk\":\"medium\",\"external_effect\":false,\"read_only\":true,\"fail_mode\":\"closed\",\"args\":{\"zs\":{\"type\":\"string\"},\"zn\":{\"type\":\"number\"},\"zb\":{\"type\":\"boolean\",\"optional\":true},\"zl\":{\"type\":\"string[]\"}}},\"zz_tool2\":{\"risk…(1285 chars)"
+    }
+  ],
+  "load_expectation_misses": []
+}

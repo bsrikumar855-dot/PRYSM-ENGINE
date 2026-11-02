@@ -128,10 +128,15 @@ function validHostValue(v: string): boolean {
   return true;
 }
 
-function validRoot(r: string): boolean {
+function validRoot(r: string, driveRoots: boolean): boolean {
   if (!/^[\x20-\x7e]*$/.test(r)) return false; // ASCII only (printable; control chars rejected earlier)
   if (r.includes("\\")) return false;
-  if (!r.startsWith("/")) return false; // drive-prefixed roots rejected (deny-safe, see report)
+  if (driveRoots && /^[A-Z]:\//.test(r)) {
+    const rest = r.slice(3);
+    if (rest === "") return false;
+    return rest.split("/").every((seg) => seg !== "" && seg !== "." && seg !== "..");
+  }
+  if (!r.startsWith("/")) return false; // drive-prefixed roots rejected by default (deny-safe, see report)
   if (r === "/") return true;
   if (r.endsWith("/")) return false;
   for (const seg of r.slice(1).split("/")) {
@@ -142,7 +147,7 @@ function validRoot(r: string): boolean {
 
 const OPS = ["equals", "in", "glob", "range", "max_length", "domain_suffix", "domain_exact", "path_within"];
 
-function parsePredicate(raw: unknown, path: string): Pred {
+function parsePredicate(raw: unknown, path: string, opts: RefLoadOptions): Pred {
   if (!isObj(raw)) return fail(path, "predicate must be an object");
   const keys = Object.keys(raw);
   const ops = keys.filter((k) => OPS.includes(k));
@@ -218,7 +223,7 @@ function parsePredicate(raw: unknown, path: string): Pred {
     }
     default: {
       const pw = expectObj(raw.path_within, path, ["root", "case_insensitive"], ["root", "case_insensitive"]);
-      if (typeof pw.root !== "string" || !validRoot(pw.root)) return fail(path, "bad root");
+      if (typeof pw.root !== "string" || !validRoot(pw.root, opts.driveRoots === true)) return fail(path, "bad root");
       const ci = expectBool(pw.case_insensitive, path);
       return { kind: "path_within", root: pw.root, ci };
     }
@@ -247,7 +252,14 @@ function toArgType(v: unknown, path: string): ArgType {
   return fail(path, "bad arg type");
 }
 
-export function refLoadPolicy(input: Uint8Array | string): RefPolicy {
+export interface RefLoadOptions {
+  /** accept `X:/seg` roots in path_within (spec ambiguity; default reject = deny-safe) */
+  driveRoots?: boolean;
+  /** do not treat string vs string[] as a conflicting arg type when no tools clause (spec ambiguity; default reject) */
+  lenientStringArrayConflict?: boolean;
+}
+
+export function refLoadPolicy(input: Uint8Array | string, opts: RefLoadOptions = {}): RefPolicy {
   let text: string;
   if (typeof input === "string") {
     if (Buffer.byteLength(input, "utf8") > 1024 * 1024) fail("$", "file too large");
@@ -355,9 +367,11 @@ export function refLoadPolicy(input: Uint8Array | string): RefPolicy {
       rule.args = [];
       for (const an of names) {
         const ts = declaringTools(an);
-        const pred = parsePredicate(am[an], `${p}.match.args.${an.length <= 40 ? an : "…"}`);
+        const pred = parsePredicate(am[an], `${p}.match.args.${an.length <= 40 ? an : "…"}`, opts);
         const types = new Set(ts.map((t) => (t.args.get(an) as RefArg).type));
-        if (!rule.tools && types.size > 1) fail(p + ".match.args", "arg type conflicts across tools");
+        const bases = new Set([...types].map((t) => (t === "string[]" ? "string" : t)));
+        const conflict = opts.lenientStringArrayConflict ? bases.size > 1 : types.size > 1;
+        if (!rule.tools && conflict) fail(p + ".match.args", "arg type conflicts across tools");
         for (const ty of types) predCompat(pred, ty, p + ".match.args");
         rule.args.push([an, pred]);
       }
