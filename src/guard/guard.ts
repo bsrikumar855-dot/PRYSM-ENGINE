@@ -140,7 +140,7 @@ export interface CreateGuardOptions {
   /** Per-window budgets for best-effort rows, one independent budget per class. */
   maxPreEvaluateRowsPerWindow?: number; // unknown tool, invalid request/ctx (default 200)
   maxDenyRowsPerWindow?: number; // policy denials (default 1000)
-  maxResultRowsPerWindow?: number; // tool_result rows (default 1000)
+  maxResultRowsPerWindow?: number; // optional hard ceiling for tool_result rows (default Infinity: unmetered)
   /** Window length for the rate limit (default 60000, hrtime-based). */
   bestEffortWindowMs?: number;
   /** Live-session cap (default 10000). */
@@ -327,11 +327,12 @@ export function createGuardWithAdmin(opts: CreateGuardOptions): { guard: Guard; 
   const caps = {
     pre_evaluate: opts.maxPreEvaluateRowsPerWindow ?? 200,
     policy_deny: opts.maxDenyRowsPerWindow ?? 1000,
-    tool_result: opts.maxResultRowsPerWindow ?? 1000,
+    // result rows of executed calls are not metered by default (AUDIT-SPEC 8): optional hard ceiling only
+    tool_result: opts.maxResultRowsPerWindow ?? Infinity,
   } as const;
   const windowMs = opts.bestEffortWindowMs ?? 60_000;
   const maxSessions = opts.maxSessions ?? MAX_SESSIONS;
-  if (!Number.isInteger(failOpenBudget) || failOpenBudget < 0 || !Object.values(caps).every((c) => Number.isInteger(c) && c >= 0) ||
+  if (!Number.isInteger(failOpenBudget) || failOpenBudget < 0 || !Object.values(caps).every((c) => (Number.isInteger(c) || c === Infinity) && c >= 0) ||
     !(windowMs > 0) || !Number.isInteger(maxSessions) || maxSessions < 1) {
     throw new TypeError('invalid guard option');
   }
