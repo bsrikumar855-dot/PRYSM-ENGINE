@@ -1,15 +1,42 @@
 // Differential harness: independent reference implementation vs production engine (public API only).
 //   npm run diff -- [--cases N] [--seed S] [--quick] [--out FILE] [--fail-on-diff]
 import { createHash } from "node:crypto";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { loadPolicy, decide } from "../../src/core/index.ts";
-import { refDecide, refFaultKinds, refLoadPolicy, type RefPolicy } from "../reference/index.ts";
+import {
+  refDecide as baseRefDecide,
+  refFaultKinds,
+  refLoadPolicy as baseRefLoad,
+  type RefDecision,
+  type RefPolicy,
+} from "../reference/index.ts";
 import { describe } from "./describe.ts";
 import { genPolicy, genPolicyCase, type GenPolicy } from "./gen-policy.ts";
 import { genCase } from "./gen-request.ts";
 import { derive, seedFrom } from "./prng.ts";
+
+export const HARNESS_VERSION = "2";
+
+/** Reference hooks, for harness self-tests (fault injection into the REFERENCE side only). */
+export interface RefHooks {
+  decide?: (p: RefPolicy, raw: unknown) => RefDecision;
+  load?: (input: string | Uint8Array) => RefPolicy;
+}
+let hooks: RefHooks = {};
+const refDecide = (p: RefPolicy, raw: unknown): RefDecision => (hooks.decide ?? baseRefDecide)(p, raw);
+const refLoadPolicy = (input: string | Uint8Array): RefPolicy => (hooks.load ?? baseRefLoad)(input);
+
+/** sha256 of each eval/reference/*.ts file, so reports are attributable to an exact reference implementation. */
+export function referenceHashes(): Record<string, string> {
+  const dir = new URL("../reference/", import.meta.url);
+  const out: Record<string, string> = {};
+  for (const name of readdirSync(dir).filter((n) => n.endsWith(".ts")).sort()) {
+    out[name] = createHash("sha256").update(readFileSync(new URL(name, dir))).digest("hex");
+  }
+  return out;
+}
 
 export const DEFAULT_SEED = 20261102;
 export const DEFAULT_CASES = 100_000;
@@ -21,6 +48,8 @@ export interface DiffOptions {
   seed: number | string;
   perPolicy?: number;
   maxDistinct?: number;
+  /** inject faults into the reference (self-tests only) */
+  refHooks?: RefHooks;
   minimise?: boolean;
   log?: (s: string) => void;
 }
@@ -57,6 +86,8 @@ interface LoadExample {
 
 export interface DiffReport {
   tool: "prysm-diff";
+  harness_version: string;
+  reference_files_sha256: Record<string, string>;
   seed: number;
   seed_arg: string;
   cases: number;
@@ -267,6 +298,16 @@ function minimise(
 
 // ---------- main run ----------
 export function runDiff(opts: DiffOptions): DiffReport {
+  const saved = hooks;
+  hooks = opts.refHooks ?? {};
+  try {
+    return runDiffInner(opts);
+  } finally {
+    hooks = saved;
+  }
+}
+
+function runDiffInner(opts: DiffOptions): DiffReport {
   const t0 = Date.now();
   const seed = seedFrom(opts.seed);
   const per = opts.perPolicy ?? PER_POLICY;
@@ -279,6 +320,8 @@ export function runDiff(opts: DiffOptions): DiffReport {
 
   const rep: DiffReport = {
     tool: "prysm-diff",
+    harness_version: HARNESS_VERSION,
+    reference_files_sha256: referenceHashes(),
     seed,
     seed_arg: String(opts.seed),
     cases: 0,

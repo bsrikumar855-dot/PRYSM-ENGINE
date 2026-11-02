@@ -1,5 +1,14 @@
 {
   "tool": "prysm-diff",
+  "harness_version": "2",
+  "reference_files_sha256": {
+    "decide.ts": "e6a3a34b4752acacf9537e34da5a9240d27df70837be85781d226027ec6615bc",
+    "index.ts": "92533550d3b19da674242fb843bb52c8acc348a80fa50f5d9ad1071cf897e5aa",
+    "json.ts": "ab2daae60a36e9e31bc189592edff4ec9e8e11ebfec30c86f5d59db5e10c7957",
+    "matchers.ts": "25c4ef0f2a70c8dcffba7d9b64ca83ad71238f8d61229f0b9cd13ffb3eaa0bfb",
+    "policy.ts": "75c7c12921b93278db389b8a361b3e5122e9646fa59ccdfb9e2713504ec1e4e4",
+    "request.ts": "eb66f0eb67632176c07450b5154317b7eb225abc0d6f1c4e9b971b387159e91d"
+  },
   "seed": 20261104,
   "seed_arg": "20261104",
   "cases": 100000,
@@ -8,9 +17,9 @@
   "case_digest": "sha256:b7cb5f0274f3bae3dd85c6f3a5cc675defde58adafc12ca2c99c3aa2a7569bf7",
   "result_digest": "sha256:f6385fa82d884ed64df4e51241ecde4657875f34b7c7e94cb4999c2cd00e1052",
   "elapsed_ms": {
-    "total": 23429,
-    "ref": 6366,
-    "prod": 7029
+    "total": 36034,
+    "ref": 9551,
+    "prod": 11187
   },
   "load": {
     "valid_policies": 5000,
