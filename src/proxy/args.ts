@@ -17,7 +17,7 @@ const VALUE_FLAGS = new Set([
   '--list-mode', '--allow-methods', '--env', '--user-id', '--scopes', '--provenance', '--ready-timeout-ms',
   '--allow-server-requests', '--max-server-line-bytes', '--forward-timeout-ms', '--client-stall-ms',
 ]);
-const BOOL_FLAGS = new Set(['--require-pins', '--allow-server-notifications', '--no-taint-forwarded']);
+const BOOL_FLAGS = new Set(['--require-pins', '--allow-server-notifications', '--no-taint-forwarded', '--allow-unprotected-key']);
 
 // empty entries are kept so createProxy rejects them (exit 2)
 const csv = (v: string): string[] => v.split(',');
@@ -95,6 +95,7 @@ export function parseArgs(argv: readonly string[]): CliConfig {
   }
   if (bools.has('--require-pins')) out.requirePins = true;
   if (bools.has('--no-taint-forwarded')) out.taintForwarded = false;
+  if (bools.has('--allow-unprotected-key')) out.allowUnprotectedKey = true;
   if (bools.has('--allow-server-notifications')) out.allowServerNotifications = true;
   return out;
 }

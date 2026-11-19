@@ -342,11 +342,13 @@ test('timeAsync and timeConcurrent: warm-up discarded as well', async () => {
   const slowFirst = (n: number) => { let k = 0; return (): Promise<void> => { if (k++ < n) spin(5); return Promise.resolve(); }; };
   const a = await timeAsync(slowFirst(10), 10, 40);
   assert.equal(a.length, 40);
-  assert.ok(Math.max(...a) < 2e6);
+  // warm-up iterations spin 5 ms; measured ones are no-ops. Bound below 5 ms (not 2 ms) so scheduler noise on a
+  // loaded machine or a CI runner cannot fail the test, while a leaked warm-up sample still would.
+  assert.ok(Math.max(...a) < 4.5e6);
   const c = await timeConcurrent(slowFirst(10), 4, 10, 40);
   assert.equal(c.samples.length, 40);
   assert.ok(c.samples.every((x) => typeof x === 'number'));
-  assert.ok(Math.max(...c.samples) < 2e6);
+  assert.ok(Math.max(...c.samples) < 4.5e6);
   assert.ok(c.wallNs > 0);
 });
 

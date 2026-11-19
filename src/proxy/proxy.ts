@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs';
 import type { Readable, Writable } from 'node:stream';
 import { jcs, loadPolicy } from '../core/index.ts';
 import type { LoadedPolicy } from '../core/index.ts';
-import { openStore } from '../store/index.ts';
+import { openStore, StoreError } from '../store/index.ts';
 import type { Store } from '../store/index.ts';
 import { createGuardWithAdmin, ENGINE_VERSION } from '../guard/index.ts';
 import type { CallContext, GuardResult, ToolCallOptions, ToolEntry } from '../guard/index.ts';
@@ -51,7 +51,7 @@ const LIST_FIELDS = ['name', 'title', 'description', 'inputSchema', 'outputSchem
 
 export type ProxyConfigErrorCode =
   | 'bad_option' | 'policy_unreadable' | 'policy_invalid' | 'policy_sha256_mismatch' | 'taint_tool_unknown'
-  | 'store_unavailable' | 'spawn_failed';
+  | 'store_unavailable' | 'key_unprotected' | 'spawn_failed';
 
 export class ProxyConfigError extends Error {
   readonly code: ProxyConfigErrorCode;
@@ -83,6 +83,8 @@ export interface ProxyOptions {
   requirePins?: boolean;
   readyTimeoutMs?: number;
   allowServerRequests?: string[];
+  /** Accept a key file whose ACL/mode could not be restricted (default false: refuse to start; S-06). */
+  allowUnprotectedKey?: boolean;
   /** Taint the session when an allow-listed method returns a result (default true, fail-safe; S-04). */
   taintForwarded?: boolean;
   allowServerNotifications?: boolean;
@@ -281,10 +283,14 @@ export function createProxy(opts: ProxyOptions): ProxyHandle {
       path: opts.dbPath,
       ...(opts.keyPath !== undefined ? { keyPath: opts.keyPath } : {}),
       ...(opts.hmacKey !== undefined ? { hmacKey: opts.hmacKey } : {}),
+      // S-06: the enforcing proxy refuses an unprotected key file unless the operator explicitly allows it
+      requireProtectedKey: opts.allowUnprotectedKey !== true,
       secondarySink: sink,
     });
     store = opts.storeWrap ? opts.storeWrap(raw) : raw;
-  } catch { return cfg('store_unavailable'); }
+  } catch (e) {
+    return cfg(e instanceof StoreError && e.code === 'key_unprotected' ? 'key_unprotected' : 'store_unavailable');
+  }
 
   // ---------------------------------------------------------------- guard + session
   const als = new AsyncLocalStorage<Entry>();

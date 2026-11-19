@@ -73,3 +73,6 @@ S-03: treating every backslash as a separator let a POSIX filename containing ba
 
 ## DEC-46 Novelty reserve for best-effort rows; explain uninterpretable values (M2-21, M5 usability finding)
 M2-21: a flood of one kind of denial used up the per-window budget and hid later, different denials. Decision: a 64-row-per-window novelty reserve for rows with a signature not yet seen in the window, rather than per-session budgets (an agent controls how many sessions it opens) or coalescing by argument digest (varied arguments defeat it). Usability: decision rows record which deny rules matched on an uninterpretable value, and explanations say so. AUDIT-SPEC v1.6 section 10. Independent re-review pending.
+
+## DEC-47 Protect the key before writing it; the proxy refuses unprotected keys (S-06)
+Decision: write the key only into an already-protected file and link it into place; make "refuse an unprotected key" an explicit store option that the enforcing proxy turns on by default (`--allow-unprotected-key` to opt out). Rejected: failing closed in the library by default, which would break hosts that only use the store for local analysis and change long-standing warning behaviour. AUDIT-SPEC v1.7 section 11. Independent re-review pending.

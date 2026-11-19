@@ -5,13 +5,13 @@
 import { DatabaseSync } from 'node:sqlite';
 import type { StatementSync } from 'node:sqlite';
 import { createHash, createHmac, randomBytes, randomUUID } from 'node:crypto';
-import { readFileSync, statSync, writeFileSync } from 'node:fs';
+import { linkSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 import { userInfo } from 'node:os';
 import { jcs } from '../core/index.ts';
 
-export type StoreErrorCode = 'busy' | 'io' | 'invalid_event' | 'corrupt' | 'duplicate_id' | 'key_invalid' | 'key_mismatch';
+export type StoreErrorCode = 'busy' | 'io' | 'invalid_event' | 'corrupt' | 'duplicate_id' | 'key_invalid' | 'key_mismatch' | 'key_unprotected';
 
 /** Error with a fixed code. The message never contains values. */
 export class StoreError extends Error {
@@ -181,6 +181,11 @@ export interface OpenStoreOptions {
   aclReader?: (keyPath: string) => string | null;
   /** Test seam: the principal expected in the ACL (default: os.userInfo().username). */
   aclUser?: string;
+  /**
+   * Fail closed (StoreError key_unprotected) when the key file cannot be protected (S-06). Default false for the
+   * library, which only warns; the MCP proxy turns it on unless `--allow-unprotected-key` is given.
+   */
+  requireProtectedKey?: boolean;
   /**
    * Open an EXISTING store strictly read-only (CLI reads; query_only). Never creates the DB, tables, meta rows or a
    * key file, never loads a key file, never resets meta flags, never writes. Without `hmacKey`, `hmac` throws
@@ -667,22 +672,36 @@ export function openStore(opts: OpenStoreOptions): Store {
           key = existing;
         } else {
           const nk = randomBytes(32);
+          // S-06: the secret is written only after the (empty) file is protected, then linked into place with no-clobber
+          // semantics, so there is no moment when the key bytes sit in a file with the inherited (broad) ACL.
+          const tmp = keyPath + '.tmp-' + randomBytes(6).toString('hex');
+          let linked = false;
           try {
-            writeFileSync(keyPath, nk, { flag: 'wx', mode: 0o600 });
+            writeFileSync(tmp, '', { flag: 'wx', mode: 0o600 });
+            protection = computeProtection(tmp, true);
+            if (protection === 'unprotected' && opts.requireProtectedKey === true) throw new StoreError('key_unprotected');
+            writeFileSync(tmp, nk, { flag: 'r+' });
+            linkSync(tmp, keyPath); // EEXIST if another process created the key meanwhile
+            linked = true;
             key = nk;
-            protection = computeProtection(keyPath, true);
             db.prepare("INSERT OR REPLACE INTO meta(key, value) VALUES ('key_protection', ?)").run(protection);
           } catch (e) {
-            if ((e as { code?: string }).code !== 'EEXIST') throw new StoreError('io');
+            if (e instanceof StoreError) throw e;
+            if ((e as { code?: string }).code !== 'EEXIST' || linked) throw new StoreError('io');
             const k = readKeyFile(keyPath);
             if (k === null) throw new StoreError('key_invalid');
             key = k;
+          } finally {
+            try { unlinkSync(tmp); } catch { /* already gone */ }
           }
         }
       }
       if (opts.hmacKey === undefined && existingKid !== null) {
         // existing key file: always re-checked on open; meta is only a hint and is never trusted
         protection = computeProtection(keyPath, false);
+      }
+      if (opts.requireProtectedKey === true && opts.hmacKey === undefined && protection === 'unprotected') {
+        throw new StoreError('key_unprotected');
       }
       const keyIdHex = createHash('sha256').update(key).digest('hex').slice(0, 8);
       ins.run('key_id', keyIdHex);

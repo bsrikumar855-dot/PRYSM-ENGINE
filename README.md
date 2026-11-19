@@ -73,6 +73,7 @@ Key flags: `--taint-tools` (retrieval tools whose use taints the session), `--li
 
 - Make the proxy the **only** path from the agent host to the tool server. An agent host that can launch the tool server itself bypasses PRYSM.
 - Keep the policy file, audit database and key file **where the agent host and the tool server cannot read or write them** (different OS account or sandbox). The server child runs as the same OS user as the proxy and is outside the protection scope for those files.
+- The proxy refuses to start if the key file is readable by others (exit 2, `key_unprotected`); `--allow-unprotected-key` overrides this and is not recommended.
 - Put `--key-path` outside the database directory. With the key beside the database, anyone who can read the database can brute-force low-entropy keyed digests; `verify()` warns `key_colocated`.
 - Store an **anchor** (`store.anchor()`; the proxy also prints one on shutdown) somewhere an attacker with database access cannot rewrite, and verify with it.
 - Pass `--policy-sha256` so a swapped policy file is refused at startup.
