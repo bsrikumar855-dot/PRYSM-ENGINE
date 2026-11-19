@@ -83,6 +83,8 @@ export interface ProxyOptions {
   requirePins?: boolean;
   readyTimeoutMs?: number;
   allowServerRequests?: string[];
+  /** Taint the session when an allow-listed method returns a result (default true, fail-safe; S-04). */
+  taintForwarded?: boolean;
   allowServerNotifications?: boolean;
   maxServerLineBytes?: number;
   forwardTimeoutMs?: number;
@@ -210,6 +212,7 @@ export function createProxy(opts: ProxyOptions): ProxyHandle {
   if (listMode !== 'hide' && listMode !== 'show') cfg('bad_option');
   const allowMethods = methodList(opts.allowMethods);
   const allowServerRequests = methodList(opts.allowServerRequests);
+  const taintForwarded = opts.taintForwarded !== false;
   if (allowMethods.size > 32 || allowServerRequests.size > 32) cfg('bad_option');
   const allowServerNotifications = opts.allowServerNotifications === true;
   const requirePins = opts.requirePins === true;
@@ -304,6 +307,7 @@ export function createProxy(opts: ProxyOptions): ProxyHandle {
           event: 'proxy_config', policy_mode: policy.mode, list_mode: listMode, require_pins: requirePins,
           tool_timeout_ms: toolTimeoutMs, taint_tools_n: taintSet.size, allow_methods: [...allowMethods],
           allow_server_requests: [...allowServerRequests], allow_server_notifications: allowServerNotifications,
+          taint_forwarded: taintForwarded,
           provenance_args: [...provNames], scopes_n: hostCtx.scopes?.length ?? 0, user_set: hostCtx.userId !== undefined,
         },
       });
@@ -690,6 +694,8 @@ export function createProxy(opts: ProxyOptions): ProxyHandle {
           });
         } catch { /* best effort */ }
       }
+      const forwarded = msg['method'] !== 'initialize';
+      if (forwarded) admin.recordForwarded(msg['method'] as string, session.id); // S-04: every forwarded request is audited
       const { id: sid, promise } = sendReq(msg['method'] as string, params);
       entry.serverId = sid;
       const m = await Promise.race([
@@ -710,6 +716,8 @@ export function createProxy(opts: ProxyOptions): ProxyHandle {
         const listChanged = isPlain(tools) && tools['listChanged'] === true;
         respond(id, { ...r, capabilities: { tools: { listChanged } } });
       } else {
+        // S-04: content returned by an allow-listed method is untrusted, like a tool result from a tainting tool
+        if (taintForwarded) session.taint('forwarded:' + String(msg['method']));
         respond(id, m['result']);
       }
     } catch {

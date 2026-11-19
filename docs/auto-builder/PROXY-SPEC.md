@@ -1,4 +1,4 @@
-# PRYSM MCP stdio proxy specification v1.3 (normative; section 9/10 supersede conflicting v1 text, e.g. the server line cap is 16 MiB by default)
+# PRYSM MCP stdio proxy specification v1.4 (normative; sections 9-11 supersede conflicting v1 text, e.g. the server line cap is 16 MiB by default)
 
 Implements DEC-01 (enforcing mode), DEC-04 (taint via control config), DEC-07 (schema pinning), A-18. Files: `src/proxy/*.ts` (+ `src/proxy/bin.ts`), tests `test/proxy/*.test.ts`, fixtures `test/support/mcp-server.ts`. Consumes `src/guard` (`createGuardWithAdmin`), `src/store`, `src/core`; no new runtime dependencies (hand-written newline-delimited JSON-RPC; Node built-ins only).
 
@@ -88,3 +88,11 @@ Responses to the client (same `id`): permit + server result ⇒ the server's `re
 6. **Activation lookup.** The guard decides whether to append a startup `policy_activate` row by scanning back (at most 50 rows) for the newest `policy_activate` row **that has `outcome.policy_version`** (rows with `outcome.event` of `proxy_config`, `proxy_client`, `tools_replaced` and similar are skipped), so restarts do not write redundant activation rows. M4 consumers must filter on `outcome.event`.
 7. **denyUnexposed after close.** After `guard.close()`, `denyUnexposed` writes no row and returns a decision id only.
 8. **Test additions.** `test/guard/v14.test.ts` asserts `tool_hmac` equals the guard's keyed HMAC of the raw name and that the raw name is absent from the DB for a non-policy tool name; a proxy-level test sends a raw non-policy tool name through the not-ready path and asserts the same; a stalled-client test (never-draining output) ends in bounded-time shutdown with exit 1.
+
+## 11. v1.4 amendment (DEC-44; closes S-04)
+Requests forwarded because of `--allow-methods` are no longer invisible.
+- Before forwarding, the proxy writes a best-effort `policy_activate` row with `outcome = {event: "method_forwarded", method}` and the proxy session id, through the guard's host-only `admin.recordForwarded`. It uses the pre-evaluate budget, so a flood of forwarded requests cannot exhaust the store; dropped rows are counted like other best-effort rows.
+- When a forwarded request returns a result (not an error), the session is tainted, because that content is untrusted exactly like a tainting tool's result. After that, tools with an external effect are denied `tainted_session` unless a permit rule opts in.
+- `--no-taint-forwarded` (library `taintForwarded: false`) turns the taint off; the choice is recorded as `taint_forwarded` in the `proxy_config` posture row.
+- Client notifications on the allow-list are forwarded as before and are not audited (they return no content).
+Tests: `test/proxy/s04-forwarded.test.ts`.

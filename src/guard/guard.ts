@@ -113,6 +113,11 @@ export interface GuardAdmin {
    * dropped_before accounting). `enforcement` is "enforced" regardless of policy mode. Never executes anything.
    */
   denyUnexposed(toolName: unknown, reason: UnexposedReason): { decision_id: string };
+  /**
+   * Writes a best-effort policy_activate row (`outcome.event = "method_forwarded"`) for a non-tool MCP request the host
+   * chose to forward (S-04). Uses the pre_evaluate budget so a flood cannot exhaust the store. Never executes anything.
+   */
+  recordForwarded(method: string, sessionId: string | null): { decision_id: string };
 }
 
 export type UnexposedReason = 'schema_changed' | 'no_pin' | 'tool_not_offered' | 'not_ready';
@@ -932,6 +937,20 @@ export function createGuardWithAdmin(opts: CreateGuardOptions): { guard: Guard; 
           tool: known ? toolName : '?', policy_version: policy.policy_version, engine_version: ENGINE_VERSION,
           enforcement: 'enforced', effect: 'deny', reason_code: 'unknown_tool', rule_ids: [], request_digest: null,
           args_hmac: null, args_redacted: null, session_tainted: 0, provenance_asserted: UNTRUSTED, outcome,
+        }, 'pre_evaluate');
+      } catch { /* best effort */ }
+      return { decision_id };
+    },
+    recordForwarded: (method: string, sessionId: string | null): { decision_id: string } => {
+      const decision_id = randomUUID();
+      if (closed) return { decision_id };
+      try {
+        const m = typeof method === 'string' && /^[A-Za-z0-9_./-]{1,64}$/.test(method) ? method : '?';
+        bestEffort({
+          id: decision_id, kind: 'policy_activate', ts_ms: nowTs(), agent_id: agentId, effect: null, tool: null,
+          enforcement: policy.mode === 'monitor_only' ? 'monitor_only' : 'enforced', policy_version: policy.policy_version,
+          engine_version: ENGINE_VERSION, session_id: typeof sessionId === 'string' && SESSION_ID.test(sessionId) ? sessionId : null,
+          outcome: { event: 'method_forwarded', method: m },
         }, 'pre_evaluate');
       } catch { /* best effort */ }
       return { decision_id };
