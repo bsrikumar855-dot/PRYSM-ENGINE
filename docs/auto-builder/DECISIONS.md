@@ -76,3 +76,6 @@ M2-21: a flood of one kind of denial used up the per-window budget and hid later
 
 ## DEC-47 Protect the key before writing it; the proxy refuses unprotected keys (S-06)
 Decision: write the key only into an already-protected file and link it into place; make "refuse an unprotected key" an explicit store option that the enforcing proxy turns on by default (`--allow-unprotected-key` to opt out). Rejected: failing closed in the library by default, which would break hosts that only use the store for local analysis and change long-standing warning behaviour. AUDIT-SPEC v1.7 section 11. Independent re-review pending.
+
+## DEC-48 Drop server instructions by default; cap tool text (S-08)
+Server `instructions` and tool descriptions are model-visible text from a server PRYSM does not trust. Decision: drop `instructions` by default (opt-in flag, recorded in posture) and cap tool text at 4096 characters. Not chosen: making `--require-pins` the default, which would refuse every unpinned server out of the box; it stays a documented production recommendation. PROXY-SPEC v1.5 section 12. Independent re-review pending.

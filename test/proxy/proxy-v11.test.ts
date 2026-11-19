@@ -266,7 +266,7 @@ test('W15 initialize: capabilities rewritten to tools only, second initialize re
   const r = await l.client.request('initialize', { protocolVersion: '2025-03-26', capabilities: {}, clientInfo: { name: 't', version: '0' } });
   const res = r['result'] as Json;
   assert.deepEqual(res['capabilities'], { tools: { listChanged: true } });
-  assert.equal(res['instructions'], 'fixture instructions');
+  assert.equal(res['instructions'], undefined, 'S-08: server instructions are dropped by default');
   assert.equal(res['protocolVersion'], '2025-03-26');
   assert.equal(((await l.client.request('initialize', {}))['error'] as Json)['code'], -32600);
   assert.deepEqual((await l.client.request('ping'))['result'], {});

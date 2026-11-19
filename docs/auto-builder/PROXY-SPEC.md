@@ -1,4 +1,4 @@
-# PRYSM MCP stdio proxy specification v1.4 (normative; sections 9-11 supersede conflicting v1 text, e.g. the server line cap is 16 MiB by default)
+# PRYSM MCP stdio proxy specification v1.5 (normative; sections 9-12 supersede conflicting v1 text, e.g. the server line cap is 16 MiB by default)
 
 Implements DEC-01 (enforcing mode), DEC-04 (taint via control config), DEC-07 (schema pinning), A-18. Files: `src/proxy/*.ts` (+ `src/proxy/bin.ts`), tests `test/proxy/*.test.ts`, fixtures `test/support/mcp-server.ts`. Consumes `src/guard` (`createGuardWithAdmin`), `src/store`, `src/core`; no new runtime dependencies (hand-written newline-delimited JSON-RPC; Node built-ins only).
 
@@ -96,3 +96,10 @@ Requests forwarded because of `--allow-methods` are no longer invisible.
 - `--no-taint-forwarded` (library `taintForwarded: false`) turns the taint off; the choice is recorded as `taint_forwarded` in the `proxy_config` posture row.
 - Client notifications on the allow-list are forwarded as before and are not audited (they return no content).
 Tests: `test/proxy/s04-forwarded.test.ts`.
+
+## 12. v1.5 amendment (DEC-48; closes S-08)
+Server text that lands in the client model's context is reduced.
+- The server's `initialize` result field `instructions` is dropped (sink line `proxy_instructions_dropped`) unless `--forward-instructions` (library `forwardInstructions: true`) is given; then it is forwarded truncated to 4096 characters. The choice is recorded as `forward_instructions` in the `proxy_config` posture row.
+- Tool `title` and `description` in `tools/list` are capped at 4096 characters and dropped if they are not strings (sink line `proxy_tool_text_capped` with a count). Schema pins (`schema_hash`) are still computed on the server's original text, so a pinned tool whose description changes is still refused.
+- Recommendation unchanged: production deployments should pin tool schemas and run with `--require-pins`.
+Tests: `test/proxy/s08-text.test.ts`.

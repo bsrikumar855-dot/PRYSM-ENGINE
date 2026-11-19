@@ -67,7 +67,7 @@ node src/proxy/bin.ts --policy policy.json --db /secure/audit.db --key-path /sec
   --taint-tools search_docs --scopes sales -- node path/to/mcp-server.js
 ```
 
-Key flags: `--taint-tools` (retrieval tools whose use taints the session), `--list-mode hide|show`, `--require-pins`, `--tool-timeout-ms`, `--max-server-line-bytes`, `--allow-methods` (forwarded requests are audited and taint the session; `--no-taint-forwarded` turns the taint off), `--policy-sha256`. Full specification: `docs/auto-builder/PROXY-SPEC.md` (§9 is current). Exit codes: `0` clean shutdown (including a client that closes stdin first, even if the server dies at the same moment), `1` server exit/crash while the client is still connected, `2` bad flags/policy/store configuration, `3` server could not be started, `70` fatal error.
+Key flags: `--taint-tools` (retrieval tools whose use taints the session), `--list-mode hide|show`, `--require-pins` (recommended in production), `--forward-instructions` (server `instructions` are dropped by default), `--tool-timeout-ms`, `--max-server-line-bytes`, `--allow-methods` (forwarded requests are audited and taint the session; `--no-taint-forwarded` turns the taint off), `--policy-sha256`. Full specification: `docs/auto-builder/PROXY-SPEC.md` (§9 is current). Exit codes: `0` clean shutdown (including a client that closes stdin first, even if the server dies at the same moment), `1` server exit/crash while the client is still connected, `2` bad flags/policy/store configuration, `3` server could not be started, `70` fatal error.
 
 ### Deployment duties (the proxy is only enforcing if you do these)
 

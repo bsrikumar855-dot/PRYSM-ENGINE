@@ -48,6 +48,8 @@ const HANDLED_METHODS = new Set([
 ]);
 const HEX64 = /^[0-9a-fA-F]{64}$/;
 const LIST_FIELDS = ['name', 'title', 'description', 'inputSchema', 'outputSchema', 'annotations'];
+/** Longest server-supplied model-visible text field the proxy forwards (S-08). */
+const MAX_TEXT_FIELD = 4096;
 
 export type ProxyConfigErrorCode =
   | 'bad_option' | 'policy_unreadable' | 'policy_invalid' | 'policy_sha256_mismatch' | 'taint_tool_unknown'
@@ -85,6 +87,8 @@ export interface ProxyOptions {
   allowServerRequests?: string[];
   /** Accept a key file whose ACL/mode could not be restricted (default false: refuse to start; S-06). */
   allowUnprotectedKey?: boolean;
+  /** Forward the server's initialize `instructions` to the client (default false; S-08). */
+  forwardInstructions?: boolean;
   /** Taint the session when an allow-listed method returns a result (default true, fail-safe; S-04). */
   taintForwarded?: boolean;
   allowServerNotifications?: boolean;
@@ -215,6 +219,7 @@ export function createProxy(opts: ProxyOptions): ProxyHandle {
   const allowMethods = methodList(opts.allowMethods);
   const allowServerRequests = methodList(opts.allowServerRequests);
   const taintForwarded = opts.taintForwarded !== false;
+  const forwardInstructions = opts.forwardInstructions === true;
   if (allowMethods.size > 32 || allowServerRequests.size > 32) cfg('bad_option');
   const allowServerNotifications = opts.allowServerNotifications === true;
   const requirePins = opts.requirePins === true;
@@ -313,7 +318,7 @@ export function createProxy(opts: ProxyOptions): ProxyHandle {
           event: 'proxy_config', policy_mode: policy.mode, list_mode: listMode, require_pins: requirePins,
           tool_timeout_ms: toolTimeoutMs, taint_tools_n: taintSet.size, allow_methods: [...allowMethods],
           allow_server_requests: [...allowServerRequests], allow_server_notifications: allowServerNotifications,
-          taint_forwarded: taintForwarded,
+          taint_forwarded: taintForwarded, forward_instructions: forwardInstructions,
           provenance_args: [...provNames], scopes_n: hostCtx.scopes?.length ?? 0, user_set: hostCtx.userId !== undefined,
         },
       });
@@ -563,6 +568,7 @@ export function createProxy(opts: ProxyOptions): ProxyHandle {
     }
     if (truncatedN >= 0) proxyLine('proxy_tool_ignored', { reason: 'truncated', n: truncatedN });
     const ign = { bad_name: 0, duplicate: 0, schema_changed: 0, not_in_policy: 0, no_pin: 0 };
+    let capped = 0;
     for (const t of tools) {
       const nm = t['name'];
       if (typeof nm !== 'string' || !TOOL_NAME.test(nm)) { ign.bad_name++; continue; }
@@ -573,6 +579,12 @@ export function createProxy(opts: ProxyOptions): ProxyHandle {
       } catch { ign.bad_name++; continue; }
       const def: Msg = {};
       for (const f of LIST_FIELDS) if (Object.hasOwn(t, f)) def[f] = t[f];
+      // S-08: descriptions are model-visible text from the server; cap them (pins still cover the original text)
+      for (const f of ['title', 'description']) {
+        const v = def[f];
+        if (typeof v === 'string' && v.length > MAX_TEXT_FIELD) { def[f] = v.slice(0, MAX_TEXT_FIELD); capped++; }
+        else if (v !== undefined && typeof v !== 'string') { delete def[f]; capped++; }
+      }
       if (inPolicy(nm)) {
         const pin = policyTools[nm]?.schema_hash;
         if (pin === undefined && requirePins) { ign.no_pin++; continue; }
@@ -604,6 +616,7 @@ export function createProxy(opts: ProxyOptions): ProxyHandle {
       }
     }
     for (const [reason, n] of Object.entries(ign)) if (n > 0) proxyLine('proxy_tool_ignored', { reason, n });
+    if (capped > 0) proxyLine('proxy_tool_text_capped', { n: capped });
     listed = nextListed;
     exposedPolicy = nextExposed;
     schemaChanged = nextChanged;
@@ -720,7 +733,14 @@ export function createProxy(opts: ProxyOptions): ProxyHandle {
         const caps = r['capabilities'];
         const tools = isPlain(caps) ? caps['tools'] : undefined;
         const listChanged = isPlain(tools) && tools['listChanged'] === true;
-        respond(id, { ...r, capabilities: { tools: { listChanged } } });
+        // S-08: server `instructions` go straight into the client model's context; dropped unless the operator opts in
+        const { instructions, ...rest } = r;
+        if (instructions !== undefined && !forwardInstructions) proxyLine('proxy_instructions_dropped');
+        const out: Msg = { ...rest, capabilities: { tools: { listChanged } } };
+        if (instructions !== undefined && forwardInstructions && typeof instructions === 'string') {
+          out['instructions'] = instructions.slice(0, MAX_TEXT_FIELD);
+        }
+        respond(id, out);
       } else {
         // S-04: content returned by an allow-listed method is untrusted, like a tool result from a tainting tool
         if (taintForwarded) session.taint('forwarded:' + String(msg['method']));

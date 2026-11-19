@@ -202,7 +202,7 @@ test('9.13 proxy_config / proxy_client / tools_replaced rows carry posture and c
   assert.deepEqual(
     { ...cfg, policy_version: undefined },
     { event: 'proxy_config', policy_mode: 'enforce', list_mode: 'hide', require_pins: false, tool_timeout_ms: 60000, taint_tools_n: 1,
-      allow_methods: ['resources/list'], allow_server_requests: [], allow_server_notifications: false, taint_forwarded: true, provenance_args: [],
+      allow_methods: ['resources/list'], allow_server_requests: [], allow_server_notifications: false, taint_forwarded: true, forward_instructions: false, provenance_args: [],
       scopes_n: 2, user_set: true, policy_version: undefined });
   const cl = rows.find((o) => o['event'] === 'proxy_client') as Json;
   assert.equal(cl['name'], 'my-client'); assert.equal(cl['version'], '9.9');
