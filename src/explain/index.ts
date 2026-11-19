@@ -23,6 +23,12 @@ export const LEGACY_CAUSE = 'A deny rule matched. All matched rules, deny rules 
 
 const MARKER = '…+';
 
+/** Shown when a deny rule matched only because a value could not be interpreted (POLICY-SPEC 11, 14). */
+export const UNPARSEABLE_WHY =
+  'The value could not be interpreted safely (for example non-ASCII characters, percent-encoding, a backslash outside a ' +
+  'drive-letter path, or a reserved device name). Deny rules treat such values as a match so they cannot be bypassed; ' +
+  'this does not mean the value was actually inside the rule\u2019s path or domain.';
+
 const WHY: Readonly<Record<string, string>> = {
   permitted: 'A permit rule matched and no deny rule matched.',
   denied_by_rule: 'A deny rule matched.',
@@ -112,7 +118,18 @@ export function rowVerdict(row: RowLike, opts: { policy?: LoadedPolicy } = {}): 
     const ids = realRuleIds(row);
     return { verdict: `${head}. ${LEGACY_CAUSE} ${ids.length > 0 ? ids.join(', ') : 'none'}`, why, cause };
   }
-  if (cause.ids.length > 0) return { verdict: head + byRules(cause.ids) + '.', why, cause };
+  if (cause.ids.length > 0) {
+    const up = isObj(row.outcome) && Array.isArray(row.outcome['unparseable'])
+      ? (row.outcome['unparseable'] as unknown[]).filter((x): x is string => typeof x === 'string' && cause.ids.includes(x))
+      : [];
+    if (up.length > 0 && up.length === cause.ids.length) {
+      return {
+        verdict: `${head}: a value could not be interpreted, so deny ${up.length === 1 ? 'rule' : 'rules'} ${up.join(', ')} treated it as a match.`,
+        why: UNPARSEABLE_WHY, cause,
+      };
+    }
+    return { verdict: head + byRules(cause.ids) + '.', why, cause };
+  }
   const rc = row.reason_code;
   const because = rc !== null && Object.hasOwn(BECAUSE, rc) ? BECAUSE[rc] : undefined;
   return { verdict: because === undefined ? head + '.' : `${head} because ${because}.`, why, cause };

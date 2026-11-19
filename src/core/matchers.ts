@@ -44,9 +44,11 @@ interface CacheEntry {
 export interface EvalCtx {
   steps: number;
   readonly cache: Map<string, CacheEntry>;
+  /** Set when a deny predicate counted an unparseable value as a match (explanations only; never affects decisions). */
+  unparseableHit: boolean;
 }
 export function newEvalCtx(): EvalCtx {
-  return { steps: 0, cache: new Map() };
+  return { steps: 0, cache: new Map(), unparseableHit: false };
 }
 
 function charge(ctx: EvalCtx, n: number): void {
@@ -307,7 +309,10 @@ export function evalPredicate(p0: CompiledPredicate, value: ArgValue, effect: 'p
   // S-07 (POLICY-SPEC 14): a deny rule's path_within always folds case, so case variants cannot slip past it on
   // case-insensitive filesystems; permit rules keep the author's choice (stricter is the safe side for permits)
   const p = effect === 'deny' && p0.kind === 'path_within' && !p0.caseInsensitive ? { ...p0, root: p0.root.toLowerCase(), caseInsensitive: true } : p0; // compiled ci roots are lowercased
-  const hit = (t: Tri): boolean => (effect === 'deny' ? t !== 'no_match' : t === 'match');
+  const hit = (t: Tri): boolean => {
+    if (effect === 'deny' && t === 'unparseable') ctx.unparseableHit = true;
+    return effect === 'deny' ? t !== 'no_match' : t === 'match';
+  };
   if (Array.isArray(value)) {
     if (value.length === 0) return false;
     let any = false;

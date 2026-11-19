@@ -42,6 +42,8 @@ export interface Decision {
   readonly mode: PolicyMode;
   readonly request_digest: string | null;
   readonly trace: readonly TraceEntry[];
+  /** Deny rules that matched because a value could not be interpreted (unparseable counts as a match for deny). */
+  readonly matched_unparseable: readonly string[];
 }
 
 export interface Evaluation {
@@ -55,6 +57,7 @@ interface Extra {
   permit?: string[];
   reasons?: MatchedReason[];
   trace?: TraceEntry[];
+  unparseable?: string[];
 }
 
 function result(
@@ -74,6 +77,7 @@ function result(
     mode,
     request_digest: digest,
     trace: Object.freeze((x.trace ?? []).map((t) => Object.freeze(t))),
+    matched_unparseable: Object.freeze(x.unparseable ?? []),
   });
 }
 
@@ -136,15 +140,20 @@ function decideOnSnapshot(policy: CompiledPolicy, req: Request, digest: string):
   const deny: string[] = [];
   const permit: string[] = [];
   const reasons: MatchedReason[] = [];
+  const unparseable: string[] = [];
   const trace: TraceEntry[] = [];
   let taintedPermit = false;
   try {
     for (const rule of policy.rules) {
+      ec.unparseableHit = false;
       const failed = failingClause(rule, req, ec);
       trace.push({ rule: rule.id, matched: failed === null, why: failed === null ? 'all_conditions_met' : `no_match:${failed}` });
       if (failed !== null) continue;
       reasons.push({ id: rule.id, effect: rule.effect, reason_code: rule.reasonCode });
-      if (rule.effect === 'deny') deny.push(rule.id);
+      if (rule.effect === 'deny') {
+        deny.push(rule.id);
+        if (ec.unparseableHit) unparseable.push(rule.id);
+      }
       else {
         permit.push(rule.id);
         if (rule.sessionTainted === true) taintedPermit = true;
@@ -154,7 +163,7 @@ function decideOnSnapshot(policy: CompiledPolicy, req: Request, digest: string):
     if (e instanceof WorkBudgetExceeded) return result('deny', 'limit_exceeded', version, mode, digest);
     throw e;
   }
-  const x: Extra = { deny, permit, reasons, trace };
+  const x: Extra = { deny, permit, reasons, trace, unparseable };
   if (deny.length > 0) return result('deny', 'denied_by_rule', version, mode, digest, x);
   if (req.ctx.sessionTainted === true && tool.externalEffect) {
     if (taintedPermit) return result('permit', 'permitted', version, mode, digest, x);

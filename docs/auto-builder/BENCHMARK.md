@@ -42,7 +42,7 @@ Plus 128 policy-load cases: 128 of 128 agree. FN = an attack call the policy per
 | 298, 299, 300 | name that looks like an 8.3 short name, a colon in the name, a reserved device name (`con.csv`) | Windows-safety rules (§4) | documented deny-safe limitation |
 | 304 | a string with two `@` (comma-separated recipients) | email form check (§3) | documented limitation |
 
-Usability finding (open, backlog): for the six file reads in 295-300 the audit trail reports the block as caused by `file.deny-secrets`, because a value the path matcher cannot interpret counts as a match for deny rules (the safe design that closed a bypass in review). The decision is right but the explanation can mislead an operator; the explanation should say the value could not be interpreted.
+Usability finding (fixed in the production phase, DEC-46; explanations now say the value could not be interpreted): for the six file reads in 295-300 the audit trail reports the block as caused by `file.deny-secrets`, because a value the path matcher cannot interpret counts as a match for deny rules (the safe design that closed a bypass in review). The decision is right but the explanation can mislead an operator; the explanation should say the value could not be interpreted.
 
 ### 1.3 Independent second implementation (differential)
 A second implementation of POLICY-SPEC written without reading the production code, and a seeded random differential harness (valid and hostile policies and requests, mutated policies). Three full seeds, 100,000 decision cases and 5,000 valid plus 5,000 mutated policies per seed, reproduced by the lead with identical digests:

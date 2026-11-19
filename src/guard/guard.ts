@@ -461,6 +461,14 @@ export function createGuardWithAdmin(opts: CreateGuardOptions): { guard: Guard; 
     tool_result: { used: 0, dropped: 0, lineWritten: false },
   };
   let winStart = hr();
+  // M2-21 (AUDIT-SPEC 10): after a class budget is spent, a row whose signature (class, tool, reason, rules) is new in
+  // this window may still use a small novelty reserve, so a flood of identical denials cannot hide a different one.
+  const NOVELTY_RESERVE = 64;
+  const MAX_SIGNATURES = 4096;
+  const seenSig = new Set<string>();
+  let noveltyUsed = 0;
+  const signatureOf = (ev: NewEvent, cls: RowClass): string =>
+    cls + '|' + String(ev.tool ?? '') + '|' + String(ev.reason_code ?? '') + '|' + (Array.isArray(ev.rule_ids) ? ev.rule_ids.join(',') : '');
   const bestEffort = (ev: NewEvent, cls: RowClass): void => {
     try {
       const t = hr();
@@ -470,9 +478,16 @@ export function createGuardWithAdmin(opts: CreateGuardOptions): { guard: Guard; 
           c.used = 0;
           c.lineWritten = false;
         }
+        seenSig.clear();
+        noveltyUsed = 0;
       }
       const c = classes[cls];
-      if (c.used >= caps[cls]) {
+      const sig = signatureOf(ev, cls);
+      const isNew = !seenSig.has(sig);
+      if (isNew && seenSig.size < MAX_SIGNATURES) seenSig.add(sig);
+      const novelty = c.used >= caps[cls] && isNew && noveltyUsed < NOVELTY_RESERVE && cls !== 'tool_result';
+      if (novelty) noveltyUsed++;
+      if (c.used >= caps[cls] && !novelty) {
         c.dropped++;
         if (!c.lineWritten) {
           c.lineWritten = true;
@@ -480,7 +495,7 @@ export function createGuardWithAdmin(opts: CreateGuardOptions): { guard: Guard; 
         }
         return;
       }
-      c.used++;
+      if (!novelty) c.used++;
       // the drop counts (per class, when non-zero) ride on the next row that is actually written
       const pending: Partial<Record<RowClass, number>> = {};
       for (const k of Object.keys(classes) as RowClass[]) if (classes[k].dropped > 0) pending[k] = classes[k].dropped;
@@ -604,7 +619,11 @@ export function createGuardWithAdmin(opts: CreateGuardOptions): { guard: Guard; 
         latency_us,
         session_tainted: tainted ? 1 : 0,
         provenance_asserted: prov,
-        outcome: willExecute ? { deny_n: denyN, will_execute: true } : { deny_n: denyN },
+        outcome: {
+          deny_n: denyN,
+          ...(willExecute ? { will_execute: true } : {}),
+          ...(decision.matched_unparseable.length > 0 ? { unparseable: decision.matched_unparseable.slice(0, 16) } : {}),
+        },
       };
       ev = decisionEvent;
 

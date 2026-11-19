@@ -1,4 +1,4 @@
-# PRYSM audit store & guard specification v1.5 (normative; amended by later sections, see section 9 for the latest)
+# PRYSM audit store & guard specification v1.6 (normative; amended by later sections, see section 10 for the latest)
 
 Implements DEC-01 (in-process half), DEC-03, DEC-04, DEC-05, DEC-06 and SECURITY-REVIEW items P-02, P-03, P-07, P-08, P-10, P-16, P-19, P-21 and F-03. Consumes `src/core` (POLICY-SPEC v1.3). Files: `src/store/*.ts`, `src/guard/*.ts`. `src/core` must not import store or guard.
 
@@ -133,3 +133,7 @@ Decision rows written by the guard carry `outcome.deny_n` (integer): the number 
 - Every facet is bound to a named session, so `taintsSession` tools taint all later calls made through the same facet (S-05 for agent code).
 - Host ephemeral calls (`guard.call` without a session) that run a `taintsSession` tool write one sink line `{"prysm":"ephemeral_taint_dropped"}` per guard, because that taint cannot protect later calls.
 Tests: `test/guard/agent-facet.test.ts`.
+
+## 10. v1.6 amendment (DEC-46; closes M2-21 and the explain wording finding)
+**10.1 Novelty reserve.** Each best-effort row has a signature: class, tool, reason code and rule ids. Within one budget window, once a class budget is spent, a row whose signature has not been seen in the window may still be written from a shared novelty reserve of 64 rows per window (tool_result rows excluded). Repeats of a signature never use the reserve, and at most 4096 signatures are tracked per window. A flood of identical denials therefore cannot hide a later denial of a different kind, and the total number of rows per window stays bounded (sum of class budgets plus 64). Drop counts (`dropped_before`) are unchanged. Tests: `test/guard/m2-21.test.ts`.
+**10.2 Uninterpretable values.** A decision row's outcome carries `unparseable: [ruleId...]` (at most 16) when a deny rule matched because a value could not be interpreted (POLICY-SPEC sections 11 and 14). Explanations (CLI `explain` and the report) then say that a value could not be interpreted instead of naming the rule as if the value were inside its path or domain. The core `Decision` gains `matched_unparseable`; it never affects effect, reason or matched ids. Tests: `test/guard/unparseable-explain.test.ts`.

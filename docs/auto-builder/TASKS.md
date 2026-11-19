@@ -62,7 +62,7 @@ Budget: 5 implement→verify passes per milestone, 3 attempts per failing check.
 | T-1.4 | Adversarial corpus v1 (labels by qa-engineer) | M1 | T-1.1 spec | corpus ≥ start | `npm run corpus` | done (gate passed) | qa-engineer proposes, lead writes | `eval/` |
 | T-2.x | Store, chain, guard, redaction, taint, fault-injection | M2 | M1 | A-01,05,06,13,16,19 | tests | done (gate passed) | backend-engineer | `src/store, src/guard` |
 | T-3.x | MCP proxy + e2e | M3 | M2 | A-18 | e2e | done (gate passed) | backend-engineer | `src/proxy` |
-| T-4.5 | Coalesce repeated deny rows / per-session budgets (M2-21): NOT DONE, carried to backlog, listed as a known limit | M6 (backlog) | M2 | after deny flood a distinct rule-denied call is still recorded | tests | pending | backend-engineer | `src/guard` |
+| T-4.5 | Coalesce repeated deny rows / per-session budgets (M2-21): done as a novelty reserve (DEC-46) | M6 (backlog) | M2 | after deny flood a distinct rule-denied call is still recorded | tests | done (production phase) | backend-engineer | `src/guard` |
 | T-6.5 | ACL principal full-name/SID compare (M2-22a); tools_replaced identity (M2-22b) | M6 | M2 | tests | tests | pending | backend-engineer | `src/store` |
 | T-4.6 (done in M4 pass 2) | M4 consumers filter policy_activate rows on outcome.event (proxy_config/proxy_client/tools_replaced); report shows proxy posture | M4 | M3 | report lists posture rows | tests | done (gate passed) | frontend-engineer | `src/report` |
 | T-6.7 (cause logic done: src/explain shared by CLI and report) | remaining duplication: match summaries/predicate text between CLI and report | M6 | M4 | – | review | partial | backend-engineer | `src/explain` |
