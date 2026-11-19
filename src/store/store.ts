@@ -445,8 +445,14 @@ export function isWellKnownGroup(name: string): boolean {
 }
 
 /**
- * Evaluate raw `icacls <file>` output: true only if exactly one principal entry is present, it is the
- * current user (not a well-known group), and inheritance is removed (no inherited `(I)` entry).
+ * The two principals that can read any file on Windows anyway (SYSTEM; Administrators can take ownership), so an
+ * explicit entry for them does not widen who can read the key (DEC-49). Exact names only; nothing else is accepted.
+ */
+const PRIVILEGED = new Set(['nt authority\\system', 'builtin\\administrators']);
+
+/**
+ * Evaluate raw `icacls <file>` output: true only if exactly one entry is the current user (not a well-known group),
+ * every other entry is SYSTEM or BUILTIN\\Administrators, and inheritance is removed (no inherited `(I)` entry).
  */
 export function evaluateAcl(output: string, keyPath: string, user: string): boolean {
   if (typeof output !== 'string' || typeof user !== 'string' || user === '' || isWellKnownGroup(user)) return false;
@@ -464,13 +470,15 @@ export function evaluateAcl(output: string, keyPath: string, user: string): bool
     if (m === null) return false; // anything unparseable is not trusted
     entries.push({ principal: (m[1] as string).trim(), rights: m[2] as string });
   }
-  if (entries.length !== 1) return false;
-  const e = entries[0] as { principal: string; rights: string };
-  if (isWellKnownGroup(e.principal)) return false;
-  if (/\(I\)/.test(e.rights)) return false; // inherited entry => inheritance not removed
+  if (entries.some((x) => /\(I\)/.test(x.rights))) return false; // inherited entry => inheritance not removed
   const u = user.toLowerCase();
-  const p = e.principal.toLowerCase();
-  return p === u || p.endsWith('\\' + u);
+  const isUser = (x: { principal: string }): boolean => {
+    const p = x.principal.toLowerCase();
+    return !isWellKnownGroup(x.principal) && (p === u || p.endsWith('\\' + u));
+  };
+  const users = entries.filter(isUser);
+  const others = entries.filter((x) => !isUser(x));
+  return users.length === 1 && others.every((x) => PRIVILEGED.has(x.principal.toLowerCase()));
 }
 
 function currentUser(): string | null {

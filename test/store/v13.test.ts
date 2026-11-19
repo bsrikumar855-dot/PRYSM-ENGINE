@@ -105,11 +105,19 @@ const ME = userInfo().username;
 const aclOut = (kp: string, lines: string[]) =>
   [kp + ' ' + lines[0], ...lines.slice(1).map((l) => '                 ' + l), '', 'Successfully processed 1 files; Failed processing 0 files', ''].join('\r\n');
 
-test('evaluateAcl: exactly one principal, the current user, inheritance removed', () => {
+test('evaluateAcl: exactly one entry for the current user, others only SYSTEM/Administrators, inheritance removed', () => {
   const kp = 'C:\\keys\\prysm.key';
   assert.equal(evaluateAcl(aclOut(kp, ['HOST\\alice:(R,W)']), kp, 'alice'), true);
   assert.equal(evaluateAcl(aclOut(kp, ['alice:(R,W)']), kp, 'ALICE'), true, 'case-insensitive');
-  assert.equal(evaluateAcl(aclOut(kp, ['HOST\\alice:(R,W)', 'NT AUTHORITY\\SYSTEM:(F)']), kp, 'alice'), false, 'two principals');
+  // DEC-49: SYSTEM and Administrators can read any file anyway (seen as explicit entries on GitHub's Windows runners)
+  assert.equal(evaluateAcl(aclOut(kp, ['NT AUTHORITY\\SYSTEM:(F)', 'BUILTIN\\Administrators:(F)', 'HOST\\alice:(R,W)']), kp, 'alice'), true, 'privileged principals');
+  assert.equal(evaluateAcl(aclOut(kp, ['HOST\\alice:(R,W)', 'BUILTIN\\Users:(R)']), kp, 'alice'), false, 'Users is not privileged');
+  assert.equal(evaluateAcl(aclOut(kp, ['HOST\\alice:(R,W)', 'Everyone:(R)']), kp, 'alice'), false, 'Everyone');
+  assert.equal(evaluateAcl(aclOut(kp, ['HOST\\alice:(R,W)', 'NT AUTHORITY\\Authenticated Users:(R)']), kp, 'alice'), false, 'Authenticated Users');
+  assert.equal(evaluateAcl(aclOut(kp, ['HOST\\alice:(R,W)', 'HOST\\bob:(R)']), kp, 'alice'), false, 'another user as well');
+  assert.equal(evaluateAcl(aclOut(kp, ['HOST\\alice:(R,W)', 'NT AUTHORITY\\SYSTEM:(I)(F)']), kp, 'alice'), false, 'inherited privileged entry');
+  assert.equal(evaluateAcl(aclOut(kp, ['NT AUTHORITY\\SYSTEM:(F)', 'BUILTIN\\Administrators:(F)']), kp, 'alice'), false, 'no entry for the user');
+  assert.equal(evaluateAcl(aclOut(kp, ['HOST\\alice:(R,W)', 'OTHER\\alice:(R)']), kp, 'alice'), false, 'two user entries');
   assert.equal(evaluateAcl(aclOut(kp, ['HOST\\alice:(I)(F)']), kp, 'alice'), false, 'inherited entry');
   assert.equal(evaluateAcl(aclOut(kp, ['HOST\\someone:(R,W)']), kp, 'alice'), false, 'another user');
   assert.equal(evaluateAcl(aclOut(kp, ['Everyone:(R,W)']), kp, 'Everyone'), false, 'a group can never be the grantee');

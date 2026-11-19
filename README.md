@@ -2,7 +2,7 @@
 
 **PRYSM** is a deterministic, runtime policy gate for AI agent tool calls. It sits between an agent and its tools, decides allow/deny from a versioned policy (never from prompt text), and records a privacy-aware, hash-chained audit trail.
 
-> **Status: MVP, not released.** Milestones M0–M5 are complete (M6, final review and delivery report, is in progress). Measured results, with their limits, are in `docs/auto-builder/BENCHMARK.md`; the headline numbers are *regression pins on a corpus whose labels were revised after the spec settled* and a benign set with 16 of 306 known false positives, not detection rates against real attackers. Two of four latency hypotheses were missed (decision p99 with 8 KiB strings; guard permit-path p99 above 10 ms with synchronous durable audit). See `docs/auto-builder/TASKS.md` for the roadmap and evidence table.
+> **Status: MVP delivered (M0–M6); production hardening in progress, not released.** The open security findings from the final review are fixed or mitigated (DEC-43 to DEC-48, pending independent re-review) and CI runs on Ubuntu, Windows and macOS. Measured results, with their limits, are in `docs/auto-builder/BENCHMARK.md`; the headline numbers are *regression pins on a corpus whose labels were revised after the spec settled* and a benign set with 16 of 306 known false positives, not detection rates against real attackers. Two of four latency hypotheses were missed (decision p99 with 8 KiB strings; guard permit-path p99 above 10 ms with synchronous durable audit). See `docs/auto-builder/TASKS.md` for the roadmap and evidence table.
 
 ## What it does (and does not)
 

@@ -4,13 +4,13 @@
 
 | Field | Value |
 |---|---|
-| Current phase | Phase 5 implementation (Checkpoint A approved: "Approve, mock only", DEC-15/16) |
-| Current milestone | M6 final reviews done; delivery report written (DELIVERY-REPORT.md). Remaining: owner decisions on S-02 and history rewrite |
-| Pass for this milestone (budget: 5 by default; edit here) | M6 complete pending owner review (DEC-41) |
+| Current phase | Production hardening (owner request 2026-11-19 after the MVP review; DEC-43 onwards) |
+| Current milestone | P1 hardening: S-02, S-04, S-03, S-07, M2-21, explain wording, S-06, S-08, S-09, M5-05 fixed or mitigated (DEC-43..48); CI matrix added (Ubuntu, Windows, macOS). Remaining: CI green on all three, independent re-review of P1, v0.1.0 |
+| Pass for this milestone (budget: 5 by default; edit here) | P1 pass 1 (implementation), CI pass in progress |
 | Total passes, all milestones | 14 (M0-M5) |
 | Failing checks → attempts (one line per distinct check; max 3 each) | F-01..F-09: closed except F-05(glob only)/F-07 partial; N-01 deny/unparseable: 1 attempt; N-02 metering: 1; N-03 mutable toolInfo: 1; N-04 hidden chars: 2 (F-07 then N-04) |
-| Last verified commit | 7b9375c (M5 gate; M6 doc and review commits follow) |
-| Independent review done for current milestone? | M5: yes (critical-reviewer honesty audit of benchmarks, security-engineer on sample app, bench/eval/diff and tracked tree). M6: final critical, QA and security reviews launched; results recorded in DECISIONS/SECURITY-REVIEW. Earlier exceptions: M4 pass-4 fixes verified by lead only; QA did not run report and --out scenarios in M4 |
+| Last verified commit | see `git log`; every P1 commit ran typecheck, the full suite and the corpus locally before push |
+| Independent review done for current milestone? | P1: not yet (planned before v0.1.0). M0-M6: see the M6 row and SECURITY-REVIEW.md |
 
 ## Milestone gates
 
@@ -72,7 +72,7 @@ Budget: 5 implement→verify passes per milestone, 3 attempts per failing check.
 | T-6.x | Docs, live viewer (optional), final reviews | M6 | M5 | A-09,10,11,14 | review | pending | lead | `docs/, README` |
 
 ## Blockers
-None. Checkpoint A approved ("Approve, mock only", DEC-15/16). M6 final reviews and the delivery report are in progress.
+None. P1 needs CI green on Windows (key-file ACL check on the runner, under diagnosis) and an independent re-review.
 
 ## Deferred / out of scope (needs user approval)
 Layer 2 enforcement, approvals/quarantine/escalation, governance reports/inventory UI, learned risk scoring, hosted multi-tenant, YAML policies, AgentDojo subset, Cedar/OPA runtime.

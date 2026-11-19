@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync, writeFileSync, chmodSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { openStore, StoreError } from '../../src/store/index.ts';
+import { openStore, StoreError, evaluateAcl } from '../../src/store/index.ts';
 import { cleanup, tmpDir, dbPath } from '../support/tmp.ts';
 import { makeEnv, startLib } from '../support/proxy-kit.ts';
 
@@ -67,4 +67,12 @@ test('S-06: the proxy refuses to start on an unprotected key file unless --allow
   const l = startLib({ env, proxy: { ...viaKeyFile, allowUnprotectedKey: true } });
   l.client.end();
   return l.done.then((code) => assert.equal(code, 0));
+});
+
+test('S-06 / DEC-49: the icacls output captured on a GitHub Windows runner is judged protected', () => {
+  // verbatim from CI run 44552941737 (temporary diagnostic step): SYSTEM and Administrators are explicit entries there
+  const keyPath = 'C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\prysm-diag-jZ6Ufm\\k.key';
+  const output = 'C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\prysm-diag-jZ6Ufm\\k.key NT AUTHORITY\\SYSTEM:(F)\n                                                             BUILTIN\\Administrators:(F)\n                                                             runnervmm7ud1\\runneradmin:(R,W)\n\nSuccessfully processed 1 files; Failed processing 0 files\r\n';
+  assert.equal(evaluateAcl(output, keyPath, 'runneradmin'), true);
+  assert.equal(evaluateAcl(output.replace('runneradmin:(R,W)', 'runneradmin:(R,W)' + '\\n   BUILTIN\\\\Users:(R)'), keyPath, 'runneradmin'), false);
 });
