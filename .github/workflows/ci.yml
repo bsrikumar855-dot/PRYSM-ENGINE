@@ -30,6 +30,21 @@ jobs:
           cache: npm
       - name: Install (no install scripts)
         run: npm ci --ignore-scripts
+      - name: Diagnose key-file protection (Windows, temporary)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          node -e "
+          const os=require('os'),fs=require('fs'),path=require('path'),cp=require('child_process');
+          const d=fs.mkdtempSync(path.join(os.tmpdir(),'prysm-diag-')); const f=path.join(d,'k.key');
+          fs.writeFileSync(f,'',{flag:'wx',mode:0o600});
+          const u=os.userInfo().username;
+          console.log('user=',JSON.stringify(u),'tmpdir=',JSON.stringify(os.tmpdir()),'file=',JSON.stringify(f));
+          const g=cp.spawnSync('icacls',[f,'/inheritance:r','/grant:r',u+':(R,W)'],{encoding:'utf8'});
+          console.log('grant status',g.status,JSON.stringify(g.stdout),JSON.stringify(g.stderr));
+          const r=cp.spawnSync('icacls',[f],{encoding:'utf8'});
+          console.log('read status',r.status); console.log(JSON.stringify(r.stdout));
+          "
       - name: Typecheck
         run: npm run typecheck
       - name: Test suite

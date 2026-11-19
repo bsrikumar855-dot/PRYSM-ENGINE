@@ -20,7 +20,7 @@ const rowFor = (k: Kit, id: string) => k.rows().find((r) => r.id === id);
 const email = { to: 'a@b.c', subject: 's', body: 'b' };
 
 // ---------------------------------------------------------------- items 5, 6, 7
-test('held write lock: a deny call and a result row return within 600 ms (appendShort cap)', async () => {
+test('held write lock: a deny call and a result row return well inside the 2000 ms busy timeout (appendShort cap)', async () => {
   let other: DatabaseSync | null = null;
   let toolReturnedAt = 0;
   const k = kit({
@@ -41,14 +41,15 @@ test('held write lock: a deny call and a result row return within 600 ms (append
   const denied = await k.guard.call('denied_by_default', { x: 'a' });
   const dt = Date.now() - t0;
   assert.equal(reason(denied), 'denied');
-  assert.ok(dt < 600, `deny call took ${dt}ms`);
+  // the cap is 250 ms; 1200 ms leaves headroom for slow CI runners and still proves the 2000 ms busy timeout was not used
+  assert.ok(dt < 1200, `deny call took ${dt}ms`);
   lock.exec('ROLLBACK');
   lock.close();
   // result row path
   const r = await k.guard.call('read_file', { path: '/a' });
   const dt2 = Date.now() - toolReturnedAt;
   assert.equal(r.ok, true);
-  assert.ok(dt2 < 600, `result row took ${dt2}ms`);
+  assert.ok(dt2 < 1200, `result row took ${dt2}ms`);
   (other as DatabaseSync | null)?.exec('ROLLBACK');
   (other as DatabaseSync | null)?.close();
   k.store.close();

@@ -278,7 +278,21 @@ export function createProxy(opts: ProxyOptions): ProxyHandle {
   const sink = (line: string): void => {
     try { stderr.write(line + '\n'); } catch { /* the sink must never change the outcome */ }
   };
+  // S-09: lines a hostile server or client can trigger at will are limited to 20 per kind per minute; the number
+  // suppressed is reported once the window rolls over, so the evidence is kept as a count.
+  const NOISY = new Set(['proxy_orphan_response', 'proxy_server_request_refused']);
+  const noisy = new Map<string, { start: number; n: number; suppressed: number }>();
   const proxyLine = (kind: string, fields: Record<string, string | number | null> = {}): void => {
+    if (NOISY.has(kind)) {
+      const now = Date.now();
+      let w = noisy.get(kind);
+      if (w === undefined || now - w.start >= 60_000) {
+        if (w !== undefined && w.suppressed > 0) sink(JSON.stringify({ prysm: 'proxy_lines_suppressed', kind, n: w.suppressed }));
+        w = { start: now, n: 0, suppressed: 0 };
+        noisy.set(kind, w);
+      }
+      if (++w.n > 20) { w.suppressed++; return; }
+    }
     sink(JSON.stringify({ prysm: kind, ...fields }));
   };
 

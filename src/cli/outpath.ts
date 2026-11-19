@@ -1,7 +1,7 @@
 // Safe output files for `report --out` and `anchor --out` (REPORT-SPEC §4.1): refuse protected inputs, links, devices,
 // NTFS streams and non-regular files; write a temp file in the same directory, then rename. --force never overrides
 // the protected-path or link refusals.
-import { closeSync, lstatSync, openSync, readSync, realpathSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import { closeSync, lstatSync, openSync, readdirSync, readSync, realpathSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { basename, dirname, join, resolve } from 'node:path';
 import { CliExit } from './files.ts';
@@ -87,8 +87,29 @@ export function fileStartsWith(path: string, start: string): boolean {
   }
 }
 
+/**
+ * S-09: removes `.<name>.tmp-<12 hex>` files for this target older than 10 minutes (a crashed earlier write). Only
+ * regular files with exactly our naming pattern are touched; anything else is left alone. Best effort.
+ */
+function sweepStaleTemps(abs: string): void {
+  try {
+    const dir = dirname(abs);
+    const re = new RegExp('^\\.' + basename(abs).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\.tmp-[0-9a-f]{12}$');
+    const cutoff = Date.now() - 10 * 60_000;
+    for (const f of readdirSync(dir)) {
+      if (!re.test(f)) continue;
+      const p = join(dir, f);
+      try {
+        const st = lstatSync(p);
+        if (st.isFile() && st.mtimeMs < cutoff) unlinkSync(p);
+      } catch { /* ignore */ }
+    }
+  } catch { /* best effort */ }
+}
+
 /** Temp file in the same directory + atomic rename. */
 export function writeAtomic(abs: string, data: string): void {
+  sweepStaleTemps(abs);
   const tmp = join(dirname(abs), `.${basename(abs)}.tmp-${randomBytes(6).toString('hex')}`);
   try {
     writeFileSync(tmp, data, { flag: 'wx' });
