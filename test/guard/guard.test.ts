@@ -758,7 +758,7 @@ test('policy_activate: durable, once per version+mode, fields per spec, creation
 
 test('public API surface: only call/session/close; tool functions are not exposed; creation validation', () => {
   const k = kit();
-  assert.deepEqual(Object.keys(k.guard).sort(), ['call', 'close', 'session']);
+  assert.deepEqual(Object.keys(k.guard).sort(), ['call', 'close', 'forAgent', 'session']);
   assert.ok(Object.isFrozen(k.guard));
   const dump = JSON.stringify(k.guard, (_, v) => (typeof v === 'function' ? 'fn' : v));
   assert.ok(!dump.includes('read_file'));

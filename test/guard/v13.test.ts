@@ -71,7 +71,7 @@ test('the single maxBestEffortRowsPerWindow option no longer exists', () => {
   const opts = { maxBestEffortRowsPerWindow: 1 } as Record<string, unknown>;
   // not part of the options type: it is simply ignored (the three class budgets apply)
   const g = createGuard({ policy: k.policy, store: k.store, agentId: 'a', tools: defaultTools({}), secondarySink: () => {}, ...(opts as object) });
-  assert.deepEqual(Object.keys(g).sort(), ['call', 'close', 'session']);
+  assert.deepEqual(Object.keys(g).sort(), ['call', 'close', 'forAgent', 'session']);
   k.store.close();
 });
 
@@ -134,12 +134,12 @@ test('taintsSession taint on an evicted handle is not lost', async () => {
 test('Guard has no setTools; createGuard returns only the guard; createGuardWithAdmin returns {guard, admin}', () => {
   const k = kit();
   const g = createGuard({ policy: k.policy, store: k.store, agentId: 'a', tools: defaultTools({}), secondarySink: () => {} });
-  assert.deepEqual(Object.keys(g).sort(), ['call', 'close', 'session']);
+  assert.deepEqual(Object.keys(g).sort(), ['call', 'close', 'forAgent', 'session']);
   assert.equal((g as unknown as Record<string, unknown>)['setTools'], undefined);
   assert.equal((g as unknown as Record<string, unknown>)['admin'], undefined);
   const both = createGuardWithAdmin({ policy: k.policy, store: k.store, agentId: 'a', tools: defaultTools({}), secondarySink: () => {} });
   assert.deepEqual(Object.keys(both).sort(), ['admin', 'guard']);
-  assert.deepEqual(Object.keys(both.guard).sort(), ['call', 'close', 'session']);
+  assert.deepEqual(Object.keys(both.guard).sort(), ['call', 'close', 'forAgent', 'session']);
   assert.deepEqual(Object.keys(both.admin), ['setTools', 'denyUnexposed']);
   assert.ok(Object.isFrozen(both.admin) && Object.isFrozen(both.guard));
   k.store.close();

@@ -61,3 +61,6 @@ Three independent whole-project reviews (critical-reviewer, qa-engineer, securit
 
 ## DEC-42 Delivery accepted by owner
 Owner accepted delivery at 28bb8c2 with S-02 (guard.call trusts caller ctx), S-03..S-09, M2-21, M5-05 and the history/username question left open and disclosed in DELIVERY-REPORT.md. Reopening S-02 (host-only context facet) is the recommended first follow-up.
+
+## DEC-43 Agent facet separates host trust from agent calls (production phase, S-02)
+`guard.call(tool, args, ctx)` trusted caller-supplied scopes, user and provenance, so untrusted code holding the guard could grant itself a scope (S-02, Medium). Decision: keep `Guard` as the host API (the proxy and existing hosts are unchanged) and add `guard.forAgent(binding)`, the only object to hand to agent code. Identity is bound by the host; the agent may only add taint. Alternatives rejected: (a) removing `ctx` from `Guard.call` breaks every host and the proxy without improving the host path; (b) a global "trust context" flag is easy to misconfigure. The sample application now uses the facet. AUDIT-SPEC v1.5 section 9. Independent re-review pending.

@@ -1,4 +1,4 @@
-# PRYSM audit store & guard specification v1.4 (normative; amended by later sections, see section 8 for the latest)
+# PRYSM audit store & guard specification v1.5 (normative; amended by later sections, see section 9 for the latest)
 
 Implements DEC-01 (in-process half), DEC-03, DEC-04, DEC-05, DEC-06 and SECURITY-REVIEW items P-02, P-03, P-07, P-08, P-10, P-16, P-19, P-21 and F-03. Consumes `src/core` (POLICY-SPEC v1.3). Files: `src/store/*.ts`, `src/guard/*.ts`. `src/core` must not import store or guard.
 
@@ -124,3 +124,12 @@ Decision rows written by the guard carry `outcome.deny_n` (integer): the number 
 
 ## 8. v1.4 amendment (DEC-39; found by the M5 benchmark audit)
 **Result rows of executed permits are not rate-limited.** The M2-12 budgets (pre-evaluate, policy-deny, tool_result; §6.3) stop an agent from drowning evidence of *denied or invalid* attempts. A `tool_result` row, however, exists 1:1 for a permit decision whose durable row is already written and is never rate-limited, so metering result rows adds no protection and, above the budget, leaves permitted calls without outcomes (spurious `outcome_unknown` warnings, understated audit cost). Therefore: the guard writes the `tool_result` row for every executed call (at most one per decision) outside the `tool_result` budget; it stays **best-effort** (short busy timeout, circuit breaker, sink line on failure) and keeps the `maxResultRowsPerWindow` option name only as an optional hard ceiling that defaults to **unlimited** (`Infinity`); the pre-evaluate and policy-deny budgets are unchanged. `dropped_before` accounting for the remaining classes is unchanged. Tests: 3 000 sequential permitted calls produce 3 000 result rows and no `outcome_unknown`; the pre-evaluate and policy-deny flood tests of M2-12 still pass; a configured finite `maxResultRowsPerWindow` still drops and counts excess result rows.
+
+## 9. v1.5 amendment (DEC-43; closes S-02, mitigates S-05)
+**Host and agent facets are separate.** `Guard` (`call`, `session`, `close`) and `GuardAdmin` are HOST-ONLY: `call` and `session().call` trust the `ctx` they receive. Untrusted agent code receives `guard.forAgent(binding)`, a frozen object with exactly `sessionId`, `tainted` and `call(tool, args, opts?)`.
+- `binding` is fixed by the host at creation: `sessionId?`, `userId?`, `scopes?` (copied, so later mutation of the caller's array has no effect), `provenance?(tool, argsCopy)`. Unknown keys or wrong types throw `TypeError`; a bad `sessionId` throws `GuardError('invalid_session_id')`.
+- The agent's `opts` may contain only `sessionTainted: true`. Any other key or value (including `scopes`, `userId`, `provenance`, `sessionTainted: false`) is denied as `invalid_request`, audited through the pre-evaluate budget, and the tool never runs.
+- `provenance` is a synchronous host callback that receives a detached `structuredClone` of the arguments. If it throws, returns a non-object or returns labels that are not `string[]`, the call is denied as `invalid_request` (fail closed). Labels for an argument the tool does not declare are `invalid_request` (POLICY-SPEC rule unchanged).
+- Every facet is bound to a named session, so `taintsSession` tools taint all later calls made through the same facet (S-05 for agent code).
+- Host ephemeral calls (`guard.call` without a session) that run a `taintsSession` tool write one sink line `{"prysm":"ephemeral_taint_dropped"}` per guard, because that taint cannot protect later calls.
+Tests: `test/guard/agent-facet.test.ts`.

@@ -10,7 +10,7 @@ import { createGuard } from '../../src/guard/index.ts';
 import type { GuardSession, ToolRegistryInput } from '../../src/guard/index.ts';
 import { StoreError, openStore } from '../../src/store/index.ts';
 import type { Store, StoredEvent } from '../../src/store/index.ts';
-import { directExecutor, guardExecutor, injectedCall, runAgent, scriptedModel } from './agent.ts';
+import { agentFacet, directExecutor, guardExecutor, injectedCall, runAgent, scriptedModel } from './agent.ts';
 import type { Executor, Step, Turn } from './agent.ts';
 import { startDocsServer } from './docs-server.ts';
 import type { DocsServer } from './docs-server.ts';
@@ -152,7 +152,7 @@ async function withBackend(
     });
     const session = guard.session(`${opts.label}-${++lab.n}`);
     try {
-      await body({ exec: guardExecutor(session, { userId: USER_ID, scopes: SCOPES, userAddresses }), session });
+      await body({ exec: guardExecutor(agentFacet(guard, session.id, { userId: USER_ID, scopes: SCOPES, userAddresses })), session });
     } finally {
       guard.close();
     }
@@ -403,7 +403,7 @@ export async function scenario6(lab: Lab): Promise<ScenarioResult> {
     tools: registryFor(makeTools(w, lab.docs.port)), secondarySink: (l) => { lab.sink.push(l); },
   });
   const session = guard.session('s6-' + String(++lab.n));
-  const exec = guardExecutor(session, { userId: USER_ID, scopes: SCOPES, userAddresses: ['customer@corp.com'] });
+  const exec = guardExecutor(agentFacet(guard, session.id, { userId: USER_ID, scopes: SCOPES, userAddresses: ['customer@corp.com'] }));
   const headBefore = lab.store.head()?.seq ?? 0;
   const sinkBefore = lab.sink.length;
   let turns: Turn[] = [];

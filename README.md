@@ -46,13 +46,15 @@ const guard = createGuard({
   tools: { search_docs: async (args) => /* your tool */ ({ ok: true }) },
 });
 
-const r = await guard.call('search_docs', { query: 'hello' });
+// host code binds identity; agent code receives only `agent`
+const agent = guard.forAgent({ sessionId: 'chat-42', userId: 'u-7', scopes: ['support'] });
+const r = await agent.call('search_docs', { query: 'hello' });
 // r = { ok: true, value, decision_id }
 //   | { ok: false, blocked: true, decision_id, reason_code: 'denied'|'unknown_tool'|'invalid_request'|'unavailable' }
 //   | { ok: false, blocked: false, decision_id, error: 'tool_error'|'tool_timeout' }
 ```
 
-**Trust boundary:** `guard.call(tool, args, ctx)` accepts `scopes`, `userId` and `provenance` in `ctx` and trusts them (they are host-asserted). Untrusted agent code must not hold the raw guard; give it a wrapper that fixes `ctx`, or use the proxy, where these come from host flags. Calls without a session use an ephemeral state, so use sessions if you rely on taint. The tool function receives the guard's frozen, normalized snapshot of the arguments, never the caller's object. The agent-facing denial contains no rule ids, policy version or argument values; those are in the audit store only.
+**Trust boundary:** the `Guard` object is host-only: `guard.call(tool, args, ctx)` trusts the `scopes`, `userId` and `provenance` in `ctx`. Give untrusted agent code only `guard.forAgent({ sessionId, userId, scopes, provenance })`: identity is fixed by the host, the agent's `call(tool, args)` cannot add scopes or provenance (it may only mark its own call tainted), and the facet is session-bound so taint sticks. See AUDIT-SPEC section 9. The tool function receives the guard's frozen, normalized snapshot of the arguments, never the caller's object. The agent-facing denial contains no rule ids, policy version or argument values; those are in the audit store only.
 
 A policy is strict JSON: default deny, `deny` beats `permit`, no priorities. See `docs/auto-builder/POLICY-SPEC.md` and the example `eval/policies/support-agent.policy.json`.
 

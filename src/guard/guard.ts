@@ -55,16 +55,51 @@ export interface GuardSession {
   close(): void;
 }
 
+/**
+ * Identity the HOST binds to an agent facet (DEC-43). Nothing here can be changed by the agent: the agent-facing
+ * `call` accepts no identity, scopes or provenance of its own.
+ */
+export interface AgentBinding {
+  /** Session the facet is bound to (default: a new random id). Taint on it is sticky. */
+  sessionId?: string;
+  userId?: string;
+  scopes?: string[];
+  /**
+   * Host callback that labels where argument values came from, for one call. It receives the tool name and a detached
+   * copy of the arguments, must be synchronous, and must return `Record<argName, label[]>` or undefined. If it throws or
+   * returns anything else the call is denied (`invalid_request`).
+   */
+  provenance?: (tool: string, args: unknown) => Record<string, string[]> | undefined;
+}
+
+/** The only option an agent may pass: it can make its own call stricter (taint), never more privileged. */
+export interface AgentCallOptions {
+  sessionTainted?: true;
+}
+
+/** Agent-facing facet: safe to hand to untrusted agent code (DEC-43). */
+export interface AgentGuard {
+  readonly sessionId: string;
+  readonly tainted: boolean;
+  call(tool: string, args: unknown, opts?: AgentCallOptions): Promise<GuardResult>;
+}
+
+/**
+ * HOST-ONLY. `call` and `session().call` trust the `ctx` they receive (user, scopes, provenance), so code that holds
+ * this object can grant itself privileges. Give untrusted agent code `guard.forAgent(binding)` instead (DEC-43).
+ */
 export interface Guard {
   call(tool: string, args: unknown, ctx?: CallContext): Promise<GuardResult>;
   /** The same id returns the same session object (taint cannot be shed by re-opening). */
   session(sessionId?: string): GuardSession;
   /** Stops the guard (later calls blocked `unavailable`), aborts in-flight tool signals, writes the anchor line. */
   close(): void;
+  /** Returns an agent-facing facet whose identity is fixed by the host (see AgentBinding). Throws TypeError on a bad binding. */
+  forAgent(binding?: AgentBinding): AgentGuard;
 }
 
 /**
- * Host-only facet. Whoever holds this object is trusted: give agent code only `guard.call` / `guard.session`.
+ * Host-only facet. Whoever holds this object is trusted: give agent code only `guard.forAgent(...)`.
  */
 export interface GuardAdmin {
   /**
@@ -405,6 +440,7 @@ export function createGuardWithAdmin(opts: CreateGuardOptions): { guard: Guard; 
   };
 
   let closed = false;
+  let warnedEphemeralTaint = false;
   let counter = 0;
   let failOpenStreak = 0;
   const inflight = new Set<AbortController>();
@@ -649,7 +685,14 @@ export function createGuardWithAdmin(opts: CreateGuardOptions): { guard: Guard; 
       inflight.delete(ac);
     }
     // Taint synchronously as soon as the tool resolves (before the result row and before returning).
-    if (status === 'ok' && run.taintsSession) markTainted(sess);
+    if (status === 'ok' && run.taintsSession) {
+      markTainted(sess);
+      if (sess.ephemeral && !warnedEphemeralTaint) {
+        // S-05: a taint on a per-call (ephemeral) session protects nothing afterwards; say so once
+        warnedEphemeralTaint = true;
+        writeSink(sinkLine({ prysm: 'ephemeral_taint_dropped', tool: safeTool ?? '?' }));
+      }
+    }
 
     // Result digest: types, lengths and keyed digest only; never the value.
     const outcome: Record<string, unknown> = { status };
@@ -786,6 +829,7 @@ export function createGuardWithAdmin(opts: CreateGuardOptions): { guard: Guard; 
       sessions.set(id, state);
       return handle;
     },
+    forAgent: (binding?: AgentBinding): AgentGuard => makeAgentFacet(binding),
     close: (): void => {
       if (closed) return;
       closed = true;
@@ -798,6 +842,54 @@ export function createGuardWithAdmin(opts: CreateGuardOptions): { guard: Guard; 
       } catch { /* store may already be closed */ }
     },
   };
+  function makeAgentFacet(binding: AgentBinding | undefined): AgentGuard {
+    const b = binding ?? {};
+    if (typeof b !== 'object' || b === null || Array.isArray(b)) throw new TypeError('invalid agent binding');
+    for (const k of Object.keys(b)) {
+      if (!['sessionId', 'userId', 'scopes', 'provenance'].includes(k)) throw new TypeError('invalid agent binding: ' + k);
+    }
+    if (b.userId !== undefined && typeof b.userId !== 'string') throw new TypeError('invalid agent binding: userId');
+    if (b.scopes !== undefined && !isStringArray(b.scopes)) throw new TypeError('invalid agent binding: scopes');
+    if (b.provenance !== undefined && typeof b.provenance !== 'function') throw new TypeError('invalid agent binding: provenance');
+    // detached copies: the host cannot be tricked into changing identity later through a shared array
+    const userId = b.userId;
+    const scopes = b.scopes === undefined ? undefined : Object.freeze([...b.scopes]);
+    const provFn = b.provenance;
+    const session = guard.session(b.sessionId); // validates the id; throws GuardError on a bad one
+    const call = (tool: string, args: unknown, opts?: AgentCallOptions): Promise<GuardResult> => {
+      const ctx: Record<string, unknown> = {};
+      let valid = true;
+      if (opts !== undefined) {
+        if (typeof opts !== 'object' || opts === null || Array.isArray(opts)) valid = false;
+        else {
+          for (const k of Object.keys(opts)) if (k !== 'sessionTainted') valid = false;
+          const t = (opts as Record<string, unknown>)['sessionTainted'];
+          if (t !== undefined && t !== true) valid = false;
+          if (t === true) ctx['sessionTainted'] = true;
+        }
+      }
+      if (userId !== undefined) ctx['userId'] = userId;
+      if (scopes !== undefined) ctx['scopes'] = [...scopes];
+      if (valid && provFn !== undefined) {
+        try {
+          let copy: unknown;
+          try { copy = structuredClone(args); } catch { copy = undefined; }
+          const p = provFn(typeof tool === 'string' ? tool : '', copy);
+          if (p !== undefined) ctx['provenance'] = p;
+        } catch {
+          valid = false;
+        }
+      }
+      // an invalid option or a failing host callback is denied and audited like any malformed context
+      return session.call(tool, args, (valid ? ctx : { invalid: true }) as CallContext);
+    };
+    return Object.freeze({
+      sessionId: session.id,
+      get tainted(): boolean { return session.tainted; },
+      call,
+    });
+  }
+
   const admin: GuardAdmin = Object.freeze({
     setTools: (tools: ToolRegistryInput, meta?: ToolsMeta): void => {
       const next = buildRegistry(tools); // throws before anything else happens

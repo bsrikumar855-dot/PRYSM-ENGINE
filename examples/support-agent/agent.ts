@@ -1,6 +1,6 @@
 // Scripted mock model + agent loop. SCRIPTED MOCK MODEL: it proves the gate, not model behaviour.
 // The model is a pure function of the history (no randomness, no network). The loop reaches tools only through an Executor.
-import type { GuardSession } from '../../src/guard/index.ts';
+import type { AgentGuard, Guard } from '../../src/guard/index.ts';
 import type { Args, ToolImpl } from './tools.ts';
 
 export interface Outcome {
@@ -79,17 +79,28 @@ export async function runAgent(
 }
 
 /**
- * In-process executor: every call goes through guard.session(...).call. The host asserts provenance for send_email.to:
- * `trusted-user` only if the address appeared in the user's own request, else `model-generated`.
+ * The host builds the agent's facet (DEC-43): identity, scopes and provenance are fixed here, in host code, and the
+ * agent loop only ever sees `agent.call(tool, args)`. Provenance for send_email.to is `trusted-user` only if the address
+ * appeared in the user's own request, else `model-generated`.
  */
-export function guardExecutor(session: GuardSession, host: { userId: string; scopes: string[]; userAddresses: string[] }): Executor {
+export function agentFacet(guard: Guard, sessionId: string, host: { userId: string; scopes: string[]; userAddresses: string[] }): AgentGuard {
+  return guard.forAgent({
+    sessionId,
+    userId: host.userId,
+    scopes: host.scopes,
+    provenance: (tool, args) => {
+      const to = (args as Record<string, unknown> | undefined)?.['to'];
+      if (tool !== 'send_email' || typeof to !== 'string') return undefined;
+      return { to: [host.userAddresses.includes(to) ? 'trusted-user' : 'model-generated'] };
+    },
+  });
+}
+
+/** In-process executor: every call goes through the agent facet, which cannot grant itself anything. */
+export function guardExecutor(agent: AgentGuard): Executor {
   return {
     async run(tool, args) {
-      const ctx: { userId: string; scopes: string[]; provenance?: Record<string, string[]> } = { userId: host.userId, scopes: host.scopes };
-      if (tool === 'send_email' && typeof args['to'] === 'string') {
-        ctx.provenance = { to: [host.userAddresses.includes(args['to']) ? 'trusted-user' : 'model-generated'] };
-      }
-      const r = await session.call(tool, args, ctx);
+      const r = await agent.call(tool, args);
       if (r.ok) return { tool, args, status: 'ok', reason: null, decisionId: r.decision_id, text: JSON.stringify(r.value) };
       if (r.blocked) return { tool, args, status: 'blocked', reason: r.reason_code, decisionId: r.decision_id, text: `blocked: ${r.reason_code}` };
       return { tool, args, status: 'error', reason: r.error, decisionId: r.decision_id, text: `error: ${r.error}` };
