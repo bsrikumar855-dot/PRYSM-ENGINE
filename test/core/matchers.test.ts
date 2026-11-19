@@ -173,7 +173,7 @@ const WS = { root: '/workspace', case_insensitive: false };
 test('path_within: accepted paths', () => {
   for (const v of [
     '/workspace', '/workspace/a.txt', '/workspace/a/b/c', '/workspace/a/../b', '/workspace//a', '/workspace/./a',
-    '/workspace/a/..', '\\workspace\\a', '/workspace/CONSOLE', '/workspace/com10', '/workspace/a~b',
+    '/workspace/a/..', '/workspace/CONSOLE', '/workspace/com10', '/workspace/a~b',
     '/workspace/.hidden', '/workspace/a.b.c', '/workspace/x/../../workspace/y', '/workspace/100%', '/workspace/a%2',
   ]) {
     assert.equal(matchPathWithin(v, WS), true, JSON.stringify(v));
@@ -189,6 +189,8 @@ test('path_within: rejected paths', () => {
     '/workspaceX', '/workspace-evil/a', '/work', '/', '', 'workspace/a', './workspace/a', '../workspace',
     // UNC / device paths
     '\\\\server\\share\\workspace', '\\\\?\\C:\\workspace', '\\\\.\\C:\\workspace', '//workspace/a', '//server/share', '/\\workspace/a', '\\/workspace/a',
+    // S-03: a backslash outside a drive-letter path (a literal filename character on POSIX)
+    '\\workspace\\a', '/workspace\\a', '/workspace/secret\\..\\..\\tmp',
     // alternate data streams and colons
     '/workspace/a.txt:stream', '/workspace/a.txt::$DATA', '/workspace/a:b', '/workspace:x',
     // drive letters (root has none)

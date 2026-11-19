@@ -180,7 +180,8 @@ export function refNormalizePath(valueIn: string): NormPath | null {
     }
   }
   if (value.startsWith("\\\\") || value.startsWith("//")) return null;
-  // step 2
+  // step 2 (§14: a backslash is a separator only after a drive letter)
+  if (value.includes("\\") && !/^[A-Za-z]:/.test(value)) return null;
   const v = value.replace(/\\/g, "/");
   if (v.startsWith("//")) return null; // covers `/\` and `\/` starts (§10.10) after conversion
   let prefix = "";

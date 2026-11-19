@@ -109,6 +109,9 @@ Variance and anomalies: one noisy repetition at concurrency 1 (p50 6.7 ms agains
 - Two of four performance hypotheses were missed on this machine; the 8 KiB glob case and the permit-path tail latency are the items to investigate or to accept with documented limits.
 - Not measured: real-model prompt compliance, a prompt-only baseline, other operating systems, other disks, network storage, concurrency across machines, the work-budget limit and 1,000-rule policies under load.
 
+## 4a. Production-phase changes since this run (DEC-45)
+POLICY-SPEC section 14 changed three corpus labels (marked LEAD-DERIVED): the decision corpus now has 350 expected-deny and 85 expected-permit cases (was 348 and 87). The engine still agrees with all 563 cases: FN 0 of 350 (95% upper bound 1.09%), FP 0 of 85 (4.32%). The benign set is unchanged (16 of 306). The latency numbers above were not re-measured; the change adds one string scan per path value.
+
 ## 5. Reproduce
 ```
 npm run eval                       # accuracy (deterministic)

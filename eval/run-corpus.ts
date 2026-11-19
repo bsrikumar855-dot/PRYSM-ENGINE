@@ -102,7 +102,7 @@ for (const [k, min] of Object.entries(MIN_CASES)) {
   if (n < min) { console.log(`FAIL  corpus class ${k} has ${n} cases, expected at least ${min} (file deleted or truncated?)`); bad++; }
 }
 console.log(`(${overridden} cases were overridden by later corpus files)`);
-const leadDerived = [...cases.values()].filter((c) => (c.why ?? "").startsWith("v1.2 LEAD-DERIVED")).length;
+const leadDerived = [...cases.values()].filter((c) => /^v[0-9.]+ LEAD-DERIVED/.test(c.why ?? "")).length;
 console.log(`TOTAL ${total - bad}/${total} agree with the labels (${total - leadDerived} blind-labeller, ${leadDerived} lead-derived and NOT independent); ${bad} mismatches`);
 if (bad && (verbose || bad <= 60)) for (const f of failures) console.log("  MISMATCH " + f);
 process.exit(bad ? 1 : 0);

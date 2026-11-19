@@ -191,6 +191,9 @@ export function normalizePath(input: string): string | null {
   if (colon !== -1) {
     if (colon !== 1 || !/^[A-Za-z]$/.test(s.charAt(0)) || s.indexOf(':', 2) !== -1) return null;
   }
+  // S-03 (POLICY-SPEC 14): a backslash is a separator only in a drive-letter path; elsewhere it could be a literal
+  // filename character on POSIX, so the value is unparseable (deny rules match, permit rules do not)
+  if (s.includes('\\') && colon !== 1) return null;
   s = s.replaceAll('\\', '/');
   if (s.startsWith('//')) return null;
   if (colon === 1) {
@@ -300,7 +303,10 @@ function evalScalar(p: CompiledPredicate, v: Scalar, ctx: EvalCtx): Tri {
  * Deny rule: match or unparseable counts as a match; permit rule: only match does.
  * string[]: deny = ANY element, permit = ALL elements; an empty array never matches.
  */
-export function evalPredicate(p: CompiledPredicate, value: ArgValue, effect: 'permit' | 'deny', ctx: EvalCtx): boolean {
+export function evalPredicate(p0: CompiledPredicate, value: ArgValue, effect: 'permit' | 'deny', ctx: EvalCtx): boolean {
+  // S-07 (POLICY-SPEC 14): a deny rule's path_within always folds case, so case variants cannot slip past it on
+  // case-insensitive filesystems; permit rules keep the author's choice (stricter is the safe side for permits)
+  const p = effect === 'deny' && p0.kind === 'path_within' && !p0.caseInsensitive ? { ...p0, root: p0.root.toLowerCase(), caseInsensitive: true } : p0; // compiled ci roots are lowercased
   const hit = (t: Tri): boolean => (effect === 'deny' ? t !== 'no_match' : t === 'match');
   if (Array.isArray(value)) {
     if (value.length === 0) return false;

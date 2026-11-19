@@ -67,7 +67,9 @@ function evalScalar(p: Pred, v: unknown, c: Ctx): Tri {
   }
 }
 
-function predHolds(p: Pred, v: unknown, effect: Effect, c: Ctx): boolean {
+function predHolds(p0: Pred, v: unknown, effect: Effect, c: Ctx): boolean {
+  // §14: deny-rule path_within compares case-insensitively regardless of case_insensitive
+  const p: Pred = effect === "deny" && p0.kind === "path_within" && !p0.ci ? { ...p0, ci: true } : p0;
   const ok = (t: Tri): boolean => (effect === "deny" ? t !== "no_match" : t === "match");
   if (Array.isArray(v)) {
     if (v.length === 0) return false;
