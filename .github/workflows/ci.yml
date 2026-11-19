@@ -1,0 +1,44 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: ['24']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - name: Install (no install scripts)
+        run: npm ci --ignore-scripts
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Test suite
+        run: node --test --test-timeout=120000 --no-warnings=ExperimentalWarning "test/**/*.test.ts"
+      - name: Labelled corpus
+        run: npm run corpus
+      - name: Accuracy (corpus and benign set)
+        run: npm run eval
+      - name: Differential against the independent reference (one seed)
+        run: npm run diff -- --seeds 20261102 --out diff-report.json
+      - name: Sample application, with and without PRYSM
+        run: npm run demo
