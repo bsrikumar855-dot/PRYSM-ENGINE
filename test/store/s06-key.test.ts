@@ -1,7 +1,8 @@
 // S-06: the key is written only after its file is protected; an unprotected key can be refused (the proxy does so).
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync, writeFileSync, chmodSync, existsSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync, chmodSync, existsSync, unlinkSync, utimesSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { openStore, StoreError, evaluateAcl } from '../../src/store/index.ts';
@@ -74,5 +75,81 @@ test('S-06 / DEC-49: the icacls output captured on a GitHub Windows runner is ju
   const keyPath = 'C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\prysm-diag-jZ6Ufm\\k.key';
   const output = 'C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\prysm-diag-jZ6Ufm\\k.key NT AUTHORITY\\SYSTEM:(F)\n                                                             BUILTIN\\Administrators:(F)\n                                                             runnervmm7ud1\\runneradmin:(R,W)\n\nSuccessfully processed 1 files; Failed processing 0 files\r\n';
   assert.equal(evaluateAcl(output, keyPath, 'runneradmin'), true);
-  assert.equal(evaluateAcl(output.replace('runneradmin:(R,W)', 'runneradmin:(R,W)' + '\\n   BUILTIN\\\\Users:(R)'), keyPath, 'runneradmin'), false);
+  // a real extra line (not the two characters backslash-n) granting BUILTIN\Users must make it unprotected
+  const widened = output.replace('runneradmin:(R,W)', 'runneradmin:(R,W)\n                                                             BUILTIN\\Users:(R)');
+  assert.notEqual(widened, output);
+  assert.equal(evaluateAcl(widened, keyPath, 'runneradmin'), false);
+});
+
+test('S-06 / F4: a protected key file that already exists opens a NEW database under requireProtectedKey', () => {
+  const keyPath = dbPath(tmpDir(), 'k.key');
+  openStore({ path: dbPath(tmpDir()), keyPath }).close(); // creates and protects the key with the real OS mechanism
+  const s = openStore({ path: dbPath(tmpDir()), keyPath, requireProtectedKey: true }); // fresh DB, existing key
+  assert.notEqual(s.keyProtection(), 'unprotected');
+  assert.equal(s.verify().warnings.some((w) => w.code === 'key_unprotected'), false);
+  s.close();
+});
+
+test('S-06 / F4: an unprotected key file that already exists is refused for a NEW database too', () => {
+  const keyPath = dbPath(tmpDir(), 'k.key');
+  writeFileSync(keyPath, randomBytes(32));
+  assert.throws(() => openStore({ path: dbPath(tmpDir()), keyPath, keyProtect: () => 'unprotected', requireProtectedKey: true }),
+    (e: unknown) => e instanceof StoreError && e.code === 'key_unprotected');
+  const s = openStore({ path: dbPath(tmpDir()), keyPath, keyProtect: (kp) => (kp === keyPath ? 'acl' : 'unprotected') });
+  assert.equal(s.keyProtection(), 'acl', 'judged on the key file itself');
+  s.close();
+});
+
+test('S-06 / F4: when another process links its key first, that key file (not our temp file) is judged', () => {
+  const keyPath = dbPath(tmpDir(), 'k.key');
+  const theirs = randomBytes(32);
+  const judged: string[] = [];
+  const keyProtect = (kp: string) => {
+    judged.push(kp);
+    if (kp !== keyPath) {
+      writeFileSync(keyPath, theirs, { flag: 'wx' }); // the other creator wins the race while we protect our temp file
+      return 'acl' as const;
+    }
+    return 'unprotected' as const;
+  };
+  assert.throws(() => openStore({ path: dbPath(tmpDir()), keyPath, keyProtect, requireProtectedKey: true }),
+    (e: unknown) => e instanceof StoreError && e.code === 'key_unprotected');
+  assert.ok(judged.includes(keyPath), 'the winning key file was checked');
+  assert.deepEqual(readFileSync(keyPath), theirs, 'their key was not replaced');
+  assert.deepEqual(readdirSync(dirname(keyPath)).filter((f) => f.includes('.tmp-')), []);
+});
+
+test('S-06 / F5: a temp file swapped after it was protected is never linked into place', () => {
+  const keyPath = dbPath(tmpDir(), 'k.key');
+  const keyProtect = (kp: string) => {
+    if (kp !== keyPath) { unlinkSync(kp); writeFileSync(kp, 'planted', { flag: 'wx' }); }
+    return 'acl' as const;
+  };
+  assert.throws(() => openStore({ path: dbPath(tmpDir()), keyPath, keyProtect }),
+    (e: unknown) => e instanceof StoreError && e.code === 'io');
+  assert.equal(existsSync(keyPath), false);
+  assert.deepEqual(readdirSync(dirname(keyPath)), []);
+});
+
+test('S-06 / F6: a key temp file left by a crash is removed when a new key is created; recent and unrelated files stay', () => {
+  const dir = tmpDir();
+  const keyPath = dbPath(dir, 'k.key');
+  const old = keyPath + '.tmp-0123456789ab';
+  const recent = keyPath + '.tmp-ba9876543210';
+  const other = keyPath + '.tmp-notahexname';
+  for (const f of [old, recent, other]) writeFileSync(f, randomBytes(32));
+  const past = new Date(Date.now() - 3600_000);
+  utimesSync(old, past, past);
+  openStore({ path: dbPath(tmpDir()), keyPath }).close();
+  assert.equal(existsSync(old), false);
+  assert.equal(existsSync(recent), true);
+  assert.equal(existsSync(other), true);
+});
+
+test('S-06 / F4: the proxy starts on a NEW database with a protected key file that already exists', () => {
+  const env = makeEnv();
+  openStore({ path: dbPath(tmpDir()), keyPath: env.keyPath }).close(); // protected key, different database
+  const l = startLib({ env, proxy: { hmacKey: undefined, keyPath: env.keyPath } });
+  l.client.end();
+  return l.done.then((code) => assert.equal(code, 0));
 });

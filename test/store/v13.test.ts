@@ -102,6 +102,8 @@ test('expectPruned: every retained checkpoint must be expected; every expected e
 
 // ---------------------------------------------------------------- key ACL honesty
 const ME = userInfo().username;
+// on Windows the store qualifies the user as USERDOMAIN\user (as icacls prints it); elsewhere a bare name is used
+const DOM = process.platform === 'win32' && process.env['USERDOMAIN'] ? process.env['USERDOMAIN'] : 'HOST';
 const aclOut = (kp: string, lines: string[]) =>
   [kp + ' ' + lines[0], ...lines.slice(1).map((l) => '                 ' + l), '', 'Successfully processed 1 files; Failed processing 0 files', ''].join('\r\n');
 
@@ -118,6 +120,10 @@ test('evaluateAcl: exactly one entry for the current user, others only SYSTEM/Ad
   assert.equal(evaluateAcl(aclOut(kp, ['HOST\\alice:(R,W)', 'NT AUTHORITY\\SYSTEM:(I)(F)']), kp, 'alice'), false, 'inherited privileged entry');
   assert.equal(evaluateAcl(aclOut(kp, ['NT AUTHORITY\\SYSTEM:(F)', 'BUILTIN\\Administrators:(F)']), kp, 'alice'), false, 'no entry for the user');
   assert.equal(evaluateAcl(aclOut(kp, ['HOST\\alice:(R,W)', 'OTHER\\alice:(R)']), kp, 'alice'), false, 'two user entries');
+  // M2-22a: a qualified user matches only its own domain; a bare name keeps the suffix match
+  assert.equal(evaluateAcl(aclOut(kp, ['OTHERDOM\\alice:(R,W)']), kp, 'HOST\\alice'), false, 'same name, other domain');
+  assert.equal(evaluateAcl(aclOut(kp, ['host\\ALICE:(R,W)']), kp, 'HOST\\alice'), true, 'qualified, case-insensitive');
+  assert.equal(evaluateAcl(aclOut(kp, ['NT AUTHORITY\\SYSTEM:(F)', 'HOST\\alice:(R,W)']), kp, 'HOST\\alice'), true, 'qualified plus SYSTEM');
   assert.equal(evaluateAcl(aclOut(kp, ['HOST\\alice:(I)(F)']), kp, 'alice'), false, 'inherited entry');
   assert.equal(evaluateAcl(aclOut(kp, ['HOST\\someone:(R,W)']), kp, 'alice'), false, 'another user');
   assert.equal(evaluateAcl(aclOut(kp, ['Everyone:(R,W)']), kp, 'Everyone'), false, 'a group can never be the grantee');
@@ -135,13 +141,13 @@ test('evaluateAcl: exactly one entry for the current user, others only SYSTEM/Ad
 test('store ACL status comes from re-reading the ACL on every open; meta and env vars are not trusted', () => {
   const path = dbPath(tmpDir());
   const keyPath = dbPath(tmpDir(), 'k.key');
-  const good = (kp: string) => aclOut(kp, [`HOST\\${ME}:(R,W)`]);
+  const good = (kp: string) => aclOut(kp, [`${DOM}\\${ME}:(R,W)`]);
   const s1 = openStore({ path, keyPath, aclReader: good });
   assert.equal(s1.keyProtection(), 'acl');
   assert.equal(s1.verify().warnings.some((w) => w.code === 'key_unprotected'), false);
   s1.close();
   // reopen with a reader that now reports a broad grant: meta still says 'acl' but it is only a hint
-  const s2 = openStore({ path, keyPath, aclReader: (kp) => aclOut(kp, ['Everyone:(R,W)', `HOST\\${ME}:(F)`]) });
+  const s2 = openStore({ path, keyPath, aclReader: (kp) => aclOut(kp, ['Everyone:(R,W)', `${DOM}\\${ME}:(F)`]) });
   assert.equal(s2.keyProtection(), 'unprotected');
   assert.ok(s2.verify().warnings.some((w) => w.code === 'key_unprotected'));
   s2.close();

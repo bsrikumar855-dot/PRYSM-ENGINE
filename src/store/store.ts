@@ -5,9 +5,10 @@
 import { DatabaseSync } from 'node:sqlite';
 import type { StatementSync } from 'node:sqlite';
 import { createHash, createHmac, randomBytes, randomUUID } from 'node:crypto';
-import { linkSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import { closeSync, fstatSync, linkSync, lstatSync, openSync, readdirSync, readFileSync, statSync, unlinkSync, writeSync } from 'node:fs';
+import type { BigIntStats } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { dirname, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { userInfo } from 'node:os';
 import { jcs } from '../core/index.ts';
 
@@ -472,19 +473,25 @@ export function evaluateAcl(output: string, keyPath: string, user: string): bool
   }
   if (entries.some((x) => /\(I\)/.test(x.rights))) return false; // inherited entry => inheritance not removed
   const u = user.toLowerCase();
+  // A qualified DOMAIN\user must match exactly, so OTHERDOM\<same name> is not mistaken for the current user (M2-22a).
+  // A bare name (an explicit aclUser) keeps the older suffix match.
+  const qualified = u.includes('\\');
   const isUser = (x: { principal: string }): boolean => {
     const p = x.principal.toLowerCase();
-    return !isWellKnownGroup(x.principal) && (p === u || p.endsWith('\\' + u));
+    return !isWellKnownGroup(x.principal) && (qualified ? p === u : p === u || p.endsWith('\\' + u));
   };
   const users = entries.filter(isUser);
   const others = entries.filter((x) => !isUser(x));
   return users.length === 1 && others.every((x) => PRIVILEGED.has(x.principal.toLowerCase()));
 }
 
+/** The current user; on Windows qualified as DOMAIN\user (as icacls prints it) when USERDOMAIN is known. */
 function currentUser(): string | null {
   try {
     const n = userInfo().username;
-    return typeof n === 'string' && n !== '' ? n : null;
+    if (typeof n !== 'string' || n === '') return null;
+    const d = process.platform === 'win32' ? process.env['USERDOMAIN'] : undefined;
+    return typeof d === 'string' && /^[^\\/:*?"<>|\s][^\\/:*?"<>|]{0,63}$/.test(d) ? d + '\\' + n : n;
   } catch {
     return null;
   }
@@ -503,9 +510,10 @@ function defaultAclReader(keyPath: string): string | null {
 function applyAcl(keyPath: string, user: string): void {
   if (isWellKnownGroup(user)) return;
   try {
-    spawnSync('icacls', [keyPath, '/inheritance:r', '/grant:r', user + ':(R,W)'], {
-      shell: false, timeout: 5000, windowsHide: true, stdio: 'ignore',
-    });
+    const o = { shell: false, timeout: 5000, windowsHide: true, stdio: 'ignore' } as const;
+    spawnSync('icacls', [keyPath, '/inheritance:r', '/grant:r', user + ':(R,W)'], o);
+    // explicit SYSTEM / Administrators entries removed by SID, so the result does not depend on the display language
+    spawnSync('icacls', [keyPath, '/remove:g', '*S-1-5-18', '*S-1-5-32-544'], o);
   } catch {
     /* judged by the re-read */
   }
@@ -520,7 +528,38 @@ function readKeyFile(keyPath: string): Buffer | null {
   }
 }
 
-const collapse = (x: string): string => x.replace(/\s+/g, ' ').trim().toLowerCase();
+/** True if `p` is (not a link to) the very file described by `st` (same device and inode). */
+function sameFile(a: BigIntStats, p: string): boolean {
+  try {
+    const b = lstatSync(p, { bigint: true });
+    return !b.isSymbolicLink() && b.isFile() && b.dev === a.dev && b.ino === a.ino;
+  } catch {
+    return false;
+  }
+}
+
+const KEY_TEMP_MAX_AGE_MS = 10 * 60 * 1000;
+/**
+ * S-06 / F6: a crash between writing a new key and linking it leaves `<key>.tmp-<12 hex>` holding the secret. Such
+ * leftovers (regular files only, never followed links, older than ten minutes) are removed before a new key is made.
+ */
+function sweepKeyTemps(keyPath: string): void {
+  const dir = dirname(keyPath);
+  const prefix = basename(keyPath) + '.tmp-';
+  let names: string[];
+  try { names = readdirSync(dir); } catch { return; }
+  const now = Date.now();
+  for (const n of names) {
+    if (!n.startsWith(prefix) || !/^[0-9a-f]{12}$/.test(n.slice(prefix.length))) continue;
+    const p = join(dir, n);
+    try {
+      const st = lstatSync(p);
+      if (st.isFile() && !st.isSymbolicLink() && now - st.mtimeMs > KEY_TEMP_MAX_AGE_MS) unlinkSync(p);
+    } catch { /* gone or not ours */ }
+  }
+}
+
+const collapse =(x: string): string => x.replace(/\s+/g, ' ').trim().toLowerCase();
 const EXPECTED_TRIGGERS: Readonly<Record<string, string>> = {
   events_no_update: collapse("CREATE TRIGGER events_no_update BEFORE UPDATE ON events BEGIN SELECT RAISE(ABORT, 'append-only'); END"),
   events_no_delete: collapse("CREATE TRIGGER events_no_delete BEFORE DELETE ON events WHEN COALESCE((SELECT value FROM meta WHERE key='prune_open'),'0') <> '1' BEGIN SELECT RAISE(ABORT, 'append-only'); END"),
@@ -605,6 +644,7 @@ export function openStore(opts: OpenStoreOptions): Store {
     throw mapErr(e);
   }
   let key: Buffer = Buffer.alloc(0);
+  let createdKey = false;
   let genesis = '';
   if (readOnly) {
     try {
@@ -680,32 +720,43 @@ export function openStore(opts: OpenStoreOptions): Store {
           key = existing;
         } else {
           const nk = randomBytes(32);
+          sweepKeyTemps(keyPath);
           // S-06: the secret is written only after the (empty) file is protected, then linked into place with no-clobber
-          // semantics, so there is no moment when the key bytes sit in a file with the inherited (broad) ACL.
+          // semantics, so there is no moment when the key bytes sit in a file with the inherited (broad) ACL. The bytes
+          // go through the descriptor opened with 'wx', and the linked file must be that same file (same dev/inode).
           const tmp = keyPath + '.tmp-' + randomBytes(6).toString('hex');
           let linked = false;
+          let fd: number | undefined;
           try {
-            writeFileSync(tmp, '', { flag: 'wx', mode: 0o600 });
-            protection = computeProtection(tmp, true);
-            if (protection === 'unprotected' && opts.requireProtectedKey === true) throw new StoreError('key_unprotected');
-            writeFileSync(tmp, nk, { flag: 'r+' });
+            fd = openSync(tmp, 'wx', 0o600);
+            const tp = computeProtection(tmp, true);
+            if (tp === 'unprotected' && opts.requireProtectedKey === true) throw new StoreError('key_unprotected');
+            writeSync(fd, nk);
+            const mine = fstatSync(fd, { bigint: true });
+            closeSync(fd);
+            fd = undefined;
+            if (!sameFile(mine, tmp)) throw new StoreError('io'); // tmp was swapped after creation
             linkSync(tmp, keyPath); // EEXIST if another process created the key meanwhile
             linked = true;
+            if (!sameFile(mine, keyPath)) throw new StoreError('io');
             key = nk;
+            createdKey = true;
+            protection = tp;
             db.prepare("INSERT OR REPLACE INTO meta(key, value) VALUES ('key_protection', ?)").run(protection);
           } catch (e) {
             if (e instanceof StoreError) throw e;
             if ((e as { code?: string }).code !== 'EEXIST' || linked) throw new StoreError('io');
-            const k = readKeyFile(keyPath);
+            const k = readKeyFile(keyPath); // another process won the race: its key is checked below like any existing key
             if (k === null) throw new StoreError('key_invalid');
             key = k;
           } finally {
+            if (fd !== undefined) { try { closeSync(fd); } catch { /* ignore */ } }
             try { unlinkSync(tmp); } catch { /* already gone */ }
           }
         }
       }
-      if (opts.hmacKey === undefined && existingKid !== null) {
-        // existing key file: always re-checked on open; meta is only a hint and is never trusted
+      if (opts.hmacKey === undefined && !createdKey) {
+        // any key file this open did not create itself is (re-)checked; meta is only a hint and is never trusted
         protection = computeProtection(keyPath, false);
       }
       if (opts.requireProtectedKey === true && opts.hmacKey === undefined && protection === 'unprotected') {
