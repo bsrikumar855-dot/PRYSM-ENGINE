@@ -1,4 +1,4 @@
-# PRYSM MCP stdio proxy specification v1.5 (normative; sections 9-12 supersede conflicting v1 text, e.g. the server line cap is 16 MiB by default)
+# PRYSM MCP stdio proxy specification v1.6 (normative; sections 9-13 supersede conflicting v1 text, e.g. the server line cap is 16 MiB by default)
 
 Implements DEC-01 (enforcing mode), DEC-04 (taint via control config), DEC-07 (schema pinning), A-18. Files: `src/proxy/*.ts` (+ `src/proxy/bin.ts`), tests `test/proxy/*.test.ts`, fixtures `test/support/mcp-server.ts`. Consumes `src/guard` (`createGuardWithAdmin`), `src/store`, `src/core`; no new runtime dependencies (hand-written newline-delimited JSON-RPC; Node built-ins only).
 
@@ -103,3 +103,13 @@ Server text that lands in the client model's context is reduced.
 - Tool `title` and `description` in `tools/list` are capped at 4096 characters and dropped if they are not strings (sink line `proxy_tool_text_capped` with a count). Schema pins (`schema_hash`) are still computed on the server's original text, so a pinned tool whose description changes is still refused.
 - Recommendation unchanged: production deployments should pin tool schemas and run with `--require-pins`.
 Tests: `test/proxy/s08-text.test.ts`.
+
+## 13. v1.6 amendment (DEC-51, after the P1 re-review; F3, F9, F10). Supersedes sections 11 and 12 where they conflict.
+- **Forwarded errors.** When the server answers a forwarded allow-listed request with an error, the client receives `{code, message: "Server error"}`: the integer code is kept (or -32603), the server's message and data are dropped. The session is not tainted by an error, because no server text reaches the client.
+- **Server to client.** An allowed server request (`--allow-server-requests`) or, with `--allow-server-notifications`, a server notification is audited before it is passed on (`method_forwarded`, `direction: "to_client"`, own best-effort budget) and taints the session unless `--no-taint-forwarded`.
+- **Progress.** Progress for a call in flight is passed on as `{progressToken, progress, total?}` only; the free-text `message` and other fields are dropped. Progress with an unknown token is passed on only with `--allow-server-notifications`, as a server notification (audited, tainting).
+- **initialize.** The result passed to the client has only `protocolVersion` (at most 32 printable ASCII characters), `capabilities: {tools: {listChanged}}` and `serverInfo: {name, version}` (each at most 64 printable ASCII characters); `instructions` as in section 12. Anything else the server sends is dropped.
+- **Tool text.** Every string nested in `inputSchema`, `outputSchema` and `annotations` is capped at 4096 characters as well; a tool whose schema or annotations still serialise to more than 65,536 characters (or nest deeper than 64 levels) is not listed (`proxy_tool_ignored` reason `oversize`). Truncation never splits a UTF-16 surrogate pair.
+- **Throttled sink lines.** `proxy_orphan_response`, `proxy_server_request_refused`, `proxy_tool_ignored` and `proxy_tool_text_capped` are limited to 20 lines per minute per kind and side (or reason). Suppressed counts are written as `proxy_lines_suppressed {kind, sub?, n}` when the window rolls, by a timer, and at shutdown.
+- **Posture.** The `proxy_config` row also records `allow_unprotected_key` and the actual `key_protection`; an unprotected key allowed by the flag writes a `proxy_key_unprotected` sink line.
+Tests: `test/proxy/s04-forwarded.test.ts`, `test/proxy/s08-text.test.ts`, `test/proxy/p1-flags.test.ts`, `test/store/s06-key.test.ts`.

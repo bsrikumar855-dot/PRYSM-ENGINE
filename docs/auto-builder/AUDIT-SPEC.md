@@ -1,4 +1,4 @@
-# PRYSM audit store & guard specification v1.7 (normative; amended by later sections, see section 11 for the latest)
+# PRYSM audit store & guard specification v1.8 (normative; amended by later sections, see section 12 for the latest)
 
 Implements DEC-01 (in-process half), DEC-03, DEC-04, DEC-05, DEC-06 and SECURITY-REVIEW items P-02, P-03, P-07, P-08, P-10, P-16, P-19, P-21 and F-03. Consumes `src/core` (POLICY-SPEC v1.3). Files: `src/store/*.ts`, `src/guard/*.ts`. `src/core` must not import store or guard.
 
@@ -143,3 +143,14 @@ Tests: `test/guard/agent-facet.test.ts`.
 **Unprotected keys.** `openStore({ requireProtectedKey: true })` throws `StoreError('key_unprotected')` when a new key cannot be protected (nothing is left on disk) or an existing key file is unprotected. The library default stays a `key_unprotected` verify warning. The MCP proxy sets `requireProtectedKey` unless `--allow-unprotected-key` is given and exits 2 with `key_unprotected`. Tests: `test/store/s06-key.test.ts` (including a real key widened to Everyone with `icacls`).
 
 **11.1 (DEC-49).** On Windows a key file counts as protected when inheritance is removed, exactly one entry names the current user, and any other entries are only `NT AUTHORITY\SYSTEM` or `BUILTIN\Administrators`.
+
+## 12. v1.8 amendment (production phase, after the P1 re-review; DEC-52, DEC-53, DEC-54). Supersedes 10.1, 10.2 and 11 where they conflict.
+**12.1 Best-effort rows (DEC-52).** Classes are `pre_evaluate`, `policy_deny`, `tool_result` and `forwarded` (method_forwarded rows; same cap as `pre_evaluate`, separate count). The novelty reserve of 10.1 is 64 rows per class per window. In addition, the first row of each coarse signature (class, tool, reason code; for `forwarded` also method and direction) in a window is written even when the class budget is spent, up to 512 coarse signatures per window. `tool_result` rows never use either. Drops stay counted in `dropped_before`.
+
+**12.2 Uninterpretable values (DEC-54).** 10.2 applies only when no argument value of that deny rule genuinely matched: a rule where one value matched and another was unparseable is explained as an ordinary rule block.
+
+**12.3 Forwarded rows.** `GuardAdmin.recordForwarded(method, sessionId, direction?)` writes `outcome = {event: "method_forwarded", method, direction}` with `direction` `to_server` (default) or `to_client`; method names up to 128 characters are recorded, others as `?`.
+
+**12.4 Agent facet provenance (DEC-54).** The `forAgent` provenance callback receives the tool name and the frozen, validated, NFC-normalised snapshot arguments the policy decides on. A request that fails validation never reaches the callback (the call is rejected with its own reason); a callback that throws, including by trying to modify the frozen arguments, makes the call `invalid_request`.
+
+**12.5 Key files (DEC-53).** Every key file this open did not create (an existing file, or one another process linked first) is checked with the real mechanism before `requireProtectedKey` is applied. A new key is written through the descriptor opened with `wx`; the temporary path and, after linking, the key path must be that same regular file (device and inode, not a link), else `StoreError('io')`. Before creating a key, `<key>.tmp-<12 hex>` regular files older than ten minutes are removed (links are never followed). On Windows the current user is `USERDOMAIN\user` and must match an ACL entry exactly (a bare name supplied as `aclUser` keeps the suffix match); at creation, explicit SYSTEM (`S-1-5-18`) and Administrators (`S-1-5-32-544`) entries are removed by SID, and 11.1 still accepts them on existing keys. Key creation needs hard links; on filesystems without them it fails with `io`.

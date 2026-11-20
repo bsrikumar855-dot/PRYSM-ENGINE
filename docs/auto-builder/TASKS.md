@@ -5,12 +5,12 @@
 | Field | Value |
 |---|---|
 | Current phase | Production hardening (owner request 2026-11-19 after the MVP review; DEC-43 onwards) |
-| Current milestone | P1 hardening: S-02, S-04, S-03, S-07, M2-21, explain wording, S-06, S-08, S-09, M5-05 fixed or mitigated (DEC-43..48); CI matrix added (Ubuntu, Windows, macOS). Remaining: CI green on all three, independent re-review of P1, v0.1.0 |
-| Pass for this milestone (budget: 5 by default; edit here) | P1 pass 1 (implementation), CI pass in progress |
+| Current milestone | P1 hardening: findings of the M6 review fixed or mitigated (DEC-43..49); independent re-review done 2026-11-20 (security-engineer and critical-reviewer); its findings fixed (DEC-50..54, not re-reviewed). CI matrix: Ubuntu, Windows, macOS. Remaining: CI green on the last commits, tag v0.1.0 |
+| Pass for this milestone (budget: 5 by default; edit here) | P1 pass 2 (fixes after the re-review) |
 | Total passes, all milestones | 14 (M0-M5) |
 | Failing checks → attempts (one line per distinct check; max 3 each) | F-01..F-09: closed except F-05(glob only)/F-07 partial; N-01 deny/unparseable: 1 attempt; N-02 metering: 1; N-03 mutable toolInfo: 1; N-04 hidden chars: 2 (F-07 then N-04) |
 | Last verified commit | see `git log`; every P1 commit ran typecheck, the full suite and the corpus locally before push |
-| Independent review done for current milestone? | P1: not yet (planned before v0.1.0). M0-M6: see the M6 row and SECURITY-REVIEW.md |
+| Independent review done for current milestone? | P1: yes, 2026-11-20 (security re-review F1-F12, critical review MAJOR 1-4 and minors; see SECURITY-REVIEW.md); the fixes that followed are not re-reviewed. M0-M6: see the M6 row |
 
 ## Milestone gates
 
@@ -63,7 +63,7 @@ Budget: 5 implement→verify passes per milestone, 3 attempts per failing check.
 | T-2.x | Store, chain, guard, redaction, taint, fault-injection | M2 | M1 | A-01,05,06,13,16,19 | tests | done (gate passed) | backend-engineer | `src/store, src/guard` |
 | T-3.x | MCP proxy + e2e | M3 | M2 | A-18 | e2e | done (gate passed) | backend-engineer | `src/proxy` |
 | T-4.5 | Coalesce repeated deny rows / per-session budgets (M2-21): done as a novelty reserve (DEC-46) | M6 (backlog) | M2 | after deny flood a distinct rule-denied call is still recorded | tests | done (production phase) | backend-engineer | `src/guard` |
-| T-6.5 | ACL principal full-name/SID compare (M2-22a); tools_replaced identity (M2-22b) | M6 | M2 | tests | tests | pending | backend-engineer | `src/store` |
+| T-6.5 | ACL principal full-name/SID compare (M2-22a: done, DEC-53); tools_replaced identity (M2-22b: open) | M6 | M2 | tests | tests | M2-22a done | backend-engineer | `src/store` |
 | T-4.6 (done in M4 pass 2) | M4 consumers filter policy_activate rows on outcome.event (proxy_config/proxy_client/tools_replaced); report shows proxy posture | M4 | M3 | report lists posture rows | tests | done (gate passed) | frontend-engineer | `src/report` |
 | T-6.7 (cause logic done: src/explain shared by CLI and report) | remaining duplication: match summaries/predicate text between CLI and report | M6 | M4 | – | review | partial | backend-engineer | `src/explain` |
 | T-6.6 | Split proxy.ts (~1000 lines) into registry/client/server/lifecycle modules; backpressure+provenance CLI mutation checks; SIGINT/SIGTERM test on a real console; third-party MCP server compatibility test (needs owner permission) | M6 | M3 | – | review | pending | backend-engineer | `src/proxy` |
@@ -72,10 +72,10 @@ Budget: 5 implement→verify passes per milestone, 3 attempts per failing check.
 | T-6.x | Docs, live viewer (optional), final reviews | M6 | M5 | A-09,10,11,14 | review | pending | lead | `docs/, README` |
 
 ## Blockers
-None. P1 needs CI green on Windows (key-file ACL check on the runner, under diagnosis) and an independent re-review.
+None. Owner approval still needed for: npm publishing, real-LLM tests (paid), committing the report, deck and marketing files (they contain personal data).
 
 ## Deferred / out of scope (needs user approval)
 Layer 2 enforcement, approvals/quarantine/escalation, governance reports/inventory UI, learned risk scoring, hosted multi-tenant, YAML policies, AgentDojo subset, Cedar/OPA runtime.
 
 ## Recently completed
-Discovery; M0-M5 (core, store/guard, proxy, CLI/report, benchmarks and sample app) with independent gates. See the milestone table.
+Discovery; M0-M6 with independent gates (see the milestone table); P1 production hardening: DEC-43..54, CI matrix, independent re-review, CHANGELOG.md.
