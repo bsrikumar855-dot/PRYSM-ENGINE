@@ -7,7 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { openStore, StoreError, evaluateAcl } from '../../src/store/index.ts';
 import { cleanup, tmpDir, dbPath } from '../support/tmp.ts';
-import { makeEnv, startLib } from '../support/proxy-kit.ts';
+import { makeEnv, startLib, openAudit, rowsOf } from '../support/proxy-kit.ts';
 
 after(cleanup);
 
@@ -67,7 +67,17 @@ test('S-06: the proxy refuses to start on an unprotected key file unless --allow
   assert.throws(() => startLib({ env, proxy: viaKeyFile }), /key_unprotected/);
   const l = startLib({ env, proxy: { ...viaKeyFile, allowUnprotectedKey: true } });
   l.client.end();
-  return l.done.then((code) => assert.equal(code, 0));
+  return l.done.then((code) => {
+    assert.equal(code, 0);
+    // the opt-out is visible: a sink line, and the audited posture row records the flag and the real protection
+    assert.match(l.stderrText(), /"prysm":"proxy_key_unprotected"/);
+    const s = openAudit(env, true);
+    const rows = rowsOf(s);
+    const cfg = rows.map((r) => r.outcome as Record<string, unknown> | null).find((o) => o?.['event'] === 'proxy_config');
+    assert.equal(cfg?.['allow_unprotected_key'], true);
+    assert.equal(cfg?.['key_protection'], 'unprotected');
+    s.close();
+  });
 });
 
 test('S-06 / DEC-49: the icacls output captured on a GitHub Windows runner is judged protected', () => {

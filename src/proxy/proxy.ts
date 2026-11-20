@@ -383,6 +383,7 @@ export function createProxy(opts: ProxyOptions): ProxyHandle {
   const session = guard.session();
   const sessionId = session.id;
   for (const a of provNames) proxyLine('proxy_provenance_asserted', { arg: a });
+  if (store.keyProtection() === 'unprotected') proxyLine('proxy_key_unprotected', { allowed_by_flag: 1 }); // only reachable with --allow-unprotected-key
   {
     const unpinned = Object.values(policyTools).filter((t) => t.schema_hash === undefined).length;
     if (unpinned > 0) proxyLine('proxy_unpinned_tools', { n: unpinned });
@@ -397,6 +398,7 @@ export function createProxy(opts: ProxyOptions): ProxyHandle {
           tool_timeout_ms: toolTimeoutMs, taint_tools_n: taintSet.size, allow_methods: [...allowMethods],
           allow_server_requests: [...allowServerRequests], allow_server_notifications: allowServerNotifications,
           taint_forwarded: taintForwarded, forward_instructions: forwardInstructions,
+          allow_unprotected_key: opts.allowUnprotectedKey === true, key_protection: store.keyProtection(),
           provenance_args: [...provNames], scopes_n: hostCtx.scopes?.length ?? 0, user_set: hostCtx.userId !== undefined,
         },
       });

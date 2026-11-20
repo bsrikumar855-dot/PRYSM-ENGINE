@@ -1,5 +1,5 @@
 // Temp-dir helper; tolerates Windows WAL handle lingering on cleanup.
-import { mkdtempSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { lstatSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -21,8 +21,8 @@ function sweepStale(): void {
       if (!SWEPT_PREFIXES.some((p) => name.startsWith(p) && /^[A-Za-z0-9]{6}$/.test(name.slice(p.length)))) continue;
       const p = join(root, name);
       try {
-        const st = statSync(p);
-        if (st.isDirectory() && st.mtimeMs < cutoff) rmSync(p, { recursive: true, force: true, maxRetries: 2, retryDelay: 20 });
+        const st = lstatSync(p); // never follow a link or junction (F12)
+        if (st.isDirectory() && !st.isSymbolicLink() && st.mtimeMs < cutoff) rmSync(p, { recursive: true, force: true, maxRetries: 2, retryDelay: 20 });
       } catch { /* in use or gone: next run */ }
     }
   } catch { /* best effort */ }
