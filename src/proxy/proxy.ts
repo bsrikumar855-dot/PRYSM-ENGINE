@@ -50,6 +50,45 @@ const HEX64 = /^[0-9a-fA-F]{64}$/;
 const LIST_FIELDS = ['name', 'title', 'description', 'inputSchema', 'outputSchema', 'annotations'];
 /** Longest server-supplied model-visible text field the proxy forwards (S-08). */
 const MAX_TEXT_FIELD = 4096;
+/** Largest serialised inputSchema / outputSchema / annotations the proxy forwards for one tool (S-08 / F10). */
+const MAX_SCHEMA_CHARS = 65_536;
+
+/** Truncates to at most `max` UTF-16 units without splitting a surrogate pair. */
+function capText(s: string, max: number): string {
+  if (s.length <= max) return s;
+  const c = s.charCodeAt(max - 1);
+  return s.slice(0, c >= 0xd800 && c <= 0xdbff ? max - 1 : max);
+}
+
+/**
+ * S-08 / F10: caps every string nested in a server-supplied schema or annotations object. Returns null when the
+ * value is too deep or, after capping, too large to forward; `n` counts the strings that were shortened.
+ */
+function capDeep(v: unknown, n: { n: number }, depth = 0): unknown {
+  if (depth > 64) throw new RangeError('too deep');
+  if (typeof v === 'string') {
+    if (v.length <= MAX_TEXT_FIELD) return v;
+    n.n++;
+    return capText(v, MAX_TEXT_FIELD);
+  }
+  if (Array.isArray(v)) return v.map((x) => capDeep(x, n, depth + 1));
+  if (typeof v === 'object' && v !== null) {
+    const out: Record<string, unknown> = {};
+    for (const [k, x] of Object.entries(v)) {
+      Object.defineProperty(out, k, { value: capDeep(x, n, depth + 1), enumerable: true, writable: true, configurable: true });
+    }
+    return out;
+  }
+  return v;
+}
+function capSchema(v: unknown, n: { n: number }): unknown | null {
+  try {
+    const c = capDeep(v, n);
+    return JSON.stringify(c).length <= MAX_SCHEMA_CHARS ? c : null;
+  } catch {
+    return null;
+  }
+}
 
 export type ProxyConfigErrorCode =
   | 'bad_option' | 'policy_unreadable' | 'policy_invalid' | 'policy_sha256_mismatch' | 'taint_tool_unknown'
@@ -280,16 +319,41 @@ export function createProxy(opts: ProxyOptions): ProxyHandle {
   };
   // S-09: lines a hostile server or client can trigger at will are limited to 20 per kind per minute; the number
   // suppressed is reported once the window rolls over, so the evidence is kept as a count.
-  const NOISY = new Set(['proxy_orphan_response', 'proxy_server_request_refused']);
-  const noisy = new Map<string, { start: number; n: number; suppressed: number }>();
+  // F9: buckets are per kind and side/reason (a hostile client cannot silence the server's lines), and the counts are
+  // also written by a timer and at shutdown, so a burst followed by silence still leaves its count.
+  const NOISY = new Set(['proxy_orphan_response', 'proxy_server_request_refused', 'proxy_tool_ignored', 'proxy_tool_text_capped']);
+  const NOISY_WINDOW_MS = 60_000;
+  const noisy = new Map<string, { kind: string; sub: string | null; start: number; n: number; suppressed: number }>();
+  const flushNoisy = (all: boolean): void => {
+    const now = Date.now();
+    for (const [key, w] of noisy) {
+      if (!all && now - w.start < NOISY_WINDOW_MS) continue;
+      if (w.suppressed > 0) {
+        sink(JSON.stringify({ prysm: 'proxy_lines_suppressed', kind: w.kind, ...(w.sub !== null ? { sub: w.sub } : {}), n: w.suppressed }));
+      }
+      noisy.delete(key);
+    }
+  };
+  let noisyTimer: ReturnType<typeof setInterval> | undefined; // started on first use, so a failed setup leaves none
+  let noisyClosed = false;
   const proxyLine = (kind: string, fields: Record<string, string | number | null> = {}): void => {
     if (NOISY.has(kind)) {
+      if (noisyTimer === undefined && !noisyClosed) {
+        noisyTimer = setInterval(() => flushNoisy(false), NOISY_WINDOW_MS);
+        noisyTimer.unref();
+      }
+      const s = fields['kind'] ?? fields['reason'];
+      const sub = typeof s === 'string' ? s : null;
+      const key = kind + '|' + (sub ?? '');
       const now = Date.now();
-      let w = noisy.get(kind);
-      if (w === undefined || now - w.start >= 60_000) {
-        if (w !== undefined && w.suppressed > 0) sink(JSON.stringify({ prysm: 'proxy_lines_suppressed', kind, n: w.suppressed }));
-        w = { start: now, n: 0, suppressed: 0 };
-        noisy.set(kind, w);
+      let w = noisy.get(key);
+      if (w !== undefined && now - w.start >= NOISY_WINDOW_MS) {
+        if (w.suppressed > 0) sink(JSON.stringify({ prysm: 'proxy_lines_suppressed', kind, ...(sub !== null ? { sub } : {}), n: w.suppressed }));
+        w = undefined;
+      }
+      if (w === undefined) {
+        w = { kind, sub, start: now, n: 0, suppressed: 0 };
+        noisy.set(key, w);
       }
       if (++w.n > 20) { w.suppressed++; return; }
     }
@@ -581,7 +645,7 @@ export function createProxy(opts: ProxyOptions): ProxyHandle {
       if (typeof nm === 'string' && TOOL_NAME.test(nm)) counts.set(nm, (counts.get(nm) ?? 0) + 1);
     }
     if (truncatedN >= 0) proxyLine('proxy_tool_ignored', { reason: 'truncated', n: truncatedN });
-    const ign = { bad_name: 0, duplicate: 0, schema_changed: 0, not_in_policy: 0, no_pin: 0 };
+    const ign = { bad_name: 0, duplicate: 0, schema_changed: 0, not_in_policy: 0, no_pin: 0, oversize: 0 };
     let capped = 0;
     for (const t of tools) {
       const nm = t['name'];
@@ -596,9 +660,20 @@ export function createProxy(opts: ProxyOptions): ProxyHandle {
       // S-08: descriptions are model-visible text from the server; cap them (pins still cover the original text)
       for (const f of ['title', 'description']) {
         const v = def[f];
-        if (typeof v === 'string' && v.length > MAX_TEXT_FIELD) { def[f] = v.slice(0, MAX_TEXT_FIELD); capped++; }
+        if (typeof v === 'string' && v.length > MAX_TEXT_FIELD) { def[f] = capText(v, MAX_TEXT_FIELD); capped++; }
         else if (v !== undefined && typeof v !== 'string') { delete def[f]; capped++; }
       }
+      // F10: text nested in schemas and annotations is capped too; a tool whose schema is still too large is not listed
+      let oversize = false;
+      for (const f of ['inputSchema', 'outputSchema', 'annotations']) {
+        if (def[f] === undefined) continue;
+        const n = { n: 0 };
+        const c = capSchema(def[f], n);
+        if (c === null) { oversize = true; break; }
+        def[f] = c;
+        capped += n.n;
+      }
+      if (oversize) { ign.oversize++; continue; }
       if (inPolicy(nm)) {
         const pin = policyTools[nm]?.schema_hash;
         if (pin === undefined && requirePins) { ign.no_pin++; continue; }
@@ -741,18 +816,28 @@ export function createProxy(opts: ProxyOptions): ProxyHandle {
         }),
       ]);
       if (isPlain(m['error'])) {
-        writeClient({ jsonrpc: '2.0', id, error: m['error'] });
+        // S-04 / F3: the server's error text and data never reach the client (a server could otherwise carry injected
+        // text in an error and avoid the taint applied to results); only an integer code survives
+        const c = m['error']['code'];
+        const code = typeof c === 'number' && Number.isSafeInteger(c) && Math.abs(c) <= 2 ** 31 ? c : -32603;
+        writeClient({ jsonrpc: '2.0', id, error: { code, message: 'Server error' } });
       } else if (msg['method'] === 'initialize') {
         const r = m['result'] as Msg;
         const caps = r['capabilities'];
         const tools = isPlain(caps) ? caps['tools'] : undefined;
         const listChanged = isPlain(tools) && tools['listChanged'] === true;
         // S-08: server `instructions` go straight into the client model's context; dropped unless the operator opts in
-        const { instructions, ...rest } = r;
+        const instructions = r['instructions'];
         if (instructions !== undefined && !forwardInstructions) proxyLine('proxy_instructions_dropped');
-        const out: Msg = { ...rest, capabilities: { tools: { listChanged } } };
+        // F10: only known fields pass, each capped; anything else the server adds is dropped
+        const si = isPlain(r['serverInfo']) ? r['serverInfo'] : {};
+        const out: Msg = {
+          protocolVersion: shortStr(r['protocolVersion'], 32, '2025-03-26'),
+          capabilities: { tools: { listChanged } },
+          serverInfo: { name: shortStr(si['name'], 64, 'server'), version: shortStr(si['version'], 64, '0') },
+        };
         if (instructions !== undefined && forwardInstructions && typeof instructions === 'string') {
-          out['instructions'] = instructions.slice(0, MAX_TEXT_FIELD);
+          out['instructions'] = capText(instructions, MAX_TEXT_FIELD);
         }
         respond(id, out);
       } else {
@@ -905,6 +990,12 @@ export function createProxy(opts: ProxyOptions): ProxyHandle {
     return false;
   };
 
+  /** S-04: a server request or notification passed to the client is audited and, by default, taints the session. */
+  function toClient(method: string): void {
+    admin.recordForwarded(method, session.id, 'to_client');
+    if (taintForwarded) session.taint('server_to_client:' + method);
+  }
+
   function onServerLine(buf: Buffer): void {
     let v: unknown;
     try { v = JSON.parse(new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(buf)); } catch {
@@ -920,6 +1011,7 @@ export function createProxy(opts: ProxyOptions): ProxyHandle {
         const sid = idOrNull(v['id']);
         if (sid !== null && allowServerRequests.has(method) && serverReqs.size < MAX_SERVER_REQS && !serverReqs.has(keyOf(sid))) {
           serverReqs.add(keyOf(sid));
+          toClient(method);
           writeClient({ jsonrpc: '2.0', id: sid, method, ...(p !== undefined ? { params: p } : {}) });
           return;
         }
@@ -931,11 +1023,14 @@ export function createProxy(opts: ProxyOptions): ProxyHandle {
         track(refreshTools().then((changed) => {
           if (changed) writeClient({ jsonrpc: '2.0', method });
         }));
-      } else if (method === 'notifications/progress') {
-        if (hasToken(isPlain(p) ? p['progressToken'] : undefined) || allowServerNotifications) {
-          writeClient({ jsonrpc: '2.0', method, ...(p !== undefined ? { params: p } : {}) });
-        }
+      } else if (method === 'notifications/progress' && isPlain(p) && hasToken(p['progressToken'])) {
+        // progress for a call in flight: numbers only (S-08 / F10: the free-text `message` is not passed on)
+        if (typeof p['progress'] !== 'number' || !Number.isFinite(p['progress'])) return;
+        const out: Msg = { progressToken: p['progressToken'], progress: p['progress'] };
+        if (typeof p['total'] === 'number' && Number.isFinite(p['total'])) out['total'] = p['total'];
+        writeClient({ jsonrpc: '2.0', method, params: out });
       } else if (allowServerNotifications) {
+        toClient(method);
         writeClient({ jsonrpc: '2.0', method, ...(p !== undefined ? { params: p } : {}) });
       }
       return;
@@ -984,6 +1079,10 @@ export function createProxy(opts: ProxyOptions): ProxyHandle {
 
   // ---------------------------------------------------------------- lifecycle
   function closeAll(): void {
+    if (noisyTimer !== undefined) clearInterval(noisyTimer);
+    noisyTimer = undefined;
+    noisyClosed = true;
+    flushNoisy(true);
     flushErr(true);
     try { guard.close(); } catch { /* ignore */ }
     try { store.close(); } catch { /* ignore */ }

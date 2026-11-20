@@ -24,19 +24,27 @@ test('M2-21: after the deny budget is spent by a flood, a denial with a new sign
   k.store.close();
 });
 
-test('M2-21: the novelty reserve is bounded (64 per window), so varied denials cannot write without limit', async () => {
-  // 80 policy tools with no permit rule: each call is a default deny with its own signature (the tool differs)
+test('M2-21 / F8: one row per new (tool, reason) up to 512 per window, then the 64-row reserve; the rest is dropped', async () => {
+  // 600 policy tools with no permit rule: each call is a default deny with its own (tool, reason)
   const tools: Record<string, unknown> = {};
   const reg: Record<string, () => string> = {};
-  for (let i = 0; i < 80; i++) {
+  for (let i = 0; i < 600; i++) {
     tools['t' + i] = { risk: 'low', external_effect: false, read_only: true, fail_mode: 'closed', args: {} };
     reg['t' + i] = () => 'x';
   }
   const policy = loadPolicy(JSON.stringify({ policy_schema_version: 1, name: 'm221', mode: 'enforce', tools, rules: [] }));
   const k = kit({ policy, tools: () => reg as never, guardOpts: { maxDenyRowsPerWindow: 1, bestEffortWindowMs: 60_000 } });
-  for (let i = 0; i < 80; i++) await k.guard.call('t' + i, {});
+  for (let i = 0; i < 600; i++) await k.guard.call('t' + i, {});
   const written = k.decisionRows().filter((r) => r.reason_code === 'default_deny').length;
-  assert.equal(written, 1 + 64, 'budget (1) plus the novelty reserve (64); the other 15 are dropped');
+  assert.equal(written, 512 + 64, '512 distinct (tool, reason) signatures (the first also used the budget), then the reserve of 64');
+  k.store.close();
+});
+
+test('S-04 / F8: forwarded-method rows have their own budget and cannot use up the pre_evaluate rows', async () => {
+  const k = kit({ guardOpts: { maxPreEvaluateRowsPerWindow: 2, bestEffortWindowMs: 60_000 } });
+  for (let i = 0; i < 50; i++) k.admin.recordForwarded('resources/list', null);
+  const r = await k.guard.call('no_such_tool', {});
+  assert.ok(k.decisionRows().some((x) => x.id === r.decision_id), 'the unknown-tool denial still has a row');
   k.store.close();
 });
 

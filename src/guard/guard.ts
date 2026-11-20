@@ -114,12 +114,15 @@ export interface GuardAdmin {
    */
   denyUnexposed(toolName: unknown, reason: UnexposedReason): { decision_id: string };
   /**
-   * Writes a best-effort policy_activate row (`outcome.event = "method_forwarded"`) for a non-tool MCP request the host
-   * chose to forward (S-04). Uses the pre_evaluate budget so a flood cannot exhaust the store. Never executes anything.
+   * Writes a best-effort policy_activate row (`outcome = {event: "method_forwarded", method, direction}`) for a non-tool
+   * MCP message the host chose to forward (S-04): a client request to the server (`to_server`, the default) or a server
+   * request or notification to the client (`to_client`). Uses the pre_evaluate budget so a flood cannot exhaust the
+   * store. Never executes anything.
    */
-  recordForwarded(method: string, sessionId: string | null): { decision_id: string };
+  recordForwarded(method: string, sessionId: string | null, direction?: ForwardDirection): { decision_id: string };
 }
 
+export type ForwardDirection = 'to_server' | 'to_client';
 export type UnexposedReason = 'schema_changed' | 'no_pin' | 'tool_not_offered' | 'not_ready';
 /** Small descriptive fields merged into the tools_replaced row: <= 8 keys, integers / short strings, one nested level. */
 export type ToolsMeta = Record<string, number | string | Record<string, number>>;
@@ -369,6 +372,8 @@ export function createGuardWithAdmin(opts: CreateGuardOptions): { guard: Guard; 
     policy_deny: opts.maxDenyRowsPerWindow ?? 1000,
     // result rows of executed calls are not metered by default (AUDIT-SPEC 8): optional hard ceiling only
     tool_result: opts.maxResultRowsPerWindow ?? Infinity,
+    // S-04 / F8: forwarded-method rows have their own budget, so they cannot use up the pre_evaluate rows
+    forwarded: opts.maxPreEvaluateRowsPerWindow ?? 200,
   } as const;
   const windowMs = opts.bestEffortWindowMs ?? 60_000;
   const maxSessions = opts.maxSessions ?? MAX_SESSIONS;
@@ -454,21 +459,33 @@ export function createGuardWithAdmin(opts: CreateGuardOptions): { guard: Guard; 
   const shortAppend = (ev: NewEvent) => (typeof store.appendShort === 'function' ? store.appendShort(ev) : store.append(ev));
   const breaker = makeBestEffort(shortAppend, writeSink);
   const hr = (): number => Number(process.hrtime.bigint() / 1_000_000n);
-  type RowClass = 'pre_evaluate' | 'policy_deny' | 'tool_result';
+  type RowClass = 'pre_evaluate' | 'policy_deny' | 'tool_result' | 'forwarded';
   const classes: Record<RowClass, { used: number; dropped: number; lineWritten: boolean }> = {
     pre_evaluate: { used: 0, dropped: 0, lineWritten: false },
     policy_deny: { used: 0, dropped: 0, lineWritten: false },
     tool_result: { used: 0, dropped: 0, lineWritten: false },
+    forwarded: { used: 0, dropped: 0, lineWritten: false },
   };
   let winStart = hr();
   // M2-21 (AUDIT-SPEC 10): after a class budget is spent, a row whose signature (class, tool, reason, rules) is new in
   // this window may still use a small novelty reserve, so a flood of identical denials cannot hide a different one.
+  // F8: the reserve is per class (one class cannot spend another's), and the first row of each coarse signature
+  // (class, tool, reason; plus method and direction for forwarded rows) in a window is always written, up to
+  // COARSE_MAX per window. Policy tools and reason codes are finite, so a policy_deny for a new (tool, reason) cannot be
+  // crowded out by agent-chosen variations of rule combinations.
   const NOVELTY_RESERVE = 64;
+  const COARSE_MAX = 512;
   const MAX_SIGNATURES = 4096;
   const seenSig = new Set<string>();
-  let noveltyUsed = 0;
-  const signatureOf = (ev: NewEvent, cls: RowClass): string =>
-    cls + '|' + String(ev.tool ?? '') + '|' + String(ev.reason_code ?? '') + '|' + (Array.isArray(ev.rule_ids) ? ev.rule_ids.join(',') : '');
+  const seenCoarse = new Set<string>();
+  const noveltyUsed: Record<RowClass, number> = { pre_evaluate: 0, policy_deny: 0, tool_result: 0, forwarded: 0 };
+  const coarseOf = (ev: NewEvent, cls: RowClass): string => {
+    const oc = typeof ev.outcome === 'object' && ev.outcome !== null ? ev.outcome as Record<string, unknown> : {};
+    const extra = cls === 'forwarded' ? '|' + String(oc['method'] ?? '') + '|' + String(oc['direction'] ?? '') : '';
+    return cls + '|' + String(ev.tool ?? '') + '|' + String(ev.reason_code ?? '') + extra;
+  };
+  const signatureOf = (coarse: string, ev: NewEvent): string =>
+    coarse + '|' + (Array.isArray(ev.rule_ids) ? ev.rule_ids.join(',') : '');
   const bestEffort = (ev: NewEvent, cls: RowClass): void => {
     try {
       const t = hr();
@@ -479,14 +496,19 @@ export function createGuardWithAdmin(opts: CreateGuardOptions): { guard: Guard; 
           c.lineWritten = false;
         }
         seenSig.clear();
-        noveltyUsed = 0;
+        seenCoarse.clear();
+        for (const k of Object.keys(noveltyUsed) as RowClass[]) noveltyUsed[k] = 0;
       }
       const c = classes[cls];
-      const sig = signatureOf(ev, cls);
+      const coarse = coarseOf(ev, cls);
+      const sig = signatureOf(coarse, ev);
       const isNew = !seenSig.has(sig);
       if (isNew && seenSig.size < MAX_SIGNATURES) seenSig.add(sig);
-      const novelty = c.used >= caps[cls] && isNew && noveltyUsed < NOVELTY_RESERVE && cls !== 'tool_result';
-      if (novelty) noveltyUsed++;
+      const newCoarse = !seenCoarse.has(coarse) && seenCoarse.size < COARSE_MAX;
+      if (newCoarse) seenCoarse.add(coarse);
+      const novelty = c.used >= caps[cls] && cls !== 'tool_result' &&
+        (newCoarse || (isNew && noveltyUsed[cls] < NOVELTY_RESERVE));
+      if (novelty && !newCoarse) noveltyUsed[cls]++;
       if (c.used >= caps[cls] && !novelty) {
         c.dropped++;
         if (!c.lineWritten) {
@@ -960,17 +982,18 @@ export function createGuardWithAdmin(opts: CreateGuardOptions): { guard: Guard; 
       } catch { /* best effort */ }
       return { decision_id };
     },
-    recordForwarded: (method: string, sessionId: string | null): { decision_id: string } => {
+    recordForwarded: (method: string, sessionId: string | null, direction?: ForwardDirection): { decision_id: string } => {
       const decision_id = randomUUID();
       if (closed) return { decision_id };
       try {
-        const m = typeof method === 'string' && /^[A-Za-z0-9_./-]{1,64}$/.test(method) ? method : '?';
+        const m = typeof method === 'string' && /^[A-Za-z0-9_./-]{1,128}$/.test(method) ? method : '?';
+        const dir: ForwardDirection = direction === 'to_client' ? 'to_client' : 'to_server';
         bestEffort({
           id: decision_id, kind: 'policy_activate', ts_ms: nowTs(), agent_id: agentId, effect: null, tool: null,
           enforcement: policy.mode === 'monitor_only' ? 'monitor_only' : 'enforced', policy_version: policy.policy_version,
           engine_version: ENGINE_VERSION, session_id: typeof sessionId === 'string' && SESSION_ID.test(sessionId) ? sessionId : null,
-          outcome: { event: 'method_forwarded', method: m },
-        }, 'pre_evaluate');
+          outcome: { event: 'method_forwarded', method: m, direction: dir },
+        }, 'forwarded');
       } catch { /* best effort */ }
       return { decision_id };
     },
