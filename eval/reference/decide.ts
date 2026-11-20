@@ -32,7 +32,7 @@ interface Ctx {
   pathCache: Map<string, NormPath | null>;
 }
 
-function evalScalar(p: Pred, v: unknown, c: Ctx): Tri {
+function evalScalar(p: Pred, v: unknown, c: Ctx, deny = false): Tri {
   switch (p.kind) {
     case "equals": {
       if (typeof v !== typeof p.value) return "no_match";
@@ -63,7 +63,7 @@ function evalScalar(p: Pred, v: unknown, c: Ctx): Tri {
       return refMatchHost(v, p.mode, p.value, p.accept, c.hostCache, c.budget);
     case "path_within":
       if (typeof v !== "string") return "no_match";
-      return refMatchPath(v, p.root, p.ci, c.pathCache, c.budget);
+      return refMatchPath(v, p.root, p.ci, c.pathCache, c.budget, deny);
   }
 }
 
@@ -73,10 +73,10 @@ function predHolds(p0: Pred, v: unknown, effect: Effect, c: Ctx): boolean {
   const ok = (t: Tri): boolean => (effect === "deny" ? t !== "no_match" : t === "match");
   if (Array.isArray(v)) {
     if (v.length === 0) return false;
-    if (effect === "deny") return v.some((el) => ok(evalScalar(p, el, c)));
+    if (effect === "deny") return v.some((el) => ok(evalScalar(p, el, c, true)));
     return v.every((el) => ok(evalScalar(p, el, c)));
   }
-  return ok(evalScalar(p, v, c));
+  return ok(evalScalar(p, v, c, effect === "deny"));
 }
 
 function ruleMatches(rule: RefRule, req: RefRequest, c: Ctx): boolean {

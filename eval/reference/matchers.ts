@@ -218,6 +218,7 @@ export function refMatchPath(
   caseInsensitive: boolean,
   cache?: Map<string, NormPath | null>,
   budget?: WorkBudget,
+  deny?: boolean,
 ): Tri {
   let np: NormPath | null | undefined = cache?.get(valueIn);
   if (np === undefined) {
@@ -232,8 +233,17 @@ export function refMatchPath(
     norm = norm.toLowerCase();
     r = r.toLowerCase();
   }
-  if (r === "/") return np.prefix === "" ? "match" : "no_match";
-  if (r.length === 3 && r.endsWith(":/")) return np.prefix.toLowerCase() === r.slice(0, 2).toLowerCase() ? "match" : "no_match"; // `X:/` root
-  if (norm === r || norm.startsWith(r + "/")) return "match";
-  return "no_match";
+  let res: Tri;
+  if (r === "/") res = np.prefix === "" ? "match" : "no_match";
+  else if (r.length === 3 && r.endsWith(":/")) res = np.prefix.toLowerCase() === r.slice(0, 2).toLowerCase() ? "match" : "no_match"; // `X:/` root
+  else res = norm === r || norm.startsWith(r + "/") ? "match" : "no_match";
+  if (res === "match" || deny !== true) return res;
+  // §14.4: for deny rules, a drive letter present on only one side is ignored; a hit that way is "unparseable"
+  const rootDrive = /^[A-Za-z]:\//.test(r);
+  if (rootDrive === (np.prefix !== "")) return res;
+  const rootSegs = (rootDrive ? r.slice(2) : r).split("/").filter((s) => s !== "");
+  const valSegs = caseInsensitive ? np.segs.map((s) => s.toLowerCase()) : np.segs;
+  if (rootSegs.length > valSegs.length) return res;
+  for (let k = 0; k < rootSegs.length; k++) if (rootSegs[k] !== valSegs[k]) return res;
+  return "unparseable";
 }

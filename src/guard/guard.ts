@@ -11,8 +11,8 @@
 // - The public split between denied / invalid_request / unavailable is an accepted small information oracle.
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { createHash, randomUUID } from 'node:crypto';
-import { evaluate, jcs, toolInfo } from '../core/index.ts';
-import type { LoadedPolicy, ToolInfo } from '../core/index.ts';
+import { evaluate, jcs, snapshotRequest, toolInfo } from '../core/index.ts';
+import type { LoadedPolicy, Request, ToolInfo } from '../core/index.ts';
 import { auditFailureLine, makeBestEffort, redactArgs } from '../store/index.ts';
 import type { NewEvent, Store } from '../store/index.ts';
 
@@ -917,13 +917,18 @@ export function createGuardWithAdmin(opts: CreateGuardOptions): { guard: Guard; 
       if (userId !== undefined) ctx['userId'] = userId;
       if (scopes !== undefined) ctx['scopes'] = [...scopes];
       if (valid && provFn !== undefined) {
-        try {
-          let copy: unknown;
-          try { copy = structuredClone(args); } catch { copy = undefined; }
-          const p = provFn(typeof tool === 'string' ? tool : '', copy);
-          if (p !== undefined) ctx['provenance'] = p;
-        } catch {
-          valid = false;
+        // F7 / minor 9: the callback sees the validated, NFC-normalised, frozen snapshot the policy will decide on
+        // (never the raw input). If the request does not validate, the callback is not called: session.call below
+        // rejects the same request with the same reason.
+        let snap: Request | null = null;
+        try { snap = snapshotRequest({ tool, args, ctx: { agentId } }); } catch { snap = null; }
+        if (snap !== null) {
+          try {
+            const p = provFn(snap.tool, snap.args);
+            if (p !== undefined) ctx['provenance'] = p;
+          } catch {
+            valid = false;
+          }
         }
       }
       // an invalid option or a failing host callback is denied and audited like any malformed context

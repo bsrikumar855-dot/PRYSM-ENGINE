@@ -146,13 +146,15 @@ function decideOnSnapshot(policy: CompiledPolicy, req: Request, digest: string):
   try {
     for (const rule of policy.rules) {
       ec.unparseableHit = false;
+      ec.realMatchHit = false;
       const failed = failingClause(rule, req, ec);
       trace.push({ rule: rule.id, matched: failed === null, why: failed === null ? 'all_conditions_met' : `no_match:${failed}` });
       if (failed !== null) continue;
       reasons.push({ id: rule.id, effect: rule.effect, reason_code: rule.reasonCode });
       if (rule.effect === 'deny') {
         deny.push(rule.id);
-        if (ec.unparseableHit) unparseable.push(rule.id);
+        // F1: only a rule whose argument predicates matched solely through unparseable values is explained that way
+        if (ec.unparseableHit && !ec.realMatchHit) unparseable.push(rule.id);
       }
       else {
         permit.push(rule.id);

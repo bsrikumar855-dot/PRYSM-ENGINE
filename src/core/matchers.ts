@@ -46,9 +46,11 @@ export interface EvalCtx {
   readonly cache: Map<string, CacheEntry>;
   /** Set when a deny predicate counted an unparseable value as a match (explanations only; never affects decisions). */
   unparseableHit: boolean;
+  /** Set when a deny predicate had a value that genuinely matched (F1: then the rule is not explained as unparseable). */
+  realMatchHit: boolean;
 }
 export function newEvalCtx(): EvalCtx {
-  return { steps: 0, cache: new Map(), unparseableHit: false };
+  return { steps: 0, cache: new Map(), unparseableHit: false, realMatchHit: false };
 }
 
 function charge(ctx: EvalCtx, n: number): void {
@@ -238,7 +240,10 @@ export function matchPathWithin(value: string, spec: { root: string; case_insens
 type Tri = 'match' | 'no_match' | 'unparseable';
 const tri = (b: boolean): Tri => (b ? 'match' : 'no_match');
 
-function pathTri(ctx: EvalCtx, v: string, root: string, ci: boolean): Tri {
+const DRIVE = /^[A-Za-z]:\//;
+const within = (n: string, root: string): boolean => (root.endsWith('/') ? n.startsWith(root) : n === root || n.startsWith(root + '/'));
+
+function pathTri(ctx: EvalCtx, v: string, root: string, ci: boolean, deny: boolean): Tri {
   const e = normOf(ctx, v);
   if (e.path === undefined) {
     charge(ctx, v.length);
@@ -247,8 +252,15 @@ function pathTri(ctx: EvalCtx, v: string, root: string, ci: boolean): Tri {
   }
   if (e.path === null || e.path === undefined) return 'unparseable';
   const n = ci ? (e.pathLower as string) : e.path;
-  if (root.endsWith('/')) return tri(n.startsWith(root));
-  return tri(n === root || n.startsWith(root + '/'));
+  if (within(n, root)) return 'match';
+  // F2 (POLICY-SPEC 14.4): on Windows a path without a drive letter resolves against the current drive, and a POSIX
+  // root may be meant for any drive. For a deny rule, a value that would be inside the root once the drive letter is
+  // ignored on whichever side has one is treated as unparseable, so it is denied (and explained as such).
+  if (deny && DRIVE.test(root) !== DRIVE.test(n)) {
+    const strip = (x: string): string => (DRIVE.test(x) ? x.slice(2) : x);
+    if (within(strip(n), strip(root))) return 'unparseable';
+  }
+  return 'no_match';
 }
 
 function domainTri(ctx: EvalCtx, v: string, p: { kind: 'domain_suffix' | 'domain_exact'; host: string; accept: readonly HostForm[] }): Tri {
@@ -266,7 +278,7 @@ function domainTri(ctx: EvalCtx, v: string, p: { kind: 'domain_suffix' | 'domain
   return tri(h === p.host || h.endsWith('.' + p.host));
 }
 
-function evalScalar(p: CompiledPredicate, v: Scalar, ctx: EvalCtx): Tri {
+function evalScalar(p: CompiledPredicate, v: Scalar, ctx: EvalCtx, deny: boolean): Tri {
   switch (p.kind) {
     case 'equals':
       return tri(typeof v === typeof p.value && (typeof v === 'string' ? normOf(ctx, v).nfc === p.value : v === p.value));
@@ -296,7 +308,7 @@ function evalScalar(p: CompiledPredicate, v: Scalar, ctx: EvalCtx): Tri {
     case 'domain_exact':
       return typeof v === 'string' ? domainTri(ctx, v, p) : 'no_match';
     case 'path_within':
-      return typeof v === 'string' ? pathTri(ctx, v, p.root, p.caseInsensitive) : 'no_match';
+      return typeof v === 'string' ? pathTri(ctx, v, p.root, p.caseInsensitive, deny) : 'no_match';
   }
 }
 
@@ -311,17 +323,18 @@ export function evalPredicate(p0: CompiledPredicate, value: ArgValue, effect: 'p
   const p = effect === 'deny' && p0.kind === 'path_within' && !p0.caseInsensitive ? { ...p0, root: p0.root.toLowerCase(), caseInsensitive: true } : p0; // compiled ci roots are lowercased
   const hit = (t: Tri): boolean => {
     if (effect === 'deny' && t === 'unparseable') ctx.unparseableHit = true;
+    if (effect === 'deny' && t === 'match') ctx.realMatchHit = true;
     return effect === 'deny' ? t !== 'no_match' : t === 'match';
   };
   if (Array.isArray(value)) {
     if (value.length === 0) return false;
     let any = false;
     for (const el of value as readonly unknown[]) {
-      const ok = typeof el === 'string' && hit(evalScalar(p, el, ctx));
+      const ok = typeof el === 'string' && hit(evalScalar(p, el, ctx, effect === 'deny'));
       if (effect === 'permit' && !ok) return false;
       if (ok) any = true;
     }
     return effect === 'permit' ? true : any;
   }
-  return hit(evalScalar(p, value as Scalar, ctx));
+  return hit(evalScalar(p, value as Scalar, ctx, effect === 'deny'));
 }

@@ -59,20 +59,28 @@ test('S-02: a binding array mutated after forAgent() does not change the facet',
   k.store.close();
 });
 
-test('S-02: provenance comes only from the host callback, which sees a detached copy of the arguments', async () => {
+test('S-02 / F7: provenance comes only from the host callback, which sees the frozen, normalised snapshot', async () => {
   const k = mk();
   const seen: unknown[] = [];
   const agent = k.guard.forAgent({
     provenance: (tool, args) => {
       seen.push(args);
-      (args as Record<string, unknown>)['to'] = 'mutated@evil.example'; // must not affect the real call
       return tool === 'send_email' ? { to: ['trusted-user'] } : undefined;
     },
   });
+  const decomposed = 'café@b.c'; // NFD; the policy decides on the NFC form, and so must the callback
   const r = await agent.call('send_email', { to: 'a@b.c', subject: 's', body: 'b' });
   assert.equal(reason(r), 'ok');
-  assert.equal((k.calls['send_email']?.[0]?.[0] as { to: string }).to, 'a@b.c');
-  assert.equal(seen.length, 1);
+  await agent.call('send_email', { to: decomposed, subject: 's', body: 'b' });
+  assert.equal(seen.length, 2);
+  assert.ok(Object.isFrozen(seen[0]), 'the callback gets the frozen snapshot');
+  assert.equal((seen[1] as { to: string }).to, decomposed.normalize('NFC'));
+  // a callback that tries to mutate the arguments throws on the frozen snapshot: the call fails closed
+  const mutating = k.guard.forAgent({
+    provenance: (_tool, args) => { (args as Record<string, unknown>)['to'] = 'mutated@evil.example'; return undefined; },
+  });
+  assert.equal(reason(await mutating.call('send_email', { to: 'a@b.c', subject: 's', body: 'b' })), 'invalid_request');
+  assert.equal(k.calls['send_email']?.every((c) => (c[0] as { to: string }).to !== 'mutated@evil.example'), true);
   const untrusted = k.guard.forAgent({ provenance: () => ({ to: ['model-generated'] }) });
   assert.equal(reason(await untrusted.call('send_email', { to: 'a@b.c', subject: 's', body: 'b' })), 'denied');
   k.store.close();
