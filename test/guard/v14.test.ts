@@ -50,12 +50,13 @@ test('denyUnexposed shares the pre_evaluate budget and carries dropped_before on
   assert.equal(store.iterate({ limit: 100 }).filter((r) => r.kind === 'decision').length, 3);
   assert.equal(lines.filter((l) => l.includes('rate_limit')).length, 1);
   store.close();
-  const { store: s2, g: g2 } = mk('enforce', { maxPreEvaluateRowsPerWindow: 1, bestEffortWindowMs: 60 });
+  // the window must outlast the three calls even on a slow CI runner (a 60 ms window rolled early on Windows CI)
+  const { store: s2, g: g2 } = mk('enforce', { maxPreEvaluateRowsPerWindow: 1, bestEffortWindowMs: 1000 });
   g2.admin.denyUnexposed('a', 'no_pin');
   g2.admin.denyUnexposed('b', 'no_pin');
   g2.admin.denyUnexposed('c', 'no_pin');
   const t0 = Date.now();
-  while (Date.now() - t0 < 120) { /* let the window roll */ }
+  while (Date.now() - t0 < 1100) { /* let the window roll */ }
   const next = g2.admin.denyUnexposed('d', 'no_pin');
   const row = s2.iterate({ limit: 100 }).find((r) => r.id === next.decision_id) as { outcome: Json };
   assert.deepEqual(row.outcome['dropped_before'], { pre_evaluate: 2 });
