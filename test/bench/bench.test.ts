@@ -334,8 +334,9 @@ test('timeSync: measured samples exclude the (artificially slow) warm-up iterati
   assert.equal(calls.length, 60, 'warm-up + measured iterations all ran');
   assert.deepEqual(calls.slice(0, 3), [0, 1, 2]);
   assert.equal(samples.length, 50);
-  assert.ok(Math.max(...samples) < 2e6, 'no 5 ms warm-up sample in the measured distribution');
-  assert.ok(summarize(samples).max < 2e6);
+  // bound below the 5 ms warm-up (not 2 ms): scheduler noise on a loaded machine failed the 2 ms bound once in review
+  assert.ok(Math.max(...samples) < 4.5e6, 'no 5 ms warm-up sample in the measured distribution');
+  assert.ok(summarize(samples).max < 4.5e6);
 });
 
 test('timeAsync and timeConcurrent: warm-up discarded as well', async () => {

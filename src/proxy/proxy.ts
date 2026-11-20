@@ -60,22 +60,31 @@ function capText(s: string, max: number): string {
   return s.slice(0, c >= 0xd800 && c <= 0xdbff ? max - 1 : max);
 }
 
+/** Longest object key accepted inside a server-supplied schema or annotations object (second review N5). */
+const MAX_SCHEMA_KEY = 256;
+/** Keys whose string value is prose and may be shortened; any other over-long string changes meaning if cut. */
+const PROSE_KEYS = new Set(['description', 'title']);
+
 /**
- * S-08 / F10: caps every string nested in a server-supplied schema or annotations object. Returns null when the
- * value is too deep or, after capping, too large to forward; `n` counts the strings that were shortened.
+ * S-08 / F10: caps text nested in a server-supplied schema or annotations object. Only `description` and `title`
+ * strings are shortened (counted in `n`); any other string over the cap (a `pattern`, `enum` or `const` value, whose
+ * meaning a cut would change), any key over MAX_SCHEMA_KEY characters, or nesting deeper than 64 throws, and the tool
+ * is then not listed (second review F and N5).
  */
-function capDeep(v: unknown, n: { n: number }, depth = 0): unknown {
+function capDeep(v: unknown, n: { n: number }, depth = 0, key: string | null = null): unknown {
   if (depth > 64) throw new RangeError('too deep');
   if (typeof v === 'string') {
     if (v.length <= MAX_TEXT_FIELD) return v;
+    if (key === null || !PROSE_KEYS.has(key)) throw new RangeError('long structural string');
     n.n++;
     return capText(v, MAX_TEXT_FIELD);
   }
-  if (Array.isArray(v)) return v.map((x) => capDeep(x, n, depth + 1));
+  if (Array.isArray(v)) return v.map((x) => capDeep(x, n, depth + 1, null));
   if (typeof v === 'object' && v !== null) {
     const out: Record<string, unknown> = {};
     for (const [k, x] of Object.entries(v)) {
-      Object.defineProperty(out, k, { value: capDeep(x, n, depth + 1), enumerable: true, writable: true, configurable: true });
+      if (k.length > MAX_SCHEMA_KEY) throw new RangeError('long key');
+      Object.defineProperty(out, k, { value: capDeep(x, n, depth + 1, k), enumerable: true, writable: true, configurable: true });
     }
     return out;
   }
@@ -831,12 +840,21 @@ export function createProxy(opts: ProxyOptions): ProxyHandle {
         // S-08: server `instructions` go straight into the client model's context; dropped unless the operator opts in
         const instructions = r['instructions'];
         if (instructions !== undefined && !forwardInstructions) proxyLine('proxy_instructions_dropped');
-        // F10: only known fields pass, each capped; anything else the server adds is dropped
+        // F10: only known fields pass, each capped; anything else the server adds is dropped. A protocolVersion that is
+        // not a short printable string is refused rather than replaced by one the server never sent (second review F).
+        const pv = r['protocolVersion'];
+        if (typeof pv !== 'string' || !/^[\x21-\x7e]{1,32}$/.test(pv)) {
+          proxyLine('proxy_initialize_refused', { reason: 'protocol_version' });
+          respondError(id, -32603, 'Internal error');
+          return;
+        }
         const si = isPlain(r['serverInfo']) ? r['serverInfo'] : {};
+        const info = (v: unknown, dflt: string): string =>
+          typeof v === 'string' && v.length > 0 ? capText(v, 64).replace(/[^\x20-\x7e]/g, '?') : dflt;
         const out: Msg = {
-          protocolVersion: shortStr(r['protocolVersion'], 32, '2025-03-26'),
+          protocolVersion: pv,
           capabilities: { tools: { listChanged } },
-          serverInfo: { name: shortStr(si['name'], 64, 'server'), version: shortStr(si['version'], 64, '0') },
+          serverInfo: { name: info(si['name'], 'server'), version: info(si['version'], '0') },
         };
         if (instructions !== undefined && forwardInstructions && typeof instructions === 'string') {
           out['instructions'] = capText(instructions, MAX_TEXT_FIELD);
@@ -953,6 +971,8 @@ export function createProxy(opts: ProxyOptions): ProxyHandle {
       const e = inflight.get(keyOf(rid));
       if (e !== undefined && e.kind === 'call') e.ctl.abort();
     } else if (allowMethods.has(method)) {
+      // second review N6.4: forwarded client notifications are audited too (no taint: no server content is involved)
+      admin.recordForwarded(method, session.id, 'to_server');
       writeServer({ jsonrpc: '2.0', method, ...(m['params'] !== undefined ? { params: m['params'] } : {}) });
     } // everything else (including tools/call as a notification) is dropped
   }

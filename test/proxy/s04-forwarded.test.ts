@@ -132,3 +132,13 @@ test('S-09 / F9: throttled lines are counted per side and the count is written a
   const sup = lines.filter((x) => x['prysm'] === 'proxy_lines_suppressed');
   assert.deepEqual(sup, [{ prysm: 'proxy_lines_suppressed', kind: 'proxy_orphan_response', sub: 'client', n: 5 }]);
 });
+
+test('second review N6.4: an allow-listed client notification forwarded to the server is audited (to_server), without taint', async () => {
+  const env = makeEnv();
+  const l = startLib({ env, proxy: { allowMethods: ['notifications/roots/list_changed'] } });
+  await l.client.handshake();
+  l.client.send({ jsonrpc: '2.0', method: 'notifications/roots/list_changed' });
+  assert.equal(isErr(await l.client.call('send_email', { to: 'a@example.com' })), false, 'no taint from a client notification');
+  await finish(l);
+  assert.deepEqual(forwardedRows(env), [{ event: 'method_forwarded', method: 'notifications/roots/list_changed', direction: 'to_server' }]);
+});

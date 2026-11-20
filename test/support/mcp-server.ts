@@ -178,6 +178,8 @@ rl.on('line', (line) => {
   if (id === undefined) return; // notification
   switch (method) {
     case 'initialize':
+      if (argv.includes('--bad-protocol')) { result(id, { protocolVersion: 20250326, capabilities: {}, serverInfo: { name: 'fixture', version: '0' } }); return; }
+      if (argv.includes('--long-name')) { result(id, { protocolVersion: '2025-03-26', capabilities: {}, serverInfo: { name: 'n'.repeat(100), version: 'vé' } }); return; }
       result(id, { protocolVersion: '2025-03-26', capabilities: { tools: { listChanged: true }, resources: {}, prompts: {}, logging: {}, completions: {} }, serverInfo: { name: 'fixture', version: '0' }, instructions: 'fixture instructions' });
       return;
     case 'ping':
