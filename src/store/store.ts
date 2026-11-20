@@ -485,13 +485,41 @@ export function evaluateAcl(output: string, keyPath: string, user: string): bool
   return users.length === 1 && others.every((x) => PRIVILEGED.has(x.principal.toLowerCase()));
 }
 
-/** The current user; on Windows qualified as DOMAIN\user (as icacls prints it) when USERDOMAIN is known. */
-function currentUser(): string | null {
+/** Absolute path of a Windows system tool, so PATH order cannot pick a different program (e.g. a POSIX `whoami`). */
+function sys32(exe: string): string {
+  const root = process.env['SystemRoot'];
+  const r = typeof root === 'string' && /^[A-Za-z]:\\[^\\/:*?"<>|]{1,64}$/.test(root) ? root : 'C:\\Windows';
+  return r + '\\System32\\' + exe;
+}
+
+/** Parses `whoami /user /fo csv /nh` output: `"domain\user","S-1-5-..."`. Exported for tests. */
+export function parseWhoami(out: string): { name: string; sid: string } | null {
+  const m = /^\s*"([^"\\]{1,64}\\[^"\\]{1,256})","(S-1-[0-9]+(?:-[0-9]+){1,14})"\s*$/.exec(typeof out === 'string' ? out : '');
+  return m === null ? null : { name: m[1] as string, sid: m[2] as string };
+}
+
+let tokenUserCache: { name: string; sid: string } | null | undefined;
+/**
+ * DEC-53 (revised after the second review, N2 / C): on Windows the user comes from the process token (`whoami`), never
+ * from environment variables; null (key judged unprotected, fail closed) when it cannot be read.
+ */
+function windowsTokenUser(): { name: string; sid: string } | null {
+  if (tokenUserCache !== undefined) return tokenUserCache;
+  try {
+    const r = spawnSync(sys32('whoami.exe'), ['/user', '/fo', 'csv', '/nh'], { shell: false, timeout: 5000, windowsHide: true, encoding: 'utf8' });
+    tokenUserCache = r.error === undefined && r.status === 0 && typeof r.stdout === 'string' ? parseWhoami(r.stdout) : null;
+  } catch {
+    tokenUserCache = null;
+  }
+  return tokenUserCache;
+}
+
+/** The principal key-file ACLs are judged against: `DOMAIN\user` from the token on Windows, else the OS user name. */
+export function currentAclUser(): string | null {
+  if (process.platform === 'win32') return windowsTokenUser()?.name ?? null;
   try {
     const n = userInfo().username;
-    if (typeof n !== 'string' || n === '') return null;
-    const d = process.platform === 'win32' ? process.env['USERDOMAIN'] : undefined;
-    return typeof d === 'string' && /^[^\\/:*?"<>|\s][^\\/:*?"<>|]{0,63}$/.test(d) ? d + '\\' + n : n;
+    return typeof n === 'string' && n !== '' ? n : null;
   } catch {
     return null;
   }
@@ -499,7 +527,7 @@ function currentUser(): string | null {
 
 function defaultAclReader(keyPath: string): string | null {
   try {
-    const r = spawnSync('icacls', [keyPath], { shell: false, timeout: 5000, windowsHide: true, encoding: 'utf8' });
+    const r = spawnSync(sys32('icacls.exe'), [keyPath], { shell: false, timeout: 5000, windowsHide: true, encoding: 'utf8' });
     return r.error === undefined && r.status === 0 && typeof r.stdout === 'string' ? r.stdout : null;
   } catch {
     return null;
@@ -511,9 +539,12 @@ function applyAcl(keyPath: string, user: string): void {
   if (isWellKnownGroup(user)) return;
   try {
     const o = { shell: false, timeout: 5000, windowsHide: true, stdio: 'ignore' } as const;
-    spawnSync('icacls', [keyPath, '/inheritance:r', '/grant:r', user + ':(R,W)'], o);
+    // grant by SID when the token was read (no name lookup); an injected aclUser is granted by name
+    const tu = windowsTokenUser();
+    const grantee = tu !== null && tu.name.toLowerCase() === user.toLowerCase() ? '*' + tu.sid : user;
+    spawnSync(sys32('icacls.exe'), [keyPath, '/inheritance:r', '/grant:r', grantee + ':(R,W)'], o);
     // explicit SYSTEM / Administrators entries removed by SID, so the result does not depend on the display language
-    spawnSync('icacls', [keyPath, '/remove:g', '*S-1-5-18', '*S-1-5-32-544'], o);
+    spawnSync(sys32('icacls.exe'), [keyPath, '/remove:g', '*S-1-5-18', '*S-1-5-32-544'], o);
   } catch {
     /* judged by the re-read */
   }
@@ -615,7 +646,7 @@ export function openStore(opts: OpenStoreOptions): Store {
   const computeProtection = (kp: string, creating: boolean): KeyProtection => {
     if (opts.keyProtect !== undefined) return opts.keyProtect(kp);
     if (process.platform === 'win32' || opts.aclReader !== undefined) {
-      const user = opts.aclUser ?? currentUser();
+      const user = opts.aclUser ?? currentAclUser();
       if (user === null) return 'unprotected';
       const reader = opts.aclReader ?? defaultAclReader;
       if (creating && opts.aclReader === undefined) applyAcl(kp, user);
@@ -644,7 +675,6 @@ export function openStore(opts: OpenStoreOptions): Store {
     throw mapErr(e);
   }
   let key: Buffer = Buffer.alloc(0);
-  let createdKey = false;
   let genesis = '';
   if (readOnly) {
     try {
@@ -706,6 +736,8 @@ export function openStore(opts: OpenStoreOptions): Store {
       ins.run('prune_open', '0');
       if (get('schema_version') !== SCHEMA_VERSION) throw new StoreError('corrupt');
       const existingKid = get('key_id');
+      // F6 (revised after the second review): crash leftovers are swept on every writable open, not only on creation
+      if (opts.hmacKey === undefined) sweepKeyTemps(keyPath);
       if (opts.hmacKey !== undefined) key = Buffer.from(opts.hmacKey);
       else if (existingKid !== null) {
         const k = readKeyFile(keyPath);
@@ -720,7 +752,6 @@ export function openStore(opts: OpenStoreOptions): Store {
           key = existing;
         } else {
           const nk = randomBytes(32);
-          sweepKeyTemps(keyPath);
           // S-06: the secret is written only after the (empty) file is protected, then linked into place with no-clobber
           // semantics, so there is no moment when the key bytes sit in a file with the inherited (broad) ACL. The bytes
           // go through the descriptor opened with 'wx', and the linked file must be that same file (same dev/inode).
@@ -740,7 +771,6 @@ export function openStore(opts: OpenStoreOptions): Store {
             linked = true;
             if (!sameFile(mine, keyPath)) throw new StoreError('io');
             key = nk;
-            createdKey = true;
             protection = tp;
             db.prepare("INSERT OR REPLACE INTO meta(key, value) VALUES ('key_protection', ?)").run(protection);
           } catch (e) {
@@ -755,8 +785,9 @@ export function openStore(opts: OpenStoreOptions): Store {
           }
         }
       }
-      if (opts.hmacKey === undefined && !createdKey) {
-        // any key file this open did not create itself is (re-)checked; meta is only a hint and is never trusted
+      if (opts.hmacKey === undefined) {
+        // the key file actually in place is always judged, including one this open just created and linked (second
+        // review D: on Windows icacls works by path, so the verdict on the temp file alone is not trusted)
         protection = computeProtection(keyPath, false);
       }
       if (opts.requireProtectedKey === true && opts.hmacKey === undefined && protection === 'unprotected') {

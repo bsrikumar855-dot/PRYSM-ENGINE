@@ -1,4 +1,4 @@
-export { openStore, evaluateAcl, isWellKnownGroup, StoreError, auditFailureLine, makeBestEffort, sanitizeText, SCHEMA_VERSION } from './store.ts';
+export { openStore, evaluateAcl, isWellKnownGroup, currentAclUser, parseWhoami, StoreError, auditFailureLine, makeBestEffort, sanitizeText, SCHEMA_VERSION } from './store.ts';
 export type {
   Store, NewEvent, StoredEvent, Anchor, VerifyResult, VerifyIssue, VerifyOptions, QueryOptions, PruneResult, KeyProtection,
   OpenStoreOptions, StoreErrorCode, CheckpointInfo, EventKind, HmacLabel,

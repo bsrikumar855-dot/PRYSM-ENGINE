@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { createHash } from 'node:crypto';
 import { userInfo } from 'node:os';
-import { openStore, evaluateAcl, isWellKnownGroup } from '../../src/store/index.ts';
+import { openStore, evaluateAcl, isWellKnownGroup, currentAclUser } from '../../src/store/index.ts';
 import type { Store, NewEvent } from '../../src/store/index.ts';
 import { tmpDir, cleanup, dbPath } from '../support/tmp.ts';
 
@@ -102,8 +102,9 @@ test('expectPruned: every retained checkpoint must be expected; every expected e
 
 // ---------------------------------------------------------------- key ACL honesty
 const ME = userInfo().username;
-// on Windows the store qualifies the user as USERDOMAIN\user (as icacls prints it); elsewhere a bare name is used
-const DOM = process.platform === 'win32' && process.env['USERDOMAIN'] ? process.env['USERDOMAIN'] : 'HOST';
+// the principal the store judges against: DOMAIN\user from the process token on Windows, the OS user name elsewhere
+// (on POSIX a bare name keeps the suffix match, so HOST\<name> below is accepted there)
+const PRINCIPAL = process.platform === 'win32' ? (currentAclUser() as string) : 'HOST\\' + ME;
 const aclOut = (kp: string, lines: string[]) =>
   [kp + ' ' + lines[0], ...lines.slice(1).map((l) => '                 ' + l), '', 'Successfully processed 1 files; Failed processing 0 files', ''].join('\r\n');
 
@@ -141,13 +142,13 @@ test('evaluateAcl: exactly one entry for the current user, others only SYSTEM/Ad
 test('store ACL status comes from re-reading the ACL on every open; meta and env vars are not trusted', () => {
   const path = dbPath(tmpDir());
   const keyPath = dbPath(tmpDir(), 'k.key');
-  const good = (kp: string) => aclOut(kp, [`${DOM}\\${ME}:(R,W)`]);
+  const good = (kp: string) => aclOut(kp, [`${PRINCIPAL}:(R,W)`]);
   const s1 = openStore({ path, keyPath, aclReader: good });
   assert.equal(s1.keyProtection(), 'acl');
   assert.equal(s1.verify().warnings.some((w) => w.code === 'key_unprotected'), false);
   s1.close();
   // reopen with a reader that now reports a broad grant: meta still says 'acl' but it is only a hint
-  const s2 = openStore({ path, keyPath, aclReader: (kp) => aclOut(kp, ['Everyone:(R,W)', `${DOM}\\${ME}:(F)`]) });
+  const s2 = openStore({ path, keyPath, aclReader: (kp) => aclOut(kp, ['Everyone:(R,W)', `${PRINCIPAL}:(F)`]) });
   assert.equal(s2.keyProtection(), 'unprotected');
   assert.ok(s2.verify().warnings.some((w) => w.code === 'key_unprotected'));
   s2.close();

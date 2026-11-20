@@ -156,6 +156,28 @@ test('S-06 / F6: a key temp file left by a crash is removed when a new key is cr
   assert.equal(existsSync(other), true);
 });
 
+test('S-06 / F6 (second review E): leftovers are also swept when the key already exists', () => {
+  const dir = tmpDir();
+  const keyPath = dbPath(dir, 'k.key');
+  const path = dbPath(tmpDir());
+  openStore({ path, keyPath }).close();
+  const old = keyPath + '.tmp-00aa11bb22cc';
+  writeFileSync(old, randomBytes(32));
+  const past = new Date(Date.now() - 3600_000);
+  utimesSync(old, past, past);
+  openStore({ path, keyPath }).close(); // existing database and key
+  assert.equal(existsSync(old), false);
+});
+
+test('S-06 / second review D: a newly created key is judged on the linked key file, not only on the temp file', () => {
+  const keyPath = dbPath(tmpDir(), 'k.key');
+  const judged: string[] = [];
+  const s = openStore({ path: dbPath(tmpDir()), keyPath, keyProtect: (kp) => { judged.push(kp); return kp === keyPath ? 'unprotected' : 'acl'; } });
+  assert.equal(s.keyProtection(), 'unprotected', 'the verdict on the real key file wins');
+  assert.equal(judged[judged.length - 1], keyPath);
+  s.close();
+});
+
 test('S-06 / F4: the proxy starts on a NEW database with a protected key file that already exists', () => {
   const env = makeEnv();
   openStore({ path: dbPath(tmpDir()), keyPath: env.keyPath }).close(); // protected key, different database
