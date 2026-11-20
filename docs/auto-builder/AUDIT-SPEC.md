@@ -1,4 +1,4 @@
-# PRYSM audit store & guard specification v1.8 (normative; amended by later sections, see section 12 for the latest)
+# PRYSM audit store & guard specification v1.9 (normative; amended by later sections, see section 13 for the latest)
 
 Implements DEC-01 (in-process half), DEC-03, DEC-04, DEC-05, DEC-06 and SECURITY-REVIEW items P-02, P-03, P-07, P-08, P-10, P-16, P-19, P-21 and F-03. Consumes `src/core` (POLICY-SPEC v1.3). Files: `src/store/*.ts`, `src/guard/*.ts`. `src/core` must not import store or guard.
 
@@ -154,3 +154,17 @@ Tests: `test/guard/agent-facet.test.ts`.
 **12.4 Agent facet provenance (DEC-54).** The `forAgent` provenance callback receives the tool name and the frozen, validated, NFC-normalised snapshot arguments the policy decides on. A request that fails validation never reaches the callback (the call is rejected with its own reason); a callback that throws, including by trying to modify the frozen arguments, makes the call `invalid_request`.
 
 **12.5 Key files (DEC-53).** Every key file this open did not create (an existing file, or one another process linked first) is checked with the real mechanism before `requireProtectedKey` is applied. A new key is written through the descriptor opened with `wx`; the temporary path and, after linking, the key path must be that same regular file (device and inode, not a link), else `StoreError('io')`. Before creating a key, `<key>.tmp-<12 hex>` regular files older than ten minutes are removed (links are never followed). On Windows the current user is `USERDOMAIN\user` and must match an ACL entry exactly (a bare name supplied as `aclUser` keeps the suffix match); at creation, explicit SYSTEM (`S-1-5-18`) and Administrators (`S-1-5-32-544`) entries are removed by SID, and 11.1 still accepts them on existing keys. Key creation needs hard links; on filesystems without them it fails with `io`.
+
+## 13. v1.9 amendment (DEC-55, after the second re-review). Supersedes section 12 where they conflict.
+**13.1 Best-effort rows.** The coarse and fine signature sets of 12.1 are kept per class (each capped: 512 coarse, 4096 fine), a row's signatures are recorded only when the row is written, and when a class's fine set is full no row counts as new (the reserve is never spent on repeats).
+
+**13.2 Uninterpretable values.** Replaces 12.2: a deny rule is listed in `matched_unparseable` when at least one of its argument checks held only through uninterpretable values, even if another check genuinely matched. The explanation says that condition is uncertain and that other values may still have matched.
+
+**13.3 Provenance callback.** In 12.4, "throws when trying to modify the frozen arguments" holds for strict-mode host code; in sloppy mode the write is silently ignored. Either way the arguments the policy sees are unchanged.
+
+**13.4 Key files.** Additions to 12.5:
+- On Windows the principal is the process-token user from `whoami /user`, run from `%SystemRoot%\System32` by absolute path; `USERDOMAIN` and `USERNAME` are never used. The key is granted to the token SID.
+- If the token user cannot be read, the key is judged unprotected.
+- A key this open created is judged again on the linked key file.
+- Temp leftovers are swept on every writable open.
+- Residual: a handle opened on the temp file before its ACL is tightened keeps access; keep the key directory readable only by the user.

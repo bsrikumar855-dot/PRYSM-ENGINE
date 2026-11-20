@@ -1,4 +1,4 @@
-# PRYSM MCP stdio proxy specification v1.6 (normative; sections 9-13 supersede conflicting v1 text, e.g. the server line cap is 16 MiB by default)
+# PRYSM MCP stdio proxy specification v1.7 (normative; sections 9-14 supersede conflicting v1 text, e.g. the server line cap is 16 MiB by default)
 
 Implements DEC-01 (enforcing mode), DEC-04 (taint via control config), DEC-07 (schema pinning), A-18. Files: `src/proxy/*.ts` (+ `src/proxy/bin.ts`), tests `test/proxy/*.test.ts`, fixtures `test/support/mcp-server.ts`. Consumes `src/guard` (`createGuardWithAdmin`), `src/store`, `src/core`; no new runtime dependencies (hand-written newline-delimited JSON-RPC; Node built-ins only).
 
@@ -113,3 +113,9 @@ Tests: `test/proxy/s08-text.test.ts`.
 - **Throttled sink lines.** `proxy_orphan_response`, `proxy_server_request_refused`, `proxy_tool_ignored` and `proxy_tool_text_capped` are limited to 20 lines per minute per kind and side (or reason). Suppressed counts are written as `proxy_lines_suppressed {kind, sub?, n}` when the window rolls, by a timer, and at shutdown.
 - **Posture.** The `proxy_config` row also records `allow_unprotected_key` and the actual `key_protection`; an unprotected key allowed by the flag writes a `proxy_key_unprotected` sink line.
 Tests: `test/proxy/s04-forwarded.test.ts`, `test/proxy/s08-text.test.ts`, `test/proxy/p1-flags.test.ts`, `test/store/s06-key.test.ts`.
+
+## 14. v1.7 amendment (DEC-55, after the second re-review). Supersedes section 13 where they conflict.
+- **Schema and annotations text.** Only `description` and `title` strings are shortened (4096 characters, surrogate-safe). Any other string over 4096 characters (for example a `pattern`, `enum`, `const` or `default` value, whose meaning a cut would change), any object key over 256 characters, or nesting deeper than 64 levels makes the tool unlisted (`proxy_tool_ignored` reason `oversize`).
+- **initialize.** A `protocolVersion` that is not 1 to 32 printable ASCII characters is refused: the client gets a JSON-RPC error and the sink gets `proxy_initialize_refused {reason: "protocol_version"}`. `serverInfo.name` and `version` are truncated to 64 characters (non-printable characters become `?`), or default to `server` / `0` when missing.
+- **Client notifications.** An allow-listed client notification forwarded to the server writes a `method_forwarded` row with `direction: "to_server"`; it does not taint.
+Tests: `test/proxy/s08-text.test.ts`, `test/proxy/s04-forwarded.test.ts`.

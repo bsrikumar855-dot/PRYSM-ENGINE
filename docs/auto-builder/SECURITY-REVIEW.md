@@ -1,6 +1,6 @@
 # Security review
 
-**Current status (production phase P1, after the independent re-review of 2026-11-20 and the fixes that followed it):** no Critical or High finding is open in the reviewed scope. The fixes made after the re-review (DEC-50 to DEC-54) have not themselves been independently re-reviewed. The register below shows the current state of each design-phase item (the original open/closed history is in DECISIONS.md and the milestone sections). Methods across the project: static inspection, the project's own tests, reviewers' local probe scripts. Penetration testing: not performed. Dependency scanning: not performed (no runtime dependencies). **No claim of security is made.**
+**Current status (production phase P1, after two independent re-reviews on 2026-11-20 and the fixes that followed each):** no Critical or High finding is open in the reviewed scope. The DEC-50..54 fixes were re-reviewed once; the revisions made after that second review (DEC-55) have not been re-reviewed. The register below shows the current state of each design-phase item (the original open/closed history is in DECISIONS.md and the milestone sections). Methods across the project: static inspection, the project's own tests, reviewers' local probe scripts. Penetration testing: not performed. Dependency scanning: not performed (no runtime dependencies). **No claim of security is made.**
 
 Open items (all Medium or lower): M2-22b, M2-05, M3-11, M3-12, M4-02 (earlier milestones, unchanged), and the residual risks listed at the end of the P1 re-review section below. Fixed or mitigated in the production phase: S-02 (mitigated by the host-only agent facet; the raw `guard.call` still trusts its caller by design), S-03, S-04, S-05 (mitigated), S-06, S-07, S-08 (mitigated), S-09, M2-21, M2-22a, M5-05 and the explain wording for uninterpretable values (DEC-43 to DEC-54).
 
@@ -106,11 +106,11 @@ Every register item marked fixed was re-read in current code and held (core, loa
 Not checked: dynamic/penetration testing, `npm audit`, real MCP servers, SIGINT/SIGTERM on a real console, POSIX behaviour, junction/symlink behaviour of `--out`, `src/report/build.ts` aggregation (skimmed), git history for secrets (the M5 review covered it), repository visibility.
 
 ## P1 re-review (2026-11-20): security-engineer and critical-reviewer, independent, on commits a7e3fe2..6336534
-Methods: static inspection of every `src/` change, the project's own checks (566 tests, typecheck, corpus), and local proof-of-concept scripts (Windows only; in-memory stores or scratch files). No penetration testing, no network scanners, no dependency audit. Both reviewers found no Critical or High issue; the security engineer found 3 Medium and 8 Low, the critical reviewer 4 major and 11 minor issues (overlapping). Each is listed once below with what changed afterwards. **The fixes in this table have not been re-reviewed by an independent reviewer.** Evidence for each fix is the named test; all ran green locally (587 tests, 2 platform skips) before push.
+Methods: static inspection of every `src/` change, the project's own checks (566 tests, typecheck, corpus), and local proof-of-concept scripts (Windows only; in-memory stores or scratch files). No penetration testing, no network scanners, no dependency audit. Both reviewers found no Critical or High issue; the security engineer found 3 Medium and 8 Low, the critical reviewer 4 major and 11 minor issues (overlapping). Each is listed once below with what changed afterwards. **The fixes in this table have not been re-reviewed by an independent reviewer.** Evidence for each fix is the named test; the suite ran green on the lead's machine before each push (587 tests, 2 platform skips), but the second reviewer saw one unrelated timing test fail once (fixed by DEC-55 commit fb25f54). The status column below is as of the first round; the second round (next section) revised F1, F8, F10, F11 and minor 5.
 
 | Id | Sev | Finding | Status after the fix commits |
 |---|---|---|---|
-| F1 | Medium (PoC) | A real secrets hit plus one junk value was explained as "a value could not be interpreted", misleading triage (block still held) | Fixed (DEC-54). `test/core/f1-f2.test.ts` |
+| F1 / minor 8 | Medium (PoC) | A real secrets hit plus one junk value was explained as "a value could not be interpreted", misleading triage (block still held) | Fixed (DEC-54). `test/core/f1-f2.test.ts` |
 | F2 | Medium (PoC) | Deny root `C:/Windows` did not cover `/Windows/...`, which Windows resolves against the current drive | Fixed (DEC-50), both directions, deny rules only. `test/core/f1-f2.test.ts`; corpus relabel path_traversal-93 (reason only), LEAD-DERIVED |
 | F3 / MAJOR 2 | Medium | Server error text to a forwarded request reached the client without taint; allowed server requests and notifications were neither audited nor tainted | Fixed (DEC-51). `test/proxy/s04-forwarded.test.ts` (real JSON-RPC error with injected text; server request; server notification) |
 | F4 / MAJOR 1 | Low (PoC) | Key protection taken from the temp file in a race; a pre-existing protected key with a new database was refused | Fixed (DEC-53). `test/store/s06-key.test.ts` (new-database cases, race, proxy start) |
@@ -124,10 +124,40 @@ Methods: static inspection of every `src/` change, the project's own checks (566
 | F12 | Info | Forwarded method names over 64 characters logged as `?`; test sweep used `stat` | Fixed (128 characters; `lstat`) |
 | MAJOR 3 | (docs) | The differential is not independent for POLICY-SPEC 14: the reference was edited by the same author in the same commits as production | Accepted and disclosed in BENCHMARK and POLICY-SPEC 14: for section 14 (and 14.4) the differential only shows the two implementations agree, not that either is right |
 | MAJOR 4 | (docs) | BENCHMARK 4a reported 0/85 false positives only against the lead's relabels | Corrected in BENCHMARK 4a: against the blind labels, 2 of 87 expected-permit cases are now denied |
-| minor 5 | Low | Windows handle race on the temp key file | Superseded by the descriptor-bound write (F5) |
+| minor 5 | Low | Windows handle race on the temp key file | Not closed (second review N4): the descriptor-bound write stops swapping the file, not a handle opened on it before icacls runs. Documented residual |
 | minor 6 | Low | `linkSync` needs hard links (FAT/exFAT, some shares fail with `io`) | Documented as a residual (DEC-53, AUDIT-SPEC 11) |
 | minor 13 | (tests) | Vacuous S-06 proxy test, a `'\\n'` literal test, timeout instead of a JSON-RPC error, no flag-parsing tests | Fixed: the S-06 proxy test now checks the refusal, the opt-out, the sink line and the posture row; `test/proxy/p1-flags.test.ts` |
 | minor 14 | (docs) | Register, TASKS, README stale; API additions undocumented | Fixed: this register, TASKS, README, CHANGELOG.md |
 | minor 15 | Low | Taint applies to every allow-listed method, with no per-method exception | Accepted: one switch (`--no-taint-forwarded`) for now; a per-method list is a possible later option |
 
-Residual risks after these fixes (not exhaustive): the raw `guard.call` trusts its caller (hosts must hand agents only `forAgent`); capped server text can still carry a prompt injection (pins are the only full control and stay opt-in); a client sending more than 512 distinct unknown tool names in a window can exhaust the per-signature guarantee for that class (drops stay counted); key creation needs a filesystem with hard links; localised Windows with a key created by an older version may be judged unprotected until the key is recreated; POSIX and macOS behaviour was checked only by CI, not by the reviewers.
+Residual risks after these fixes (not exhaustive): the raw `guard.call` trusts its caller (hosts must hand agents only `forAgent`); capped server text can still carry a prompt injection (pins are the only full control and stay opt-in); (superseded: see the second re-review section for the current residual list); key creation needs a filesystem with hard links; localised Windows with a key created by an older version may be judged unprotected until the key is recreated; POSIX and macOS behaviour was checked only by CI, not by the reviewers.
+
+## Second P1 re-review (2026-11-20): security-engineer and critical-reviewer, independent, on commits 6336534..be11400
+Methods as before (static inspection, project checks, local PoC scripts on Windows; no penetration testing, no dependency audit). Neither reviewer found a Critical or High issue. Both found that four first-round fixes were weaker than this register said. Fixes: commits a6762f3, c657431, fb25f54 (DEC-55). **These fixes have not been independently re-reviewed.** After them: 595 tests, 593 pass, 2 platform skips; corpus 563/563; differential seed 20261102 0 disagreements; benign set unchanged (16 of 306).
+
+| Id | Sev | Finding | Status |
+|---|---|---|---|
+| N1 / B (F8) | Low-Medium (PoC) | Signature sets were shared by all classes and filled even by dropped rows; about 5000 server-chosen notification method names made a later policy denial leave no row and spent the reserve on repeats. The first-round forwarded-budget test passed without the fix | Fixed (DEC-55): per-class sets, recorded only for written rows, a full set makes nothing new. `test/guard/m2-21.test.ts` reproduces the PoC and was checked to fail on the previous code |
+| N3 / A (F1) | Low (PoC) | The per-rule "genuine match" flag mislabelled the reverse case (a path check that held only through an uninterpretable value read as certain), and the first-round test asserted that | Fixed (DEC-55): per argument check; explanation reworded. `test/core/f1-f2.test.ts` |
+| N2 / C (F11) | Low (potential) | The user principal came from `USERDOMAIN`, with a silent fallback to the old suffix match; a wrong value could grant the key to another account; no test pinned the fix | Fixed (DEC-55): principal from the process token (`whoami`), SID grant, fail closed when unreadable. `test/store/identity.test.ts` (Windows-only cases skip elsewhere) |
+| D | Low (code reading) | A new key was recorded as protected on the temp file's verdict, which icacls produced by path | Fixed: the linked key file is always judged. Test in `s06-key.test.ts` |
+| N4 / minor 5 | Low (code reading) | A handle opened on the temp key file before icacls tightens it can read the key bytes later | **Open, documented residual**: Node cannot create a file with a protected descriptor. Keep the key directory readable only by the user |
+| E / N6.1 | Low | Leftover temp files were swept only when a key was created | Fixed: swept on every writable open. Test in `s06-key.test.ts` |
+| F / N5 (F10) | Low | Cutting `pattern`/`enum`/`const` strings changed their meaning; keys were not capped; an invalid `protocolVersion` was replaced with an invented one | Fixed (DEC-55): only description/title are shortened, anything else hides the tool; keys over 256 hide the tool; invalid `protocolVersion` refused. `test/proxy/s08-text.test.ts` |
+| N6.4 | Low | Allow-listed client notifications forwarded to the server were not audited | Fixed: `method_forwarded` row, `to_server`, no taint. Test in `s04-forwarded.test.ts` |
+| N6.2 | Info | Key file owner is never checked (an attacker who can write the key directory could pre-create a key it owns) | Accepted: an attacker with write access to the key directory already defeats the store; documented |
+| N6.3 | Info | Forwarded error codes pass any 32-bit integer the server chooses (tiny covert channel) | Accepted |
+| G, H, I | nits | Missing "minor 8" label; "throws" on mutation only in strict-mode hosts; root `/` and `C:/` examples missing from POLICY-SPEC 14.4 | Fixed in the docs |
+| bench | (test) | `test/bench/bench.test.ts` warm-up bound of 2 ms failed once under load | Bound set to 4.5 ms, below the 5 ms it detects |
+
+Residual risks after the second round (not exhaustive):
+- the raw `guard.call` trusts its caller, so hosts must hand agents only `forAgent`;
+- capped server text can still carry a prompt injection; pins are the only full control and stay opt-in;
+- within one best-effort class, a party that chooses the signature (a server, for forwarded rows) can exhaust that class's per-signature guarantee; drops stay counted;
+- the Windows handle race on the temp key file (N4);
+- the key file owner is not checked;
+- key creation needs hard links;
+- on Windows the key is judged unprotected if `whoami` cannot be run;
+- a key created on localised Windows by an older version may be judged unprotected until it is recreated;
+- the differential does not model `matched_unparseable`, so explanations are covered by tests only;
+- POSIX and macOS behaviour is checked only by CI.

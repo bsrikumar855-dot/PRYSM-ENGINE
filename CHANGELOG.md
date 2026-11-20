@@ -2,6 +2,37 @@
 
 All notable changes. Dates are UTC. Decisions (DEC-nn) are in `docs/auto-builder/DECISIONS.md`; findings (S-nn, F-nn, M-nn) in `docs/auto-builder/SECURITY-REVIEW.md`.
 
+## 0.1.1 (2026-11-20): fixes from the second independent re-review (DEC-55)
+
+Not published to npm. These fixes have not been re-reviewed independently.
+
+### Behaviour changes
+
+- **Explanations:** a denial is explained as uncertain when any argument check of the rule held only through a value that could not be interpreted, even if another check genuinely matched. The 0.1.0 rule could present such a block as certain. The wording now says the condition is uncertain, not that nothing matched.
+- **Audit under flooding:** best-effort signature tracking is per class, and only rows actually written count. In 0.1.0, about 5000 server-chosen notification names could make a later policy denial leave no row.
+- **Key file on Windows:**
+  - the principal comes from the process token (`whoami`), never from `USERDOMAIN` or `USERNAME`;
+  - the key is granted to the token SID;
+  - if the token cannot be read, the key is judged unprotected and the proxy refuses to start unless `--allow-unprotected-key`;
+  - `whoami` and `icacls` run from System32 by absolute path.
+- **Key file on every platform:**
+  - a newly created key is judged on the linked file;
+  - temp leftovers are swept on every writable open.
+- **Proxy:**
+  - only `description` and `title` strings in tool schemas and annotations are shortened; any other over-long string, an over-long key or deep nesting hides the tool instead of being cut;
+  - an invalid `protocolVersion` from the server is refused instead of replaced;
+  - long server names are truncated instead of replaced;
+  - forwarded client notifications are audited.
+
+### API additions
+
+- `currentAclUser()` and `parseWhoami()` exported from the store module.
+
+### Migration notes
+
+- On Windows, a proxy run where `whoami.exe` cannot be started (for example a stripped container) now refuses an existing key as unprotected. Use `--allow-unprotected-key` only if you accept that.
+- MCP servers with schema `pattern` or `enum` strings over 4096 characters are no longer listed.
+
 ## 0.1.0 (2026-11-20): production hardening (P1)
 
 First tagged version. Not published to npm (`package.json` stays `private`). This is not a claim that PRYSM is secure or complete: see the residual risks at the end of SECURITY-REVIEW.md.

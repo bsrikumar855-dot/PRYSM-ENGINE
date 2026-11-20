@@ -5,8 +5,8 @@
 | Field | Value |
 |---|---|
 | Current phase | Production hardening (owner request 2026-11-19 after the MVP review; DEC-43 onwards) |
-| Current milestone | P1 hardening: findings of the M6 review fixed or mitigated (DEC-43..49); independent re-review done 2026-11-20 (security-engineer and critical-reviewer); its findings fixed (DEC-50..54, not re-reviewed). CI matrix: Ubuntu, Windows, macOS. Remaining: CI green on the last commits, tag v0.1.0 |
-| Pass for this milestone (budget: 5 by default; edit here) | P1 pass 2 (fixes after the re-review) |
+| Current milestone | P1 hardening: M6 findings fixed (DEC-43..49); two independent re-reviews on 2026-11-20, findings fixed (DEC-50..55; the last round not re-reviewed). v0.1.0 tagged; v0.1.1 after CI on fb25f54 and the docs commit |
+| Pass for this milestone (budget: 5 by default; edit here) | P1 pass 3 (fixes after the second re-review) |
 | Total passes, all milestones | 14 (M0-M5) |
 | Failing checks → attempts (one line per distinct check; max 3 each) | F-01..F-09: closed except F-05(glob only)/F-07 partial; N-01 deny/unparseable: 1 attempt; N-02 metering: 1; N-03 mutable toolInfo: 1; N-04 hidden chars: 2 (F-07 then N-04) |
 | Last verified commit | see `git log`; every P1 commit ran typecheck, the full suite and the corpus locally before push |
