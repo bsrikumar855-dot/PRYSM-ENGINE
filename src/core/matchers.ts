@@ -44,13 +44,11 @@ interface CacheEntry {
 export interface EvalCtx {
   steps: number;
   readonly cache: Map<string, CacheEntry>;
-  /** Set when a deny predicate counted an unparseable value as a match (explanations only; never affects decisions). */
+  /** Set when a deny predicate held only through unparseable values (explanations only; never affects decisions). */
   unparseableHit: boolean;
-  /** Set when a deny predicate had a value that genuinely matched (F1: then the rule is not explained as unparseable). */
-  realMatchHit: boolean;
 }
 export function newEvalCtx(): EvalCtx {
-  return { steps: 0, cache: new Map(), unparseableHit: false, realMatchHit: false };
+  return { steps: 0, cache: new Map(), unparseableHit: false };
 }
 
 function charge(ctx: EvalCtx, n: number): void {
@@ -321,11 +319,16 @@ export function evalPredicate(p0: CompiledPredicate, value: ArgValue, effect: 'p
   // S-07 (POLICY-SPEC 14): a deny rule's path_within always folds case, so case variants cannot slip past it on
   // case-insensitive filesystems; permit rules keep the author's choice (stricter is the safe side for permits)
   const p = effect === 'deny' && p0.kind === 'path_within' && !p0.caseInsensitive ? { ...p0, root: p0.root.toLowerCase(), caseInsensitive: true } : p0; // compiled ci roots are lowercased
+  // DEC-54 (F1, revised after the second review): per predicate, note whether a value genuinely matched and whether
+  // one was unparseable. A deny predicate that held only through unparseable values marks the rule as uncertain.
+  let real = false;
+  let unp = false;
   const hit = (t: Tri): boolean => {
-    if (effect === 'deny' && t === 'unparseable') ctx.unparseableHit = true;
-    if (effect === 'deny' && t === 'match') ctx.realMatchHit = true;
+    if (t === 'unparseable') unp = true;
+    else if (t === 'match') real = true;
     return effect === 'deny' ? t !== 'no_match' : t === 'match';
   };
+  let held: boolean;
   if (Array.isArray(value)) {
     if (value.length === 0) return false;
     let any = false;
@@ -334,7 +337,10 @@ export function evalPredicate(p0: CompiledPredicate, value: ArgValue, effect: 'p
       if (effect === 'permit' && !ok) return false;
       if (ok) any = true;
     }
-    return effect === 'permit' ? true : any;
+    held = effect === 'permit' ? true : any;
+  } else {
+    held = hit(evalScalar(p, value as Scalar, ctx, effect === 'deny'));
   }
-  return hit(evalScalar(p, value as Scalar, ctx, effect === 'deny'));
+  if (effect === 'deny' && held && unp && !real) ctx.unparseableHit = true;
+  return held;
 }

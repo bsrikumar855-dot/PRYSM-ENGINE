@@ -26,8 +26,10 @@ const MARKER = '…+';
 /** Shown when a deny rule matched only because a value could not be interpreted (POLICY-SPEC 11, 14). */
 export const UNPARSEABLE_WHY =
   'The value could not be interpreted safely (for example non-ASCII characters, percent-encoding, a backslash outside a ' +
-  'drive-letter path, or a reserved device name). Deny rules treat such values as a match so they cannot be bypassed; ' +
-  'this does not mean the value was actually inside the rule\u2019s path or domain.';
+  'drive-letter path, a reserved device name, or a path whose drive letter only one side names). Deny rules treat such ' +
+  'values as a match so they cannot be bypassed. That condition of the rule is therefore uncertain, not shown to be met; ' +
+  'other values in the same request may still have matched the rule genuinely, so check the arguments before ' +
+  'dismissing the block.';
 
 const WHY: Readonly<Record<string, string>> = {
   permitted: 'A permit rule matched and no deny rule matched.',

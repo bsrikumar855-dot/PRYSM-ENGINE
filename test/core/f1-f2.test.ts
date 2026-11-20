@@ -8,7 +8,7 @@ import { policyDoc } from './helpers.ts';
 
 const pw = (root: string) => ({ path_within: { root, case_insensitive: false } });
 
-test('F1: a rule that genuinely matched is never explained as "could not be interpreted"', () => {
+test('F1 (DEC-54): a rule is uncertain exactly when one of its argument checks held only through uninterpretable values', () => {
   const p = mk([
     deny('d.tags', { tools: ['tag_item'], args: { tags: pw('/workspace/secrets') } }),
     deny('d.mail', { tools: ['send_email'], args: { subject: pw('/workspace/secrets'), to: { domain_suffix: 'example.com', accept: ['email'] } } }),
@@ -19,10 +19,14 @@ test('F1: a rule that genuinely matched is never explained as "could not be inte
     assert.equal(d.reason_code, 'denied_by_rule', JSON.stringify(tags));
     assert.deepEqual(d.matched_unparseable, [], JSON.stringify(tags));
   }
-  // a real path match plus an uninterpretable value in another predicate of the same rule
-  const m = decide(p, req('send_email', { to: 'bob@exämple.com', subject: '/workspace/secrets/k', body: 'b' }));
-  assert.equal(m.reason_code, 'denied_by_rule');
-  assert.deepEqual(m.matched_unparseable, []);
+  // second review: with two checks, the rule only holds because of the uninterpretable one, so it is uncertain,
+  // whichever check that is; it is certain only when every check genuinely matched
+  const mail = (to: string, subject: string): readonly string[] =>
+    decide(p, req('send_email', { to, subject, body: 'b' })).matched_unparseable;
+  assert.deepEqual(mail('bob@exämple.com', '/workspace/secrets/k'), ['d.mail'], 'real path, uninterpretable domain');
+  assert.deepEqual(mail('bob@example.com', 'notes\\x.txt'), ['d.mail'], 'real domain, uninterpretable path');
+  assert.deepEqual(mail('bob@example.com', 'C:/workspace/secrets/k'), ['d.mail'], 'real domain, drive-letter-only path hit (14.4)');
+  assert.deepEqual(mail('bob@example.com', '/workspace/secrets/k'), [], 'both checks genuinely matched');
   // only uninterpretable values: still explained that way
   const u = decide(p, req('tag_item', { tags: ['relative.txt', 'notes\\x.txt'] }));
   assert.equal(u.reason_code, 'denied_by_rule');

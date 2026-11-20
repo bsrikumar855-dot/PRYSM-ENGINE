@@ -469,15 +469,18 @@ export function createGuardWithAdmin(opts: CreateGuardOptions): { guard: Guard; 
   let winStart = hr();
   // M2-21 (AUDIT-SPEC 10): after a class budget is spent, a row whose signature (class, tool, reason, rules) is new in
   // this window may still use a small novelty reserve, so a flood of identical denials cannot hide a different one.
-  // F8: the reserve is per class (one class cannot spend another's), and the first row of each coarse signature
-  // (class, tool, reason; plus method and direction for forwarded rows) in a window is always written, up to
-  // COARSE_MAX per window. Policy tools and reason codes are finite, so a policy_deny for a new (tool, reason) cannot be
-  // crowded out by agent-chosen variations of rule combinations.
+  // F8 / DEC-52 (revised after the second review, N1): everything is per class, so one class (for example forwarded
+  // rows whose method names a server chooses) cannot use up another's. Per class and window: a 64-row novelty reserve,
+  // and the first row of each coarse signature (tool, reason; plus method and direction for forwarded rows) is always
+  // written, up to COARSE_MAX. Signatures are recorded only for rows actually written, and once a class's signature
+  // set is full nothing counts as new (repeats can never spend the reserve).
   const NOVELTY_RESERVE = 64;
   const COARSE_MAX = 512;
   const MAX_SIGNATURES = 4096;
-  const seenSig = new Set<string>();
-  const seenCoarse = new Set<string>();
+  const mkSeen = (): { sig: Set<string>; coarse: Set<string> } => ({ sig: new Set(), coarse: new Set() });
+  const seen: Record<RowClass, { sig: Set<string>; coarse: Set<string> }> = {
+    pre_evaluate: mkSeen(), policy_deny: mkSeen(), tool_result: mkSeen(), forwarded: mkSeen(),
+  };
   const noveltyUsed: Record<RowClass, number> = { pre_evaluate: 0, policy_deny: 0, tool_result: 0, forwarded: 0 };
   const coarseOf = (ev: NewEvent, cls: RowClass): string => {
     const oc = typeof ev.outcome === 'object' && ev.outcome !== null ? ev.outcome as Record<string, unknown> : {};
@@ -495,19 +498,22 @@ export function createGuardWithAdmin(opts: CreateGuardOptions): { guard: Guard; 
           c.used = 0;
           c.lineWritten = false;
         }
-        seenSig.clear();
-        seenCoarse.clear();
+        for (const k of Object.keys(seen) as RowClass[]) { seen[k].sig.clear(); seen[k].coarse.clear(); }
         for (const k of Object.keys(noveltyUsed) as RowClass[]) noveltyUsed[k] = 0;
       }
       const c = classes[cls];
+      const s = seen[cls];
       const coarse = coarseOf(ev, cls);
       const sig = signatureOf(coarse, ev);
-      const isNew = !seenSig.has(sig);
-      if (isNew && seenSig.size < MAX_SIGNATURES) seenSig.add(sig);
-      const newCoarse = !seenCoarse.has(coarse) && seenCoarse.size < COARSE_MAX;
-      if (newCoarse) seenCoarse.add(coarse);
+      const isNew = !s.sig.has(sig) && s.sig.size < MAX_SIGNATURES;
+      const newCoarse = !s.coarse.has(coarse) && s.coarse.size < COARSE_MAX;
       const novelty = c.used >= caps[cls] && cls !== 'tool_result' &&
         (newCoarse || (isNew && noveltyUsed[cls] < NOVELTY_RESERVE));
+      if (c.used < caps[cls] || novelty) {
+        // this row will be written: only now are its signatures recorded
+        if (s.sig.size < MAX_SIGNATURES) s.sig.add(sig);
+        if (s.coarse.size < COARSE_MAX) s.coarse.add(coarse);
+      }
       if (novelty && !newCoarse) noveltyUsed[cls]++;
       if (c.used >= caps[cls] && !novelty) {
         c.dropped++;

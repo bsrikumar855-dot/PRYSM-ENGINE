@@ -40,11 +40,16 @@ test('M2-21 / F8: one row per new (tool, reason) up to 512 per window, then the 
   k.store.close();
 });
 
-test('S-04 / F8: forwarded-method rows have their own budget and cannot use up the pre_evaluate rows', async () => {
-  const k = kit({ guardOpts: { maxPreEvaluateRowsPerWindow: 2, bestEffortWindowMs: 60_000 } });
-  for (let i = 0; i < 50; i++) k.admin.recordForwarded('resources/list', null);
-  const r = await k.guard.call('no_such_tool', {});
-  assert.ok(k.decisionRows().some((x) => x.id === r.decision_id), 'the unknown-tool denial still has a row');
+test('F8 / N1: 5000 server-chosen forwarded method names cannot make a later denial disappear or spend the reserve on repeats', async () => {
+  const k = kit({ guardOpts: { maxDenyRowsPerWindow: 3, maxPreEvaluateRowsPerWindow: 2, bestEffortWindowMs: 600_000 } });
+  for (let i = 0; i < 5000; i++) k.admin.recordForwarded('notifications/x' + i, null, 'to_client');
+  for (let i = 0; i < 200; i++) await k.guard.call('read_file', { path: '/secret/' + i }); // identical signature
+  const flood = k.decisionRows().filter((r) => r.reason_code === 'denied_by_rule').length;
+  assert.equal(flood, 3, 'repeats of one signature never use the novelty reserve');
+  const r = await k.guard.call('denied_by_default', { x: 'a' }); // a new (tool, reason) in policy_deny
+  assert.ok(k.decisionRows().some((x) => x.id === r.decision_id), 'the different denial still has a row');
+  const u = await k.guard.call('no_such_tool', {}); // pre_evaluate is untouched by the forwarded rows
+  assert.ok(k.decisionRows().some((x) => x.id === u.decision_id), 'the unknown-tool denial still has a row');
   k.store.close();
 });
 
